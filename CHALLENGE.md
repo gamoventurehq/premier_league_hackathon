@@ -1,5 +1,6 @@
 # Premier League Studio: Synthetic Match Insights Engine
-> **Microsoft & Premier League Hackathon Challenge Specification**
+
+> **Microsoft Premier League Hackathon: Inside the Game — Challenge Specification**
 > **Participant**: Gamoventure  
 > **Platform Target**: Microsoft Azure  
 > **Core Mandate**: Real-time explainable football match intelligence, narrative synthesis, and personalized broadcast overlays powered by synthetic data.
@@ -8,11 +9,11 @@
 
 ## 1. Executive Summary
 
-Football narratives extend far beyond scores and basic box scores. This challenge tasks Gamoventure with building an AI insights engine deployed on Azure that transforms streaming synthetic football event data into explainable match intelligence, live narrative arcs, and automated recaps. 
+Football narratives extend far beyond scores and basic box scores. This challenge tasks Gamoventure with building an AI insights engine deployed on Azure that transforms streaming synthetic football event data into explainable match intelligence, live narrative arcs, and automated recaps.
 
 The engine delivers dual-layer value:
 1. **Studio & Broadcast Stream**: Synchronized, machine-readable overlays and real-time commentary prompts.
-2. **Personalized Fan Experience**: Tailored presentation varying dynamically by expertise (deep analyst vs. casual viewer), allegiance (club/player tracking), and language.
+2. **Personalized Fan Experience**: Tailored presentation varying dynamically by expertise (Analyst vs. Casual experiences), allegiance (club/player tracking), and language.
 
 ---
 
@@ -21,7 +22,7 @@ The engine delivers dual-layer value:
 | Rule | Requirement | Verification Criterion |
 | :--- | :--- | :--- |
 | **Data Provenance** | Strict synthetic data mandate. No real Premier League match data redistributed or ingested. | All event feeds originate from synthetic generators or simulation models. |
-| **Cloud Runtime** | Hosted on Microsoft Azure services (Azure AI Studio / Foundry, Azure Functions / App Services, Event Hubs, Cosmos DB). | Cloud-native deployment scripts and Azure-backed pipelines. |
+| **Cloud Runtime** | Hosted on Microsoft Azure services (Microsoft Foundry / Azure AI Foundry, Azure Functions / App Services, Event Hubs, Cosmos DB). | Cloud-native deployment scripts and Azure-backed pipelines. |
 | **Latency & Rhythm** | Real-time broadcast responsiveness; insights generated synchronously with simulated match clock. | Event-to-insight latency within live broadcast production thresholds (<2s). |
 | **Explainability Bar** | Must answer *why* a moment matters, not merely state *that* it occurred. | Every high-value event output includes tactical context, momentum shift, or win-probability impact. |
 
@@ -35,19 +36,19 @@ The engine delivers dual-layer value:
           │
           ▼
 [ Stage 2: INTERPRET ]
-  Aggregated metrics: Pass difficulty, pitch control, pressing intensity, speed analytics
+  Aggregated metrics: Pass Difficulty Rating, Pitch Control, pressing intensity, speed analytics
           │
           ▼
 [ Stage 3: EXPLAIN ]
-  Tactical reasoning: Chaos vs. control, game-rhythm shifts, tactical inflection points
+  Tactical reasoning: Control vs. Chaos Index, Game Rhythm shifts, Tactical Inflection Points
           │
           ▼
 [ Stage 4: RENDER ]
-  Broadcast-ready outputs: Time-indexed JSON for live HUD overlays & studio teleprompters
+  Broadcast-ready outputs: Time-indexed JSON for live broadcast overlays & studio teleprompters
           │
           ▼
 [ Stage 5: PERSONALIZE ]
-  Viewer adaptation: Analyst vs. Casual, Player Cam focus, Club bias, Multi-language NLG
+  Viewer adaptation: Analyst vs. Casual, Player Cam focus, Club-Centric Experience, Multilingual Broadcast Stream
 ```
 
 ### Stage 1: Ingest
@@ -63,7 +64,7 @@ The engine delivers dual-layer value:
 
 ### Stage 3: Explain
 - Contextualize the macro impact of micro events:
-  - **Control vs. Chaos**: Quantify match volatility and rhythm disruption (e.g., transition frenzy vs. structured possession).
+  - **Control vs. Chaos Index**: Quantify match volatility and rhythm disruption (e.g., transition frenzy vs. structured possession).
   - **Tactical Pressure Shifts**: Identify triggers where pressing breaks defensive structures or forces structural retreats.
   - **Game-State Leverage**: Evaluate urgency changes driven by scoreline, match clock, or numerical advantages.
 
@@ -76,11 +77,11 @@ The engine delivers dual-layer value:
 
 ### Stage 5: Personalize
 - Dynamically project the same base intelligence stream into differentiated viewer modes:
-  - **Data-Hungry Analyst**: Deep xG/xT timelines, passing networks, pressing efficiency curves, and phase-of-play breakdowns.
-  - **Casual Fan**: Storyline-driven, accessible explanations highlighting key duels, player milestones, and high-impact momentum shifts.
-  - **Player-Focused Mode**: Continuous spotlight on a chosen individual (off-ball runs, defensive work rate, decisive actions).
-  - **Club-Centric View**: Selective narrative framing emphasizing the preferred team's tactical execution and key contributors.
-  - **Multi-Language NLG**: Live narrative generation localized across target international languages.
+  - **Analyst Experience**: Deep xG/xT timelines, passing networks, pressing efficiency curves, and phase-of-play breakdowns.
+  - **Casual Experience**: Storyline-driven, accessible explanations highlighting key duels, player milestones, and high-impact momentum shifts.
+  - **Player Cam**: Continuous spotlight on a chosen individual (off-ball runs, defensive work rate, decisive actions).
+  - **Club-Centric Experience**: Selective narrative framing emphasizing the preferred team's tactical execution and key contributors.
+  - **Multilingual Broadcast Stream**: Live narrative generation localized across target international languages.
 
 ---
 
@@ -88,7 +89,7 @@ The engine delivers dual-layer value:
 
 ### A. Real-Time Match Intelligence
 - **Player Identification & Telemetry**: Dynamic player tagging with velocity and distance alerts when speed/work-rate thresholds are crossed.
-- **Pass Difficulty Index**: Composite rating factoring passer pressure, target trajectory, interceptor density, and passing lane width.
+- **Pass Difficulty Rating (PDR)**: Composite rating factoring passer pressure, target trajectory, interceptor density, and passing lane width.
 - **Speed & Power Analytics**: Instantaneous shot velocity calculation and ball acceleration profiles.
 - **Automated Event Derivation**: Algorithmic event detector turning continuous simulated tracking into discrete football milestones.
 
@@ -98,7 +99,7 @@ The engine delivers dual-layer value:
 - **Automated Recaps**: End-of-half and full-time summaries structured for studio broadcast scripts, streaming video chapter markers, and instant digital publication.
 
 ### C. Tactical Explainability Engine
-- **Chaos vs. Control Index**: Real-time scoring of match tempo and transition predictability.
+- **Control vs. Chaos Index**: Real-time scoring of match tempo and transition predictability.
 - **Press Resistance & Line-Breaking**: Explaining how specific pass sequences unlock defensive blocks.
 - **Counter-Factual & Risk-Reward Modeling**: Contextualizing shot choices or turnover severity relative to alternative options.
 
@@ -106,8 +107,8 @@ The engine delivers dual-layer value:
 - **Realistic Event Generator**: Configurable synthetic match engine generating plausible Premier League-grade match sequences, tactical profiles, and player physical telemetry.
 - **Edge-Case Simulation**: Ability to inject synthetic game states (late red card, penalty box scramble, low-block counter-attack) to stress-test insight generation.
 
-### E. Multi-Language Global Storytelling
-- Natural language generation outputting simultaneous multi-lingual feeds (e.g., English, Spanish, French, Japanese, Arabic) preserving nuanced football terminology.
+### E. Multilingual Global Storytelling
+- Natural language generation outputting simultaneous multilingual feeds (e.g., English, Spanish, French, Japanese, Arabic) preserving nuanced football terminology.
 
 ---
 
@@ -116,39 +117,39 @@ The engine delivers dual-layer value:
 ```
                 ┌─────────────────────────────────────────┐
                 │        Synthetic Match Simulator        │
-                │     (Python Match Engine / Event Gen)   │
+                │    (Python Match Engine / Event Gen)    │
                 └────────────────────┬────────────────────┘
                                      │ JSON Stream (x, y, event, t)
                                      ▼
                 ┌─────────────────────────────────────────┐
-                │          Azure Event Hubs / Kafka       │
+                │        Azure Event Hubs / Kafka         │
                 └────────────────────┬────────────────────┘
                                      │
                                      ▼
                 ┌─────────────────────────────────────────┐
-                │       Stream Processing & Analytics     │
-                │     (Azure Functions / Python Worker)   │
+                │      Stream Processing & Analytics      │
+                │    (Azure Functions / Python Worker)    │
                 │   • Metric Aggregation & Pass Quality   │
-                │   • Control / Chaos Tempo Analysis      │
+                │   • Control vs. Chaos Index             │
                 └────────────────────┬────────────────────┘
                                      │
                                      ▼
                 ┌─────────────────────────────────────────┐
                 │   AI Narrative & Explainability Layer   │
-                │   (Azure AI Foundry / Azure OpenAI)     │
+                │   (Microsoft Foundry / Azure OpenAI)    │
                 │   • Contextual Tactical Reasoning       │
                 │   • Multi-Persona Tailoring             │
-                │   • Multi-Language NLG                  │
+                │   • Multilingual Broadcast Stream       │
                 └────────────────────┬────────────────────┘
                                      │
                                      ▼
             ┌────────────────────────┴────────────────────────┐
-            ▼                                                 ▼
+                ▼                                           ▼
 ┌───────────────────────────────┐           ┌───────────────────────────────┐
 │     Broadcast Overlay API     │           │   Fan Studio Web Experience   │
-│   (FastAPI / Azure App Svc)   │           │    (Next.js / React Studio)   │
-│   • Timed Overlay Payloads    │           │    • Analyst vs Casual Modes  │
-│   • Studio Prompt Teleprompter│           │    • Player Tracker HUD       │
+│   (FastAPI / Azure App Svc)   │           │   (Next.js / React Studio)    │
+│   • Timed Overlay Payloads    │           │   • Analyst vs Casual Modes   │
+│   • Studio Teleprompter       │           │   • Player Cam Mode           │
 └───────────────────────────────┘           └───────────────────────────────┘
 ```
 
@@ -163,8 +164,8 @@ The engine delivers dual-layer value:
    - Compute pass difficulty, pressing metrics, and pitch control matrices.
    - *Verification*: Automated unit tests checking metric validity against edge-case event sequences.
 3. **Azure AI Narrative & Explanation Service**:
-   - Prompt-engineered and fine-tuned explanation pipelines producing concise, tactically rich reasoning and multi-lingual output.
-   - *Verification*: Evaluate explanation relevance, absence of hallucinations, and multi-language fluency.
+   - Prompt-engineered and fine-tuned explanation pipelines producing concise, tactically rich reasoning and multilingual output.
+   - *Verification*: Evaluate explanation relevance, absence of hallucinations, and multilingual fluency.
 4. **Broadcast & Fan Studio UI (Experience Layer)**:
-   - Interactive front-end demonstrating live sync overlays, broadcast lower-thirds, analyst dashboard, casual fan cards, and player-focused mode.
+   - Interactive front-end demonstrating live sync overlays, broadcast lower-thirds, analyst dashboard, casual fan cards, and Player Cam mode.
    - *Verification*: Seamless toggle across viewer personas and real-time responsiveness to incoming simulated event ticks.

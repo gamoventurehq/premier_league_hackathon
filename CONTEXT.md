@@ -1,6 +1,10 @@
 # Raumdeuter
 
+> Domain glossary for **Premier League Studio: Synthetic Match Insights Engine** — Gamoventure's entry in the Microsoft Premier League Hackathon: Inside the Game.
+
 The domain model for an AI-driven football match intelligence engine that analyzes real-time pitch space, player telemetry, and match events to generate explainable broadcast narratives and personalized fan experiences.
+
+Terms listed under `_Avoid_` are superseded aliases. Do not use them in code identifiers, UI labels, prompts, or generated narrative.
 
 ## Language
 
@@ -49,6 +53,10 @@ _Avoid_: Beginner mode, simple view
 **Player Cam**:
 A dedicated perspective tracking a single designated player's off-ball positioning, physical exertion, spatial movement, and decisive actions.
 _Avoid_: Star tracker, player focus view
+
+**Club-Centric Experience**:
+A supporter-facing viewing mode that frames the match around a single club's tactical execution and key contributors without suppressing the opposition's decisive moments.
+_Avoid_: Club mode, fan bias, team view
 
 **Broadcast Overlay**:
 A synchronized, machine-readable graphical payload rendered on-screen alongside live match video feeds for television and streaming.

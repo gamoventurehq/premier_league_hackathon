@@ -99,6 +99,6 @@ The judging rubric specifically highlights leverage of Microsoft's Hero Tech sta
 
 To maximize competitive scoring across both a **Grand Prize** and a **Category Prize**:
 1. **Target Stacking**: Pair a Grand Prize bid with either **Best Multi-Agent System** or **Best Use of Microsoft Foundry**.
-2. **Multi-Agent Architecture**: Implement specialized agent roles (e.g., *Match Simulator Agent*, *Tactical Analytics Agent*, *Narrative/Commentator Agent*, *Personalization Agent*) communicating via structured handoffs and shared state.
-3. **Hero Tech Showcase**: Direct telemetry streaming into Azure Event Hubs/Functions, orchestrated via Azure AI Foundry, exposing an Azure MCP server for agent tool use.
-4. **2-Minute Video Discipline**: Script a dynamic, fast-paced video demonstrating live synthetic match event generation, instantaneous overlay sync, and one-click toggling between Analyst and Casual fan views.
+2. **Multi-Agent Architecture**: Implement specialized agent roles (e.g., *Telemetry Ingestion Agent*, *Tactical Reasoning Agent*, *Broadcast Narrative Agent*, *Fan Personalization Agent*) communicating via structured handoffs and shared state.
+3. **Hero Tech Showcase**: Direct telemetry streaming into Azure Event Hubs/Functions, orchestrated via Microsoft Foundry (Azure AI Foundry), exposing an Azure MCP server for agent tool use.
+4. **2-Minute Video Discipline**: Script a dynamic, fast-paced video demonstrating live synthetic match event generation, instantaneous overlay sync, and one-click toggling between Analyst and Casual experiences.
