@@ -31,6 +31,11 @@ import {
 } from '../../../components/studio/primitives';
 import { useStudioActions, useStudioStore } from '../../../store/studio-store';
 import { buildBroadcastOverlay } from '../../../lib/studio/broadcast-overlay';
+import {
+  FAST_PATH_LABEL,
+  agentLabel,
+  latencyNote,
+} from '../../../lib/studio/latency';
 import { SCENARIOS } from '../../../lib/pitch';
 import { cn } from '../../../lib/cn';
 import type { AgentTrace, TelemetryFrame } from '../../../types/telemetry';
@@ -246,15 +251,18 @@ function DiagnosticsRoute() {
 
                 <div className="border-t border-line pt-2">
                   <KeyValue
-                    label="Tier 1 · fast-path latency"
+                    label={`${FAST_PATH_LABEL} latency`}
                     value={`${metrics.fastPathLatencyMs.toFixed(2)} ms`}
                     tone="accent"
                   />
                   <KeyValue
-                    label="Tier 2 · agent reasoning latency"
+                    label={`${agentLabel(connection)} latency`}
                     value={`${metrics.agentReasoningLatencyMs.toFixed(2)} ms`}
                     tone="accent"
                   />
+                  <p className="mt-1 text-[10px] leading-relaxed text-ink-muted">
+                    {latencyNote(connection)}
+                  </p>
                   <KeyValue
                     label="Ball progression"
                     value={`${metrics.ballProgressionM.toFixed(1)} m`}

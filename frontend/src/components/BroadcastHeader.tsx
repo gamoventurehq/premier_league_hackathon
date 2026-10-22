@@ -112,17 +112,36 @@ export function BroadcastHeader({
             <span className="h-2 w-2 rounded-full bg-home" aria-hidden />
             <span className="text-xs font-bold text-ink">{homeLabel}</span>
           </div>
-          <span className="font-mono text-xs font-semibold tabular-nums text-ink">
+          {/*
+            The score is the one figure on this strip that changes on its
+            own, so it lives in a polite live region: a screen reader hears
+            the score change rather than only seeing it.
+          */}
+          <span
+            aria-live="polite"
+            aria-atomic="true"
+            className="font-mono text-xs font-semibold tabular-nums text-ink"
+          >
             {score ? `${score.home} – ${score.away}` : '– –'}
           </span>
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-bold text-ink">{awayLabel}</span>
             <span className="h-2 w-2 rounded-full bg-away" aria-hidden />
           </div>
-          <span className="h-3 w-px bg-line" aria-hidden />
-          <span className="font-mono text-xs font-semibold tabular-nums text-ink-strong">
-            {matchClock}
-          </span>
+          {/*
+            The compact strip sits under the studio's own sticky top bar,
+            which already carries the match clock beside the scrubber.
+            Repeating it here would put two clocks on one screen, so the
+            compact bug shows the score and the full header shows both.
+          */}
+          {compact ? null : (
+            <>
+              <span className="h-3 w-px bg-line" aria-hidden />
+              <span className="font-mono text-xs font-semibold tabular-nums text-ink-strong">
+                {matchClock}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Controls */}

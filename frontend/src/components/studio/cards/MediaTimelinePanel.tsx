@@ -195,7 +195,7 @@ export function MediaTimelinePanel() {
                 ref={trackRef}
                 role="slider"
                 tabIndex={0}
-                aria-label="Match timeline"
+                aria-label="Moment rail — scrub the published frames"
                 aria-valuemin={0}
                 aria-valuemax={lastIndex}
                 aria-valuenow={activeIndex}

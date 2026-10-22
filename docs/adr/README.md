@@ -15,6 +15,7 @@ Accepted decisions for the **Premier League Studio: Synthetic Match Insights Eng
 | [0009](0009-studio-port-to-next-app-router.md) | Studio Ported from the Feature Branch onto the Next.js App Router | Accepted |
 | [0010](0010-css-cascade-layering-without-ionic.md) | CSS Cascade Layering, and the Ionic Global Stylesheet | Accepted |
 | [0011](0011-synthetic-match-engine-calibration.md) | Synthetic Match Engine Calibration and the Goal-Mass Model | Accepted |
+| [0012](0012-honest-latency-and-frame-handover.md) | Honest Latency Measurement and Frame-Arrival Handover | Accepted |
 
 ## How decisions are made
 

@@ -14,6 +14,12 @@
 import type { BroadcastLanguage, TelemetryFrame } from '../../../types/telemetry';
 import { cn } from '../../../lib/cn';
 import {
+  FAST_PATH_LABEL,
+  agentLabel,
+  latencyNote,
+} from '../../../lib/studio/latency';
+import { useStudioStore } from '../../../store/studio-store';
+import {
   Chip,
   EmptyState,
   KeyValue,
@@ -38,6 +44,9 @@ export function AnalystBrief({
   language = 'en',
   className,
 }: AnalystBriefProps) {
+  // Read before the empty state so the hook order never changes.
+  const connection = useStudioStore((s) => s.connection);
+
   if (!frame) {
     return (
       <Panel className={className}>
@@ -145,15 +154,18 @@ export function AnalystBrief({
 
         <div className="border-t border-line pt-2">
           <KeyValue
-            label="Tier 1 · deterministic metrics"
+            label={FAST_PATH_LABEL}
             value={`${metrics.fastPathLatencyMs.toFixed(2)} ms`}
             tone="accent"
           />
           <KeyValue
-            label="Tier 2 · agent reasoning"
+            label={agentLabel(connection)}
             value={`${metrics.agentReasoningLatencyMs.toFixed(2)} ms`}
             tone="accent"
           />
+          <p className="mt-1 text-[10px] leading-relaxed text-ink-muted">
+            {latencyNote(connection)}
+          </p>
           <MeterTrack
             className="mt-2"
             value={metrics.controlVsChaosIndex}

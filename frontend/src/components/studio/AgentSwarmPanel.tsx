@@ -28,6 +28,11 @@ import { useStudioStore } from '../../store/studio-store';
 import type { AgentRole, AgentTrace } from '../../types/telemetry';
 import { cn } from '../../lib/cn';
 import {
+  FAST_PATH_LABEL,
+  agentLabel,
+  latencyNote,
+} from '../../lib/studio/latency';
+import {
   Chip,
   KeyValue,
   MeterTrack,
@@ -101,6 +106,7 @@ function BlackboardKey({ value }: { value: string }) {
 
 export function AgentSwarmPanel() {
   const frame = useStudioStore((s) => s.frame);
+  const connection = useStudioStore((s) => s.connection);
 
   const trace = frame?.agentTrace ?? [];
 
@@ -241,15 +247,18 @@ export function AgentSwarmPanel() {
               </span>
             </div>
             <KeyValue
-              label="Tier 1 · deterministic metrics"
-              value={`${metrics.fastPathLatencyMs} ms`}
+              label={FAST_PATH_LABEL}
+              value={`${metrics.fastPathLatencyMs.toFixed(2)} ms`}
               tone="accent"
             />
             <KeyValue
-              label="Tier 2 · agent reasoning"
-              value={`${metrics.agentReasoningLatencyMs} ms`}
+              label={agentLabel(connection)}
+              value={`${metrics.agentReasoningLatencyMs.toFixed(2)} ms`}
               tone="accent"
             />
+            <p className="mt-1 text-[10px] leading-relaxed text-ink-muted">
+              {latencyNote(connection)}
+            </p>
           </div>
 
           {blackboardKeys.length > 0 ? (

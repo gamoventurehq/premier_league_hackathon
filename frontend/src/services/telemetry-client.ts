@@ -96,33 +96,52 @@ export class TelemetryClient {
     if (!this.localTimer) this.store.setConnection('connecting');
     const url = this.options.url ?? DEFAULT_WS_URL;
 
+    /**
+     * Whether the backend has actually delivered a frame.
+     *
+     * An open socket is not a live stream. The backend can accept the
+     * connection and then publish nothing, and a studio that flips its
+     * badge to "live" and stops its fallback at the moment the socket
+     * opens shows an empty match — the badge claims a stream that has no
+     * frames in it. The handover happens on the first frame, not on the
+     * open.
+     */
+    let live = false;
+
     try {
       const socket = new WebSocket(url);
       this.socket = socket;
 
       socket.onopen = () => {
-        if (this.connectTimer) {
-          clearTimeout(this.connectTimer);
-          this.connectTimer = null;
-        }
-        this.store.setConnection('live');
-        this.stopLocal();
+        // Deliberately empty. The badge keeps saying whatever is actually
+        // on screen until a frame arrives to prove the stream is live.
       };
 
       socket.onmessage = (event) => {
         const received = Date.now();
         try {
           const payload = JSON.parse(event.data as string) as TelemetryEnvelope;
-          if (payload.frame) {
+          if (!payload.frame) return;
+
+          if (live) {
             this.store.pushFrame(payload.frame);
-            // The frame carries the match clock, not a wall-clock stamp, so
-            // the latency we can honestly report is the round trip measured
-            // against the publisher's own clock.
-            this.store.setConnection(
-              'live',
-              payload.sentAtMs ? Math.max(0, received - payload.sentAtMs) : 0,
-            );
+          } else {
+            // The first frame from the backend is the handover. The
+            // in-browser simulation is a different fixture, so its frames
+            // leave the timeline rather than sitting in front of the
+            // backend's.
+            this.store.adoptFrame(payload.frame);
+            this.stopLocal();
+            live = true;
           }
+
+          // The frame carries the match clock, not a wall-clock stamp, so
+          // the latency we can honestly report is the round trip measured
+          // against the publisher's own clock.
+          this.store.setConnection(
+            'live',
+            payload.sentAtMs ? Math.max(0, received - payload.sentAtMs) : 0,
+          );
         } catch {
           this.store.setError('The telemetry stream sent a frame we could not read.');
         }
@@ -151,14 +170,14 @@ export class TelemetryClient {
     }
 
     // A judge opening the studio must never stare at an empty screen
-    // because the backend is asleep. If the socket has not opened within a
-    // couple of seconds, the simulation starts in the browser anyway; the
-    // socket can still take over when it does open.
+    // because the backend is asleep. If no frame has arrived within a
+    // couple of seconds — whether the socket never opened or opened and
+    // stayed silent — the simulation starts in the browser anyway, and
+    // the socket still takes over when a real frame lands.
     this.connectTimer = setTimeout(() => {
       this.connectTimer = null;
-      if (!this.stopped && this.socket && this.socket.readyState !== WebSocket.OPEN) {
-        this.startLocal();
-      }
+      if (this.stopped || live) return;
+      this.startLocal();
     }, 2000);
   }
 
@@ -169,6 +188,9 @@ export class TelemetryClient {
   private startLocal(): void {
     if (this.localTimer) return;
     this.store.setConnection('local');
+    // The fallback running *is* the resolution of a stream error, so the
+    // error is no longer something the visitor has to act on.
+    this.store.setError(null);
 
     this.engine =
       this.engine ??

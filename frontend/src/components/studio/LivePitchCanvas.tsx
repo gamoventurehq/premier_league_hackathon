@@ -406,12 +406,13 @@ export function LivePitchCanvas({
         ctx.stroke();
       }
 
-      // The ball carrier is ringed so the eye finds the ball instantly.
+      // The ball carrier is ringed so the eye finds the ball instantly. The
+      // ring is the caution token, which is neither team's colour.
       if (isCarrier) {
-        ctx.strokeStyle = tokens['--studio-accent-2'];
+        ctx.strokeStyle = tokens['--studio-caution'];
         ctx.lineWidth = 2.4;
         ctx.beginPath();
-        ctx.arc(px, py, radius + 2.5, 0, Math.PI * 2);
+        ctx.arc(px, py, radius + 3, 0, Math.PI * 2);
         ctx.stroke();
       }
 
@@ -439,27 +440,48 @@ export function LivePitchCanvas({
 
     const ballX = previous ? lerp(previous.ball.x, current.ball.x, mix) : current.ball.x;
     const ballY = previous ? lerp(previous.ball.y, current.ball.y, mix) : current.ball.y;
-    const ballRadius = Math.max(2.5, 0.45 * scale);
+    const ballRadius = Math.max(3.5, 0.6 * scale);
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    // The ball is almost always at the carrier's feet, so drawing it dead
+    // centre would bury the player's shirt number. It is nudged a couple of
+    // pixels clear — the same thing a broadcast graphic does — and the
+    // carrier is ringed in the caution token so the eye still finds the ball.
+    const ballOffset = carrier ? ballRadius + 3 : 0;
+    const drawBallX = X(ballX) + ballOffset * 0.7;
+    const drawBallY = Y(ballY) - ballOffset * 0.7;
+
+    // The ball sits on the turf, so it gets a drop shadow first.
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.beginPath();
     ctx.ellipse(
-      X(ballX) + 1.5,
-      Y(ballY) + 1.5,
+      drawBallX + 1.5,
+      drawBallY + 2,
       ballRadius,
-      ballRadius * 0.7,
+      ballRadius * 0.6,
       0,
       0,
       Math.PI * 2,
     );
     ctx.fill();
 
+    // A white disc with a dark centre: at this size it reads as a ball, and
+    // it never disappears into the team colours behind it.
     ctx.beginPath();
-    ctx.arc(X(ballX), Y(ballY), ballRadius, 0, Math.PI * 2);
-    ctx.fillStyle = tokens['--studio-caution'];
+    ctx.arc(drawBallX, drawBallY, ballRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#f4f6fb';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.arc(drawBallX, drawBallY, ballRadius * 0.44, 0, Math.PI * 2);
+    ctx.fillStyle = '#0b0f14';
+    ctx.fill();
+
+    // A thin caution ring in the studio's own token colour, so the ball
+    // carries the same palette as the rest of the drawing.
+    ctx.beginPath();
+    ctx.arc(drawBallX, drawBallY, ballRadius + 1.5, 0, Math.PI * 2);
+    ctx.strokeStyle = tokens['--studio-caution'];
+    ctx.lineWidth = 1.5;
     ctx.stroke();
   }, []);
 

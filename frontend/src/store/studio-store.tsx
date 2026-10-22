@@ -84,6 +84,19 @@ export class StudioStore {
     this.set({ frame, frames, cursor: frames.length - 1 });
   };
 
+  /**
+   * Replace the frame history with a single frame.
+   *
+   * This is the handover from the in-browser simulation to the backend's
+   * WebSocket. The two are different fixtures running on different clocks,
+   * so the local frames must leave the timeline rather than sit in front of
+   * the backend's — a scrubber that jumps backwards is worse than a
+   * timeline that starts again.
+   */
+  adoptFrame = (frame: TelemetryFrame): void => {
+    this.set({ frame, frames: [frame], cursor: 0 });
+  };
+
   setScenario = (scenario: SyntheticScenarioType): void => this.set({ scenario });
 
   setPersona = (persona: ExperiencePersona): void => this.set({ persona });
