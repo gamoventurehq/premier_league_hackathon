@@ -1,75 +1,56 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TelemetryFrame, ExperiencePersona, SyntheticScenarioType } from '../types/telemetry';
-import { MockSimulationEngine } from '../lib/mock-simulation';
-import { PitchRadarCanvas } from './PitchRadarCanvas';
-import { BroadcastHeader } from './BroadcastHeader';
-import { ControlVsChaosGauge } from './ControlVsChaosGauge';
-import { AnalystExperienceView } from './AnalystExperienceView';
-import { CasualExperienceView } from './CasualExperienceView';
-import { PlayerCamView } from './PlayerCamView';
-import { ClubCentricView } from './ClubCentricView';
-import { BroadcastOverlayTicker } from './BroadcastOverlayTicker';
-
+import React, { useEffect, useRef } from 'react';
+import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-export default function PremierLeagueStudio() {
-  const simulation = useMemo(() => new MockSimulationEngine(), []);
-  const [frame, setFrame] = useState<TelemetryFrame | null>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(true);
-  const [activePersona, setActivePersona] = useState<ExperiencePersona>('analyst');
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('h11'); // Erling Haaland by default
-
-  // Radar layer toggles
-  const [showPitchControl, setShowPitchControl] = useState<boolean>(true);
-  const [showPassingLanes, setShowPassingLanes] = useState<boolean>(true);
-  const [showSpeedVectors, setShowSpeedVectors] = useState<boolean>(true);
-
+export default function PremierLeagueOverview() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const studioSectionRef = useRef<HTMLDivElement>(null);
   const bentoGridRef = useRef<HTMLDivElement>(null);
+  const pipelineRef = useRef<HTMLDivElement>(null);
 
-  // 5Hz telemetry stream per ADR 0003
-  useEffect(() => {
-    setFrame(simulation.nextFrame());
-
-    if (!isPlaying) return;
-
-    const interval = setInterval(() => {
-      const nextFrame = simulation.nextFrame();
-      setFrame(nextFrame);
-    }, 200);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, simulation]);
-
-  // GSAP Entrance Animations
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Hero headline gentle fade-in
+      // Hero elements entrance
       gsap.fromTo(
         '.gsap-hero-anim',
         { opacity: 0, y: 24 },
-        { opacity: 1, y: 0, duration: 1.1, stagger: 0.15, ease: 'power3.out' }
+        { opacity: 1, y: 0, duration: 1.0, stagger: 0.12, ease: 'power3.out' }
       );
 
-      // Bento cards scale and reveal on scroll
+      // Feature Bento cards reveal
       gsap.fromTo(
         '.gsap-bento-card',
-        { opacity: 0, y: 30, scale: 0.98 },
+        { opacity: 0, y: 28, scale: 0.98 },
         {
           opacity: 1,
           y: 0,
           scale: 1,
-          duration: 0.8,
-          stagger: 0.12,
+          duration: 0.7,
+          stagger: 0.1,
           ease: 'power2.out',
           scrollTrigger: {
             trigger: bentoGridRef.current,
+            start: 'top 85%',
+          },
+        }
+      );
+
+      // Pipeline cards reveal
+      gsap.fromTo(
+        '.gsap-pipeline-step',
+        { opacity: 0, y: 20 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          stagger: 0.08,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: pipelineRef.current,
             start: 'top 85%',
           },
         }
@@ -79,43 +60,54 @@ export default function PremierLeagueStudio() {
     return () => ctx.revert();
   }, []);
 
-  const handleScenarioChange = (scenario: SyntheticScenarioType) => {
-    simulation.setScenario(scenario);
-    setFrame(simulation.nextFrame());
-  };
-
-  const scrollToStudio = () => {
-    studioSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
     <main className="overflow-x-hidden w-full max-w-full min-h-screen bg-black text-[#f5f5f7]">
-      {/* 1. Floating Apple-Style Glass Navigation Header */}
-      <BroadcastHeader
-        matchClock={frame?.matchClock || '68:42'}
-        metrics={frame?.metrics || null}
-        currentScenario={simulation.getScenario()}
-        onScenarioChange={handleScenarioChange}
-        isPlaying={isPlaying}
-        onTogglePlay={() => setIsPlaying(!isPlaying)}
-      />
+      {/* 1. Minimal Apple Frosted Navigation Bar */}
+      <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-black/70 backdrop-blur-2xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-b from-white/15 to-white/5 border border-white/15 shadow-inner">
+              <span className="text-sm font-black text-white"></span>
+            </div>
+            <div>
+              <span className="text-sm font-semibold tracking-tight text-white block">
+                Premier League Studio
+              </span>
+              <span className="text-[11px] text-white/40 tracking-tight">
+                Synthetic Match Insights Engine
+              </span>
+            </div>
+          </div>
 
-      {/* 2. ATTENTION: Editorial Cinematic Hero (Wide container, 2-line title rule) */}
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-white/50 bg-white/[0.04] px-3 py-1 rounded-full border border-white/[0.06]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#30d158] animate-pulse" />
+              <span>Azure AI Foundry</span>
+            </div>
+            <Link
+              href="/studio"
+              className="rounded-full bg-white px-5 py-2 text-xs font-bold text-black transition-all hover:bg-white/90 hover:scale-105 active:scale-95 shadow-md"
+            >
+              Enter Studio →
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* 2. ATTENTION: Editorial Cinematic Hero */}
       <section
         ref={heroRef}
-        className="relative flex flex-col items-center justify-center pt-28 pb-36 px-4 text-center overflow-hidden"
+        className="relative flex flex-col items-center justify-center pt-28 pb-32 px-4 text-center overflow-hidden"
       >
-        {/* Subtle Ambient Stadium Radial Lighting */}
+        {/* Stadium Ambient Radial Lights */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-[#0a84ff]/20 via-[#64d2ff]/10 to-transparent blur-[140px] pointer-events-none rounded-full" />
         <div className="absolute top-1/3 right-1/4 w-[500px] h-[350px] bg-gradient-to-bl from-[#ff453a]/15 via-[#bf5af2]/10 to-transparent blur-[120px] pointer-events-none rounded-full" />
 
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center">
-          {/* Subtle Technology pill badge */}
-          <div className="gsap-hero-anim inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-3.5 py-1 text-xs font-semibold text-white/70 border border-white/[0.1] backdrop-blur-md mb-6">
+          {/* Contest Badge */}
+          <div className="gsap-hero-anim inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-white/70 border border-white/[0.1] backdrop-blur-md mb-8">
             <span className="h-2 w-2 rounded-full bg-[#30d158] animate-pulse" />
-            <span>Microsoft Premier League Hackathon</span>
-            <span className="text-white/30">•</span>
-            <span>Inside the Game</span>
+            <span>Microsoft Premier League Hackathon: Inside the Game</span>
           </div>
 
           {/* Guaranteed 2-Line Cinematic Title */}
@@ -125,193 +117,142 @@ export default function PremierLeagueStudio() {
             <span className="text-white/60 font-medium">Reimagined for Every Eye.</span>
           </h1>
 
-          {/* Understated Editorial Subheading */}
+          {/* Clean Description */}
           <p className="gsap-hero-anim max-w-2xl text-base sm:text-lg text-white/50 font-normal leading-relaxed mt-6">
-            Synthetic pitch space telemetry, instantaneous passing corridor evaluations, and personalized multi-persona narrative arcs powered by Azure AI Foundry.
+            A real-time insights engine powered by Azure AI Foundry that transforms streaming synthetic football telemetry into explainable broadcast narratives and personalized fan experiences.
           </p>
 
-          {/* Two High-Contrast CTAs */}
-          <div className="gsap-hero-anim flex flex-wrap items-center justify-center gap-4 mt-8">
-            <button
-              type="button"
-              onClick={scrollToStudio}
-              className="rounded-full bg-white px-7 py-3 text-sm font-bold text-black transition-all hover:bg-white/90 hover:scale-105 active:scale-95 shadow-xl"
+          {/* Single Primary Action Button */}
+          <div className="gsap-hero-anim flex flex-col sm:flex-row items-center gap-4 mt-10">
+            <Link
+              href="/studio"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-bold text-black transition-all hover:bg-white/90 hover:scale-105 active:scale-95 shadow-2xl"
             >
-              Open Studio Terminal
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActivePersona('analyst');
-                scrollToStudio();
-              }}
-              className="rounded-full bg-white/[0.08] px-7 py-3 text-sm font-semibold text-white border border-white/[0.12] transition-all hover:bg-white/[0.15] hover:scale-105 active:scale-95 backdrop-blur-md"
+              <span>Enter Live Studio</span>
+              <span className="text-base">→</span>
+            </Link>
+
+            <a
+              href="#architecture"
+              className="inline-flex items-center justify-center rounded-full bg-white/[0.08] px-8 py-3.5 text-sm font-semibold text-white border border-white/[0.12] transition-all hover:bg-white/[0.15] hover:scale-105 active:scale-95 backdrop-blur-md"
             >
-              Switch to Analyst Experience
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. MAIN STUDIO INTERFACE: Broadcast Radar & Dynamic Personas */}
-      <section
-        ref={studioSectionRef}
-        className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16"
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left / Center 8 Columns: Radar & Core Gauges */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
-            {/* Radar Quick Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-3 apple-glass px-4 py-2.5 rounded-2xl">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-white/40 tracking-tight mr-1">
-                  Radar Layers:
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => setShowPitchControl(!showPitchControl)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold border transition-all ${
-                    showPitchControl
-                      ? 'bg-[#0a84ff]/20 text-[#64d2ff] border-[#0a84ff]/40 shadow-sm'
-                      : 'bg-white/[0.04] text-white/40 border-white/[0.06]'
-                  }`}
-                >
-                  Pitch Control
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowPassingLanes(!showPassingLanes)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold border transition-all ${
-                    showPassingLanes
-                      ? 'bg-[#30d158]/20 text-[#30d158] border-[#30d158]/40 shadow-sm'
-                      : 'bg-white/[0.04] text-white/40 border-white/[0.06]'
-                  }`}
-                >
-                  Passing Lanes & PDR
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowSpeedVectors(!showSpeedVectors)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold border transition-all ${
-                    showSpeedVectors
-                      ? 'bg-[#bf5af2]/20 text-[#bf5af2] border-[#bf5af2]/40 shadow-sm'
-                      : 'bg-white/[0.04] text-white/40 border-white/[0.06]'
-                  }`}
-                >
-                  Velocity Vectors
-                </button>
-              </div>
-
-              <div className="text-[11px] text-white/40 font-medium">
-                Tap any player on the pitch to inspect
-              </div>
-            </div>
-
-            {/* 60FPS Metric Pitch Space Radar (ADR 0003 & ADR 0007) */}
-            <PitchRadarCanvas
-              frame={frame}
-              showPitchControl={showPitchControl}
-              showPassingLanes={showPassingLanes}
-              showSpeedVectors={showSpeedVectors}
-              selectedPlayerId={selectedPlayerId}
-              onSelectPlayer={(id) => {
-                setSelectedPlayerId(id);
-                setActivePersona('player_cam');
-              }}
-            />
-
-            {/* Control vs. Chaos Index Gauge */}
-            <ControlVsChaosGauge metrics={frame?.metrics || null} />
-
-            {/* Broadcast Overlay Lower-Third Ticker & Multilingual Stream */}
-            <BroadcastOverlayTicker frame={frame} />
+              Explore Architecture
+            </a>
           </div>
 
-          {/* Right 4 Columns: Dynamic Multi-Persona Terminal */}
-          <div className="lg:col-span-4 flex flex-col gap-5 sticky top-24">
-            {/* Apple Segmented Persona Navigation */}
-            <div className="grid grid-cols-4 gap-1 rounded-2xl bg-white/[0.06] p-1 border border-white/[0.1] backdrop-blur-xl">
-              <button
-                type="button"
-                onClick={() => setActivePersona('analyst')}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-semibold transition-all ${
-                  activePersona === 'analyst'
-                    ? 'bg-white text-black font-bold shadow-md'
-                    : 'text-white/50 hover:text-white'
-                }`}
-              >
-                Analyst
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActivePersona('casual')}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-semibold transition-all ${
-                  activePersona === 'casual'
-                    ? 'bg-white text-black font-bold shadow-md'
-                    : 'text-white/50 hover:text-white'
-                }`}
-              >
-                Casual
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActivePersona('player_cam')}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-semibold transition-all ${
-                  activePersona === 'player_cam'
-                    ? 'bg-white text-black font-bold shadow-md'
-                    : 'text-white/50 hover:text-white'
-                }`}
-              >
-                Player Cam
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActivePersona('club_centric')}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-semibold transition-all ${
-                  activePersona === 'club_centric'
-                    ? 'bg-white text-black font-bold shadow-md'
-                    : 'text-white/50 hover:text-white'
-                }`}
-              >
-                Club
-              </button>
+          {/* Live System Specs Strip */}
+          <div className="gsap-hero-anim mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl">
+            <div className="rounded-2xl bg-white/[0.04] p-4 border border-white/[0.06] backdrop-blur-md text-left">
+              <span className="text-[10px] uppercase font-bold text-white/40 block">PITCH STANDARD</span>
+              <span className="text-base font-bold text-white font-mono mt-0.5 block">105m × 68m</span>
+              <span className="text-[10px] text-white/40">Metric Telemetry</span>
             </div>
-
-            {/* Active Persona Terminal Display */}
-            <div className="rounded-3xl apple-glass p-6 shadow-2xl">
-              {activePersona === 'analyst' && <AnalystExperienceView frame={frame} />}
-              {activePersona === 'casual' && <CasualExperienceView frame={frame} />}
-              {activePersona === 'player_cam' && (
-                <PlayerCamView
-                  frame={frame}
-                  selectedPlayerId={selectedPlayerId}
-                  onSelectPlayer={(id) => setSelectedPlayerId(id)}
-                />
-              )}
-              {activePersona === 'club_centric' && <ClubCentricView frame={frame} />}
+            <div className="rounded-2xl bg-white/[0.04] p-4 border border-white/[0.06] backdrop-blur-md text-left">
+              <span className="text-[10px] uppercase font-bold text-white/40 block">FAST-PATH SYNC</span>
+              <span className="text-base font-bold text-[#30d158] font-mono mt-0.5 block">&lt;50ms</span>
+              <span className="text-[10px] text-white/40">Deterministic Math</span>
+            </div>
+            <div className="rounded-2xl bg-white/[0.04] p-4 border border-white/[0.06] backdrop-blur-md text-left">
+              <span className="text-[10px] uppercase font-bold text-white/40 block">AI REASONING</span>
+              <span className="text-base font-bold text-[#64d2ff] font-mono mt-0.5 block">&lt;1.5s</span>
+              <span className="text-[10px] text-white/40">Azure AI Swarm</span>
+            </div>
+            <div className="rounded-2xl bg-white/[0.04] p-4 border border-white/[0.06] backdrop-blur-md text-left">
+              <span className="text-[10px] uppercase font-bold text-white/40 block">DATA PROVENANCE</span>
+              <span className="text-base font-bold text-[#ffd60a] font-mono mt-0.5 block">100% Synthetic</span>
+              <span className="text-[10px] text-white/40">Zero Scraped Feeds</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4. INTEREST: The Mathematically Flawless Gapless Bento Grid */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-28 border-t border-white/[0.06]">
+      {/* 3. THE 5-STAGE PIPELINE: Clear Project Explanation */}
+      <section id="pipeline" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 border-t border-white/[0.06]">
         <div className="text-center max-w-3xl mx-auto mb-16">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#0a84ff] block mb-2">
+            The 5-Stage Pipeline
+          </span>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-            Architecture Designed for Real-Time Precision
+            From Synthetic Coordinates to Broadcast Storytelling
+          </h2>
+          <p className="text-sm sm:text-base text-white/50 mt-3 font-normal leading-relaxed">
+            How the engine digests real-time football geometry and delivers synchronized intelligence.
+          </p>
+        </div>
+
+        <div ref={pipelineRef} className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="gsap-pipeline-step rounded-3xl apple-glass p-6 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-mono font-bold text-white/40">01 / INGEST</span>
+              <h3 className="text-lg font-bold text-white mt-2">Synthetic Telemetry</h3>
+              <p className="text-xs text-white/50 mt-2 leading-relaxed">
+                Continuous 10Hz player and ball coordinates (x, y, t) on the standard 105m × 68m pitch.
+              </p>
+            </div>
+            <div className="mt-6 text-[11px] font-mono text-[#0a84ff]">Azure Event Hubs</div>
+          </div>
+
+          <div className="gsap-pipeline-step rounded-3xl apple-glass p-6 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-mono font-bold text-white/40">02 / INTERPRET</span>
+              <h3 className="text-lg font-bold text-white mt-2">Spatial Analytics</h3>
+              <p className="text-xs text-white/50 mt-2 leading-relaxed">
+                Voronoi Pitch Control, passing lane risk matrices, and Pass Difficulty Ratings (PDR).
+              </p>
+            </div>
+            <div className="mt-6 text-[11px] font-mono text-[#30d158]">&lt;50ms Fast-Path</div>
+          </div>
+
+          <div className="gsap-pipeline-step rounded-3xl apple-glass p-6 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-mono font-bold text-white/40">03 / EXPLAIN</span>
+              <h3 className="text-lg font-bold text-white mt-2">Tactical Reasoning</h3>
+              <p className="text-xs text-white/50 mt-2 leading-relaxed">
+                Control vs. Chaos Index, Game Rhythm shifts, and Tactical Inflection Point detection.
+              </p>
+            </div>
+            <div className="mt-6 text-[11px] font-mono text-[#bf5af2]">Azure AI Swarm</div>
+          </div>
+
+          <div className="gsap-pipeline-step rounded-3xl apple-glass p-6 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-mono font-bold text-white/40">04 / RENDER</span>
+              <h3 className="text-lg font-bold text-white mt-2">Broadcast Overlays</h3>
+              <p className="text-xs text-white/50 mt-2 leading-relaxed">
+                Machine-readable lower-third graphics and commentator prompts synced with match video.
+              </p>
+            </div>
+            <div className="mt-6 text-[11px] font-mono text-[#ffd60a]">Timed JSON Payloads</div>
+          </div>
+
+          <div className="gsap-pipeline-step rounded-3xl apple-glass p-6 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-mono font-bold text-white/40">05 / PERSONALIZE</span>
+              <h3 className="text-lg font-bold text-white mt-2">Audience Adaptation</h3>
+              <p className="text-xs text-white/50 mt-2 leading-relaxed">
+                Analyst vs. Casual viewing modes, Player Cam spotlight, and 5 global broadcast languages.
+              </p>
+            </div>
+            <div className="mt-6 text-[11px] font-mono text-[#ff453a]">Multi-Persona Engine</div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. ARCHITECTURE & HERO TECH: Gapless Bento Grid */}
+      <section id="architecture" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 border-t border-white/[0.06]">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#30d158] block mb-2">
+            Engineering & Infrastructure
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+            Cloud-Native Architecture on Microsoft Azure
           </h2>
           <p className="text-sm sm:text-base text-white/50 mt-3 font-normal">
-            Four specialized architectural pillars harmonized into a zero-stutter broadcast feed.
+            Aligned with Microsoft Premier League Hackathon judging pillars: technological depth, multi-agent innovation, and real-world applicability.
           </p>
         </div>
 
-        {/* Gapless Dense Bento Grid */}
+        {/* Mathematically Gapless Bento Grid */}
         <div
           ref={bentoGridRef}
           className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 grid-flow-dense"
@@ -431,7 +372,29 @@ export default function PremierLeagueStudio() {
         </div>
       </section>
 
-      {/* 5. ACTION: Minimalist Apple Footer */}
+      {/* 5. CALL TO ACTION: Enter Studio Banner */}
+      <section className="mx-auto max-w-5xl px-4 py-24 text-center">
+        <div className="rounded-3xl apple-glass p-12 border border-white/[0.1] shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-[#0a84ff]/20 to-transparent blur-3xl pointer-events-none" />
+          <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+            Ready to Experience the Engine?
+          </h2>
+          <p className="text-sm sm:text-base text-white/50 mt-3 max-w-xl mx-auto leading-relaxed">
+            Interact with the 60FPS pitch radar, switch viewer personas, inspect player telemetry, and toggle synthetic match scenarios.
+          </p>
+          <div className="mt-8">
+            <Link
+              href="/studio"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-9 py-4 text-sm font-bold text-black transition-all hover:bg-white/90 hover:scale-105 active:scale-95 shadow-2xl"
+            >
+              <span>Launch Studio Terminal</span>
+              <span>→</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. ACTION: Minimalist Apple Footer */}
       <footer className="border-t border-white/[0.08] py-16 px-4 text-center">
         <div className="max-w-4xl mx-auto flex flex-col items-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.08] border border-white/10 mb-4">
