@@ -6,74 +6,76 @@
 @import "@ionic/react/css/structure.css";
 @import "@ionic/react/css/typography.css";
 
-/* Optional Ionic utilities */
-@import "@ionic/react/css/padding.css";
-@import "@ionic/react/css/float-elements.css";
-@import "@ionic/react/css/text-alignment.css";
-@import "@ionic/react/css/text-transformation.css";
-@import "@ionic/react/css/flex-utils.css";
-@import "@ionic/react/css/display.css";
-
-/* Apple Dark Mode Ionic Theme Tokens */
+/* Apple Dark & High-End Design System Tokens */
 :root {
-  --ion-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --ion-background-color: #000000;
-  --ion-background-color-rgb: 0, 0, 0;
-  --ion-text-color: #f5f5f7;
-  --ion-text-color-rgb: 245, 245, 247;
-  
-  --ion-color-step-50: #0d0d0f;
-  --ion-color-step-100: #16161a;
-  --ion-color-step-150: #1f1f24;
-  --ion-color-step-200: #29292f;
-  --ion-color-step-250: #33333b;
-  --ion-color-step-300: #3d3d46;
+  --font-geist: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+  --ion-font-family: var(--font-geist);
 
-  /* Apple System Accent Palette */
-  --apple-blur: saturate(180%) blur(24px);
-  --apple-glass-bg: rgba(28, 28, 30, 0.72);
-  --apple-glass-border: rgba(255, 255, 255, 0.12);
+  --bg-pitch-black: #000000;
+  --bg-deep-surface: #0a0c10;
+  --bg-elevated: rgba(22, 24, 29, 0.72);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(255, 255, 255, 0.2);
+
+  /* Apple System Palette */
   --apple-blue: #0a84ff;
+  --apple-cyan: #64d2ff;
   --apple-green: #30d158;
-  --apple-indigo: #5e5ce6;
+  --apple-amber: #ffd60a;
   --apple-orange: #ff9f0a;
-  --apple-pink: #ff375f;
-  --apple-purple: #bf5af2;
   --apple-red: #ff453a;
-  --apple-teal: #64d2ff;
-  --apple-yellow: #ffd60a;
-  --apple-gray: #8e8e93;
-  --apple-card-bg: rgba(28, 28, 30, 0.65);
+  --apple-purple: #bf5af2;
+  --apple-white: #f5f5f7;
+  --apple-muted: rgba(245, 245, 247, 0.55);
+
+  --glass-blur: saturate(190%) blur(28px);
 }
 
-body {
-  background-color: #000000;
-  color: #f5f5f7;
-  font-family: var(--ion-font-family);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.015em;
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: var(--bg-pitch-black);
+  color: var(--apple-white);
+  font-family: var(--font-geist);
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.018em;
+  selection-background-color: var(--apple-blue);
+  selection-color: #ffffff;
 }
 
-/* Apple Liquid Glass Card */
+/* Apple Liquid Glass Surface */
 .apple-glass {
-  background: var(--apple-glass-bg);
-  backdrop-filter: var(--apple-blur);
-  -webkit-backdrop-filter: var(--apple-blur);
-  border: 1px solid var(--apple-glass-border);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  background: var(--bg-elevated);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.65);
 }
 
-.apple-glass-subtle {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.apple-glass-card {
+  background: rgba(20, 22, 27, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
-/* Custom smooth scrollbar */
+.apple-glass-interactive {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.apple-glass-interactive:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+}
+
+/* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -82,48 +84,34 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.16);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Ionic components iOS overrides */
-ion-card {
-  --background: var(--apple-glass-bg);
-  --color: #f5f5f7;
-  border-radius: 18px;
-  border: 1px solid var(--apple-glass-border);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-  margin: 0;
-}
-
+/* Global Ionic Segment & Component Tuning */
 ion-segment {
-  --background: rgba(118, 118, 128, 0.24);
-  border-radius: 12px;
+  --background: rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
   padding: 3px;
 }
 
 ion-segment-button {
-  --color: #8e8e93;
+  --color: rgba(245, 245, 247, 0.6);
   --color-checked: #ffffff;
-  --indicator-color: rgba(255, 255, 255, 0.18);
-  --indicator-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --indicator-color: rgba(255, 255, 255, 0.16);
+  --indicator-box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
   font-weight: 600;
   font-size: 13px;
-  border-radius: 9px;
-  min-height: 32px;
+  border-radius: 11px;
+  min-height: 34px;
+  transition: all 0.2s ease;
 }
 
-ion-badge {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  border-radius: 8px;
-}
-
-ion-item {
+ion-card {
   --background: transparent;
-  --color: #f5f5f7;
-  --border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  margin: 0;
 }
