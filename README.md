@@ -38,3 +38,49 @@ Specification, domain glossary, and all eight Architecture Decision Records are 
 - **Microsoft Agent Framework / Azure MCP**: Multi-agent collaboration with shared tactical state.
 - **Azure Cloud Native**: Azure Event Hubs, Azure Container Apps, and Azure Functions.
 - **Data & Storage**: Azure Cosmos DB / Microsoft Fabric.
+
+---
+
+## 🛠️ Local Development & Quick Start
+
+### Prerequisites
+- **Node.js**: `24.x` LTS
+- **Python**: `3.12+` (with `venv`)
+
+### 1. Frontend Setup (Next.js 16 + React 19 + Tailwind CSS v4)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to view the 60FPS Pitch Radar Studio & Broadcast HUD.
+
+### 2. Backend Setup (FastAPI + Pydantic + NumPy + WebSockets)
+```bash
+cd backend
+python -m venv .venv
+
+# On Windows:
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+
+# On Linux / macOS:
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+API Health Check: [http://localhost:8000/api/health](http://localhost:8000/api/health)  
+Interactive API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 3. Running Backend Tests
+```bash
+cd backend
+pytest
+```
+
+### 4. Docker Compose (Single Command Evaluation)
+```bash
+docker compose up --build
+```
+

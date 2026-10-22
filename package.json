@@ -1,0 +1,14 @@
+{
+  "name": "premier-league-hackathon-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "dev:backend": "powershell -Command \"& backend/.venv/Scripts/uvicorn app.main:app --reload --app-dir backend --port 8000\"",
+    "test:backend": "powershell -Command \"& backend/.venv/Scripts/pytest backend/tests\"",
+    "compose:up": "docker compose up --build",
+    "compose:down": "docker compose down"
+  }
+}

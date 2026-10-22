@@ -11,7 +11,8 @@ Accepted decisions for the **Premier League Studio: Synthetic Match Insights Eng
 | [0005](0005-unified-fullstack-monorepo.md) | Unified Full-Stack Monorepo Architecture | Accepted — frontend pins superseded by 0008 |
 | [0006](0006-agent-framework-and-mcp-blackboard.md) | Microsoft Agent Framework and Azure MCP with Shared Blackboard | Accepted |
 | [0007](0007-frontend-first-prototyping-sequence.md) | Frontend-First Prototyping Sequence with High-Fidelity Broadcast Radar | Accepted |
-| [0008](0008-frontend-stack-version-baseline.md) | Frontend Stack Version Baseline | Accepted |
+| [0008](0008-frontend-stack-version-baseline.md) | Frontend Stack Version Baseline | Accepted — superseded by 0009 |
+| [0009](0009-ionic-ios-mode-unified-memory.md) | Ionic Framework with Global iOS Mode and Single Base Memory Store | Accepted |
 
 ## How decisions are made
 

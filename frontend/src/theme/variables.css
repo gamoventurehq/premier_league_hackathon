@@ -1,0 +1,123 @@
+/**
+ * Ionic Theme with Premier League & iOS Cupertino Styling
+ * Supports dynamic Dark Mode and Light Mode switching
+ */
+
+/* Light Mode Defaults */
+:root {
+  --ion-color-primary: #7c3aed;
+  --ion-color-primary-rgb: 124, 58, 237;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #6d28d9;
+  --ion-color-primary-tint: #8b5cf6;
+
+  --ion-color-secondary: #0284c7;
+  --ion-color-secondary-rgb: 2, 132, 199;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+
+  --ion-color-tertiary: #e11d48;
+  --ion-color-tertiary-rgb: 225, 29, 72;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+
+  --ion-color-success: #16a34a;
+  --ion-color-warning: #d97706;
+  --ion-color-danger: #dc2626;
+
+  --ion-background-color: #f1f5f9;
+  --ion-background-color-rgb: 241, 245, 249;
+
+  --ion-text-color: #0f172a;
+  --ion-text-color-rgb: 15, 23, 42;
+
+  --ion-item-background: #ffffff;
+  --ion-card-background: #ffffff;
+  --ion-toolbar-background: #ffffff;
+  --ion-tab-bar-background: #ffffff;
+  --ion-tab-bar-border-color: rgba(0, 0, 0, 0.08);
+
+  --studio-panel-bg: #ffffff;
+  --studio-panel-border: rgba(0, 0, 0, 0.08);
+  --studio-subtext: #64748b;
+  --studio-inner-bg: #f8fafc;
+}
+
+/* Dark Mode */
+html.dark, html.ion-palette-dark, body.dark, body.ion-palette-dark, :root.dark {
+  --ion-color-primary: #8b5cf6;
+  --ion-color-primary-rgb: 139, 92, 246;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+
+  --ion-color-secondary: #00e5ff;
+  --ion-color-secondary-rgb: 0, 229, 255;
+  --ion-color-secondary-contrast: #000000;
+  --ion-color-secondary-contrast-rgb: 0, 0, 0;
+
+  --ion-color-tertiary: #f43f5e;
+  --ion-color-tertiary-rgb: 244, 63, 94;
+
+  --ion-color-success: #10b981;
+  --ion-color-warning: #f59e0b;
+  --ion-color-danger: #ef4444;
+
+  --ion-background-color: #080d16;
+  --ion-background-color-rgb: 8, 13, 22;
+
+  --ion-text-color: #f8fafc;
+  --ion-text-color-rgb: 248, 250, 252;
+
+  --ion-item-background: #0f172a;
+  --ion-card-background: #0f172a;
+  --ion-toolbar-background: #0b1120;
+  --ion-tab-bar-background: #0b1120;
+  --ion-tab-bar-border-color: rgba(255, 255, 255, 0.08);
+
+  --studio-panel-bg: #0f172a;
+  --studio-panel-border: rgba(255, 255, 255, 0.08);
+  --studio-subtext: #94a3b8;
+  --studio-inner-bg: #020617;
+}
+
+/* Force iOS font smoothing and typography */
+body.ios {
+  --ion-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -0.015em;
+}
+
+/* Custom Pitch Radar canvas container styling */
+.radar-container {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--studio-panel-border);
+}
+
+/* Dashboard Grid Utilities */
+.studio-dashboard-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr 340px;
+  gap: 16px;
+  min-height: calc(100vh - 60px);
+}
+
+@media (max-width: 1200px) {
+  .studio-dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .studio-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Ensure IonTabs respects parent flex bounds and docks beside SidebarNav */
+ion-tabs.studio-tabs-root {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+}
