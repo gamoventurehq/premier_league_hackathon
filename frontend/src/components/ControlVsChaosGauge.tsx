@@ -1,56 +1,98 @@
 'use client';
 
-import React from 'react';
-import { MatchMetrics } from '../types/telemetry';
+/**
+ * The Control vs. Chaos Index gauge.
+ *
+ * The index runs from 0 (ultra-structured possession) to 100 (transitional
+ * chaos); the gauge shows the two ends of that scale meeting in the middle
+ * and names the Game Rhythm band the index currently sits in.
+ *
+ * The value always comes from the frame. When there is no frame, the gauge
+ * says so rather than showing a made-up midpoint.
+ */
 
-interface ControlVsChaosGaugeProps {
+import type { MatchMetrics } from '../types/telemetry';
+import { cn } from '../lib/cn';
+import { SectionLabel } from './studio/primitives';
+
+export interface ControlVsChaosGaugeProps {
   metrics: MatchMetrics | null;
+  className?: string;
 }
 
-export const ControlVsChaosGauge: React.FC<ControlVsChaosGaugeProps> = ({ metrics }) => {
-  const chaosScore = metrics ? Math.round(metrics.controlVsChaosIndex) : 50;
-  const controlScore = 100 - chaosScore;
+export function ControlVsChaosGauge({ metrics, className }: ControlVsChaosGaugeProps) {
+  if (!metrics) {
+    return (
+      <div
+        className={cn(
+          'rounded-2xl border border-line bg-surface/70 p-5 backdrop-blur-xl',
+          className,
+        )}
+      >
+        <SectionLabel>Control vs. Chaos Index</SectionLabel>
+        <p className="mt-2 text-[12px] text-ink-muted">
+          No telemetry frame yet. The index is published with the first frame.
+        </p>
+      </div>
+    );
+  }
+
+  const chaos = Math.round(metrics.controlVsChaosIndex);
+  const control = 100 - chaos;
 
   return (
-    <div className="rounded-3xl apple-glass p-5 shadow-2xl">
-      <div className="flex items-center justify-between mb-3">
+    <div
+      className={cn(
+        'rounded-2xl border border-line bg-surface/70 p-5 backdrop-blur-xl',
+        className,
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <span className="text-xs font-semibold text-white tracking-tight block">
+          <p className="text-xs font-semibold tracking-tight text-ink">
             Control vs. Chaos Index
-          </span>
-          <span className="text-[11px] text-white/40">
-            Real-time balance of possession stability vs. transition volatility
-          </span>
+          </p>
+          <p className="mt-0.5 text-[11px] text-ink-muted">
+            Possession stability against transition volatility
+          </p>
         </div>
-
-        <div className="flex items-center gap-2 bg-white/[0.05] border border-white/[0.08] px-3 py-1 rounded-full text-xs">
-          <span className="text-white/40">Game Rhythm:</span>
-          <span className="font-semibold text-[#64d2ff]">{metrics?.gameRhythm || 'Structured'}</span>
+        <div className="flex items-center gap-2 rounded-full border border-line bg-inset px-3 py-1 text-xs">
+          <span className="text-ink-muted">Game Rhythm:</span>
+          <span className="font-semibold text-accent-2">{metrics.gameRhythm}</span>
         </div>
       </div>
 
-      {/* Apple Clean Progress Surface */}
-      <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/[0.06] p-0.5 border border-white/[0.08]">
+      <div
+        className="relative mt-4 h-3 w-full overflow-hidden rounded-full border border-line bg-inset"
+        role="img"
+        aria-label={`Control ${control} percent, chaos ${chaos} percent. Game Rhythm ${metrics.gameRhythm}.`}
+      >
         <div
-          className="h-full rounded-l-full bg-gradient-to-r from-[#0a84ff] to-[#64d2ff] transition-all duration-300"
-          style={{ width: `${controlScore}%` }}
+          className="h-full rounded-l-full bg-accent transition-[width] duration-300"
+          style={{ width: `${control}%` }}
         />
         <div
-          className="absolute top-0 right-0 h-full rounded-r-full bg-gradient-to-l from-[#ff453a] to-[#ff9f0a] transition-all duration-300"
-          style={{ width: `${chaosScore}%` }}
+          className="absolute top-0 right-0 h-full rounded-r-full bg-accent-3 transition-[width] duration-300"
+          style={{ width: `${chaos}%` }}
         />
-        <div className="absolute top-0 bottom-0 left-1/2 w-[2px] bg-white/40 z-10" />
       </div>
 
-      {/* Metrics breakdown */}
       <div className="mt-3 flex items-center justify-between text-xs">
-        <div className="text-[#64d2ff] font-medium">
-          Structured Possession: <span className="font-mono text-white font-bold">{controlScore}%</span>
-        </div>
-        <div className="text-[#ff453a] font-medium">
-          Transition Volatility: <span className="font-mono text-white font-bold">{chaosScore}%</span>
-        </div>
+        <span className="font-medium text-accent">
+          Structured control:{' '}
+          <span className="font-mono font-semibold tabular-nums text-ink">
+            {control}%
+          </span>
+        </span>
+        <span className="font-medium text-accent-3">
+          Transition chaos:{' '}
+          <span className="font-mono font-semibold tabular-nums text-ink">
+            {chaos}%
+          </span>
+        </span>
       </div>
     </div>
   );
-};
+}
+
+export default ControlVsChaosGauge;

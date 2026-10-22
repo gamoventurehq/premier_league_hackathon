@@ -1,101 +1,184 @@
 'use client';
 
-import React from 'react';
-import { SyntheticScenarioType, MatchMetrics } from '../types/telemetry';
-import { IonHeader, IonToolbar, IonBadge, IonIcon } from '@ionic/react';
-import { play, pause } from 'ionicons/icons';
+/**
+ * The broadcast header.
+ *
+ * The strip that sits above every studio view: the identity of the product,
+ * the score bug (which reads the live score, never a fixed one), the match
+ * clock, the fast-path latency, the Synthetic Match Scenario selector and
+ * the transport controls.
+ *
+ * It used to be built from Ionic components. The studio is a Next.js
+ * application now, so the header is built from `lucide-react` icons and the
+ * token classes in `globals.css` — no component library, no literal colours.
+ */
 
-interface BroadcastHeaderProps {
+import { Pause, Play, Radio, Zap } from 'lucide-react';
+import type { MatchMetrics, SyntheticScenarioType } from '../types/telemetry';
+import { SCENARIOS, SCENARIO_ORDER } from '../lib/pitch';
+import { TEAM_NAMES } from '../lib/narratives';
+import { cn } from '../lib/cn';
+
+export interface BroadcastHeaderProps {
   matchClock: string;
   metrics: MatchMetrics | null;
+  /** The live score. The header never carries a score of its own. */
+  score: { home: number; away: number } | null;
   currentScenario: SyntheticScenarioType;
   onScenarioChange: (scenario: SyntheticScenarioType) => void;
   isPlaying: boolean;
   onTogglePlay: () => void;
+  /**
+   * Render only the scoreboard strip. The studio shell already carries the
+   * brand, the match clock, the scenario switch and the transport control,
+   * so a secondary route uses the compact form to avoid repeating them.
+   */
+  compact?: boolean;
 }
 
-export const BroadcastHeader: React.FC<BroadcastHeaderProps> = ({
+/** "Manchester City" -> "MCI", "Arsenal" -> "ARS". */
+function abbreviate(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '---';
+  let abbreviation = words.map((word) => word.charAt(0)).join('');
+  if (abbreviation.length < 3) {
+    for (const word of [...words].reverse()) {
+      for (let i = 1; i < word.length && abbreviation.length < 3; i += 1) {
+        abbreviation += word.charAt(i);
+      }
+      if (abbreviation.length >= 3) break;
+    }
+  }
+  return abbreviation.slice(0, 3).toUpperCase();
+}
+
+export function BroadcastHeader({
   matchClock,
   metrics,
+  score,
   currentScenario,
   onScenarioChange,
   isPlaying,
   onTogglePlay,
-}) => {
+  compact = false,
+}: BroadcastHeaderProps) {
+  const homeLabel = abbreviate(TEAM_NAMES.home);
+  const awayLabel = abbreviate(TEAM_NAMES.away);
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-black/70 backdrop-blur-2xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand & Studio Title */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-b from-white/15 to-white/5 border border-white/15 shadow-inner">
-            <span className="text-sm font-black text-white"></span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold tracking-tight text-white">
-                Premier League Studio
-              </span>
-              <span className="hidden sm:inline-block rounded-full bg-rose-500/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-400 border border-rose-500/20">
-                Live
-              </span>
+    <header
+      className={cn(
+        'w-full border-b border-line bg-surface/80 backdrop-blur-xl',
+        // The studio shell already owns a sticky top bar, so the compact
+        // scoreboard strip stays in the flow instead of stacking on top of it.
+        compact ? '' : 'sticky top-0 z-50',
+      )}
+    >
+      <div
+        className={cn(
+          'mx-auto flex flex-wrap items-center gap-3 px-4 sm:px-6 lg:px-8',
+          compact ? 'h-12 justify-end' : 'h-16 justify-between',
+        )}
+      >
+        {/* Brand */}
+        {compact ? null : (
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-line-strong bg-surface-raised text-[13px] font-semibold text-ink"
+            >
+              PL
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold tracking-tight text-ink">
+                  Premier League Studio
+                </span>
+                <span className="hidden items-center gap-1 rounded-full border border-positive/40 bg-positive/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-positive sm:inline-flex">
+                  <Radio className="h-2.5 w-2.5" aria-hidden />
+                  Live
+                </span>
+              </div>
+              <div className="text-[11px] text-ink-muted">
+                Synthetic Match Insights Engine
+              </div>
             </div>
-            <div className="text-[11px] text-white/40 tracking-tight">
-              Synthetic Match Insights Engine
-            </div>
           </div>
+        )}
+
+        {/* Score bug */}
+        <div className="flex items-center gap-3 rounded-full border border-line bg-inset px-4 py-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-home" aria-hidden />
+            <span className="text-xs font-bold text-ink">{homeLabel}</span>
+          </div>
+          <span className="font-mono text-xs font-semibold tabular-nums text-ink">
+            {score ? `${score.home} – ${score.away}` : '– –'}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-ink">{awayLabel}</span>
+            <span className="h-2 w-2 rounded-full bg-away" aria-hidden />
+          </div>
+          <span className="h-3 w-px bg-line" aria-hidden />
+          <span className="font-mono text-xs font-semibold tabular-nums text-ink-strong">
+            {matchClock}
+          </span>
         </div>
 
-        {/* Dynamic Island Scoreboard */}
-        <div className="flex items-center gap-3 rounded-full bg-white/[0.07] px-4 py-1.5 border border-white/[0.12] shadow-xl backdrop-blur-md">
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#0a84ff]" />
-            <span className="text-xs font-bold text-white">MCI</span>
-          </div>
-          <span className="text-xs font-black tracking-widest text-white font-mono">2 - 1</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-white">ARS</span>
-            <span className="h-2 w-2 rounded-full bg-[#ff453a]" />
-          </div>
-          <div className="h-3 w-[1px] bg-white/20" />
-          <span className="font-mono text-xs font-semibold text-[#ffd60a]">{matchClock}</span>
-        </div>
-
-        {/* Studio Controls */}
+        {/* Controls */}
         <div className="flex items-center gap-3">
-          {/* Latency badge */}
-          <div className="hidden md:flex items-center gap-2 text-[11px] font-mono text-white/60 bg-white/[0.04] px-3 py-1 rounded-full border border-white/[0.08]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#30d158] animate-pulse" />
+          <div className="hidden items-center gap-2 rounded-full border border-line bg-inset px-3 py-1 font-mono text-[11px] text-ink-muted md:flex">
+            <Zap className="h-3 w-3 text-positive" aria-hidden />
             <span>Fast-Path:</span>
-            <span className="text-[#30d158] font-bold">{metrics?.fastPathLatencyMs || 18}ms</span>
+            <span className="font-semibold tabular-nums text-positive">
+              {metrics ? `${metrics.fastPathLatencyMs.toFixed(1)}ms` : '—'}
+            </span>
           </div>
 
-          {/* Scenario Selector */}
-          <select
-            value={currentScenario}
-            onChange={(e) => onScenarioChange(e.target.value as SyntheticScenarioType)}
-            className="rounded-xl border border-white/[0.12] bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/90 outline-none cursor-pointer backdrop-blur-md transition hover:bg-white/[0.1]"
-          >
-            <option value="high_possession" className="bg-[#12141a] text-white">High Possession Siege</option>
-            <option value="counter_attack_transition" className="bg-[#12141a] text-white">Counter-Attack Transition</option>
-            <option value="low_block_siege" className="bg-[#12141a] text-white">Low-Block Defensive Wall</option>
-            <option value="box_scramble" className="bg-[#12141a] text-white">Penalty Box Scramble</option>
-          </select>
+          {compact ? null : (
+            <>
+              <label className="sr-only" htmlFor="broadcast-scenario">
+                Synthetic Match Scenario
+              </label>
+              <select
+                id="broadcast-scenario"
+                value={currentScenario}
+                onChange={(event) =>
+                  onScenarioChange(event.target.value as SyntheticScenarioType)
+                }
+                className="rounded-xl border border-line bg-inset px-3 py-1.5 text-xs font-medium text-ink outline-none transition-colors hover:border-line-strong"
+              >
+                {SCENARIO_ORDER.map((scenario) => (
+                  <option key={scenario} value={scenario} className="bg-surface text-ink">
+                    {SCENARIOS[scenario].label}
+                  </option>
+                ))}
+              </select>
 
-          {/* Play/Pause */}
-          <button
-            type="button"
-            onClick={onTogglePlay}
-            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold tracking-tight transition shadow-sm ${
-              isPlaying
-                ? 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
-                : 'bg-[#30d158] text-black hover:bg-[#30d158]/90 font-bold'
-            }`}
-          >
-            <IonIcon icon={isPlaying ? pause : play} className="text-xs" />
-            <span>{isPlaying ? 'Pause' : 'Play'}</span>
-          </button>
+              <button
+                type="button"
+                onClick={onTogglePlay}
+                aria-label={isPlaying ? 'Pause the match stream' : 'Play the match stream'}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-colors',
+                  isPlaying
+                    ? 'border-line bg-inset text-ink hover:border-line-strong'
+                    : 'border-positive/40 bg-positive/15 text-positive',
+                )}
+              >
+                {isPlaying ? (
+                  <Pause className="h-3 w-3" aria-hidden />
+                ) : (
+                  <Play className="h-3 w-3" aria-hidden />
+                )}
+                <span>{isPlaying ? 'Pause' : 'Play'}</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>
   );
-};
+}
+
+export default BroadcastHeader;

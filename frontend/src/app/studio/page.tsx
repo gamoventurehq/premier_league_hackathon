@@ -1,28 +1,57 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import React from 'react';
+/**
+ * The studio dashboard.
+ *
+ * This is the composition of the six cards the branch's studio was built
+ * around, laid out the way the branch laid them out and re-expressed in
+ * the token system: the moment rail on the left, the match state and the
+ * shape of the game in the middle, the individual players and the shots
+ * that produced the scoreline on the right.
+ *
+ * Every number on this page comes from the live telemetry frame. Nothing is
+ * hard-coded, and nothing is a mock: the same cards read the same frame
+ * whether it arrives over the WebSocket from the Azure-native backend or
+ * from the simulation running in the browser.
+ */
 
-const StudioTerminal = dynamic(
-  () => import('../../components/StudioTerminal'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white">
-        <div className="h-10 w-10 rounded-2xl bg-gradient-to-b from-white/20 to-white/5 border border-white/20 flex items-center justify-center text-lg font-black mb-3 shadow-inner">
-          
-        </div>
-        <div className="text-sm font-semibold tracking-tight text-white">
-          Premier League Studio
-        </div>
-        <div className="text-xs text-white/40 mt-1 font-mono">
-          Initializing 60FPS Pitch Space Radar & Multi-Persona Engine...
-        </div>
-      </div>
-    ),
-  }
-);
+import { AttackingShapeCard } from '../../components/studio/cards/AttackingShapeCard';
+import { FormationPitchCard } from '../../components/studio/cards/FormationPitchCard';
+import { MatchScoreCard } from '../../components/studio/cards/MatchScoreCard';
+import { MediaTimelinePanel } from '../../components/studio/cards/MediaTimelinePanel';
+import { PlayerSpotlightCard } from '../../components/studio/cards/PlayerSpotlightCard';
+import { ShootMapCard } from '../../components/studio/cards/ShootMapCard';
 
 export default function StudioPage() {
-  return <StudioTerminal />;
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="min-w-0">
+        <h1 className="text-[22px] font-semibold tracking-tight text-ink">
+          Match Dashboard
+        </h1>
+        <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink-muted">
+          The Synthetic Match Scenario as the studio sees it right now: the
+          scoreline and the metrics behind it, the shape each side is
+          holding, and the players the match has been about.
+        </p>
+      </header>
+
+      <div className="studio-dashboard-grid">
+        <div className="flex min-w-0 flex-col gap-4">
+          <MediaTimelinePanel />
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <MatchScoreCard />
+          <FormationPitchCard />
+          <AttackingShapeCard />
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <PlayerSpotlightCard />
+          <ShootMapCard />
+        </div>
+      </div>
+    </div>
+  );
 }

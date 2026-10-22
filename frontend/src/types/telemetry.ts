@@ -1,6 +1,10 @@
 /**
  * Canonical Domain Types for Premier League Studio: Synthetic Match Insights Engine
  * Conforms strictly to CONTEXT.md and ADR 0001 - 0008.
+ *
+ * This module is the single shared contract between the frontend studio and the
+ * `backend/` FastAPI service (ADR 0005). Any change here must be mirrored by
+ * `backend/app/models.py` — the WebSocket payload is the same shape.
  */
 
 export interface PitchPosition {
@@ -10,16 +14,26 @@ export interface PitchPosition {
 
 export type TeamSide = 'home' | 'away';
 
+export type PlayerRole = 'GK' | 'DF' | 'MF' | 'FW';
+
 export interface PlayerTelemetry extends PitchPosition {
   id: string;
   name: string;
+  shortName: string;
   number: number;
   team: TeamSide;
-  role: 'GK' | 'DF' | 'MF' | 'FW';
+  role: PlayerRole;
+  /** Granular formation position, e.g. "LB", "AM", "ST". */
+  position: string;
   vx: number; // velocity x (m/s)
   vy: number; // velocity y (m/s)
   speedKmH: number; // calculated speed in km/h
   distanceMeters: number; // cumulative distance
+  touches: number; // touches on the ball this match
+  // Formation anchor — the player is pulled back toward this point (ADR 0001).
+  homeX: number;
+  homeY: number;
+  onBall: boolean;
   isDesignatedPlayerCam?: boolean;
 }
 
@@ -29,6 +43,9 @@ export interface BallTelemetry extends PitchPosition {
   vy: number;
   vz: number;
   speedKmH: number;
+  possessionTeam: TeamSide | null;
+  possessionPlayerId: string | null;
+  lastTouchBy: string | null;
 }
 
 export interface PassingLane {
@@ -39,37 +56,127 @@ export interface PassingLane {
   interceptionRisk: number; // 0.0 (open) to 1.0 (blocked)
   passDifficultyRating: number; // Pass Difficulty Rating (PDR) 0 to 100
   isClear: boolean;
+  // Supporting evidence for the PDR composite (CONTEXT.md definition).
+  corridorWidthM: number; // metres of clear corridor across the pass axis
+  interceptorCount: number; // opponents within 1.5m of the corridor
+  passerPressure: number; // 0.0 to 1.0 pressure on the passer
+  receiverCoverage: number; // 0.0 to 1.0 coverage of the receiver
+  defenderVelocityAlignment: number; // 0.0 to 1.0, opponent closing rate onto the pass axis
 }
 
-export interface PitchControlCell {
+export interface PitchControlCell extends PitchPosition {
+  controlScore: number; // -1.0 (full away control) to +1.0 (full home control)
+  homeWeight: number;
+  awayWeight: number;
+}
+
+/** Game Rhythm — the temporal pacing of match actions (CONTEXT.md). */
+export type GameRhythm = 'Structured' | 'Fluid' | 'Transitional' | 'Chaotic';
+
+export type MatchEventType =
+  | 'pass'
+  | 'carry'
+  | 'shot'
+  | 'duel'
+  | 'tackle'
+  | 'interception'
+  | 'foul'
+  | 'goal'
+  | 'turnover'
+  | 'inflection';
+
+export interface MatchEvent {
+  id: string;
+  type: MatchEventType;
+  matchClock: string;
+  timestampMs: number;
+  team: TeamSide | null;
+  actorId: string | null;
+  targetId: string | null;
   x: number;
   y: number;
-  controlScore: number; // -1.0 (full away control) to +1.0 (full home control)
+  /** Expected goals for shots. */
+  xG?: number;
+  /** Pass Difficulty Rating for pass events. */
+  pdr?: number;
+  completed?: boolean;
+  /** The score at the moment the event happened. */
+  score?: { home: number; away: number };
+  description: string;
+}
+
+/**
+ * A single shot, kept in full so the studio's Shoot Map and the match
+ * summary can plot it. Every field is derived from the simulation.
+ */
+export interface ShotRecord extends PitchPosition {
+  id: string;
+  team: TeamSide;
+  playerId: string;
+  playerName: string;
+  matchClock: string;
+  timestampMs: number;
+  /** Expected goals for this shot, 0-1. */
+  xG: number;
+  /** Metres from the goalmouth. */
+  distanceToGoalM: number;
+  outcome: 'goal' | 'saved' | 'missed';
+  onTarget: boolean;
+}
+
+/**
+ * Per-player match statistics. Derived from the simulation ledger, never
+ * hand-authored.
+ */
+export interface PlayerMatchStats {
+  id: string;
+  name: string;
+  shortName: string;
+  number: number;
+  team: TeamSide;
+  role: PlayerRole;
+  /** Granular formation position, e.g. "LB", "AM", "ST". */
+  position: string;
+  touches: number;
+  passesAttempted: number;
+  passesCompleted: number;
+  shots: number;
+  distanceMeters: number;
+  topSpeedKmH: number;
+  /** Match rating on the 0-10 studio scale. */
+  rating: number;
 }
 
 export interface MatchMetrics {
   // Canonical: Control vs. Chaos Index (0 = ultra-structured possession, 100 = transitional chaos)
   controlVsChaosIndex: number;
-  // Canonical: Pass Difficulty Rating (PDR) average for current sequence
+  // Canonical: Pass Difficulty Rating (PDR) — weighted mean of the live lanes
   passDifficultyRating: number;
-  // Canonical: Game Rhythm (possession pace, passes per minute, transition urgency)
-  gameRhythm: 'Structured' | 'Fluid' | 'High Intensity' | 'Chaotic Break';
-  // Canonical: Pitch Control dominance percentages
+  // Canonical: Game Rhythm
+  gameRhythm: GameRhythm;
+  // Canonical: Pitch Control
   pitchControl: {
-    homePercentage: number;
-    awayPercentage: number;
-    contestedPercentage: number;
+    home: number;
+    away: number;
+    contested: number;
   };
   // Tiered Fast-Path metrics (<50ms latency tracking)
   fastPathLatencyMs: number;
   // Deep AI Agent Reasoning latency (<1.5s tracking)
   agentReasoningLatencyMs: number;
+  // Derived match statistics
+  possessionShare: { home: number; away: number };
+  passCompletion: { home: number; away: number };
+  shotCount: { home: number; away: number };
+  duelCount: number;
+  topSprintKmH: number;
+  ballProgressionM: number;
 }
 
-export type ExperiencePersona = 
-  | 'analyst' 
-  | 'casual' 
-  | 'player_cam' 
+export type ExperiencePersona =
+  | 'analyst'
+  | 'casual'
+  | 'player_cam'
   | 'club_centric';
 
 export type BroadcastLanguage = 'en' | 'es' | 'fr' | 'ja' | 'ar';
@@ -84,7 +191,7 @@ export interface MultilingualNarrative {
 
 export interface NarrativeEvent {
   id: string;
-  matchClock: string; // e.g. "68:42"
+  matchClock: string; // e.g. "68:42" — authoritative for the moment described
   timestamp: number;
   // Canonical: Tactical Inflection Point flag
   isTacticalInflectionPoint: boolean;
@@ -93,25 +200,90 @@ export interface NarrativeEvent {
   // Persona specific tailored insights
   analystContext: string;
   casualContext: string;
+  /** The Player Cam persona reads from the pitch, not from the numbers. */
+  playerCamContext: string;
   clubCentricContext: {
     homeFrame: string;
     awayFrame: string;
   };
 }
 
-export type SyntheticScenarioType = 
-  | 'high_possession' 
-  | 'counter_attack_transition' 
+/**
+ * Broadcast Overlay — a synchronized, machine-readable graphical payload
+ * (CONTEXT.md). This is the Stage 4 artefact consumed by broadcast graphic
+ * engines; it is not a UI component.
+ */
+export interface BroadcastOverlayPayload {
+  overlayId: string;
+  schemaVersion: string;
+  /** Milliseconds since the start of the match, for sync against match video. */
+  syncTimestampMs: number;
+  matchClock: string;
+  lowerThird: {
+    headline: string;
+    subline: string;
+    speaker: string;
+  };
+  scoreBug: {
+    home: string;
+    away: string;
+    homeScore: number;
+    awayScore: number;
+  };
+  metrics: {
+    controlVsChaosIndex: number;
+    passDifficultyRating: number;
+    pitchControl: { home: number; away: number; contested: number };
+  };
+  languages: Partial<Record<BroadcastLanguage, string>>;
+  commentatorCue: string;
+}
+
+/**
+ * Agent swarm trace (ADR 0002, ADR 0006). Rendered by the studio so the
+ * four-agent architecture is visible rather than merely asserted.
+ */
+export type AgentRole =
+  | 'telemetry_ingestion'
+  | 'tactical_reasoning'
+  | 'broadcast_narrative'
+  | 'fan_personalization';
+
+export interface AgentTrace {
+  role: AgentRole;
+  label: string;
+  status: 'idle' | 'running' | 'complete' | 'fallback';
+  latencyMs: number;
+  /** Shared tactical state keys this agent read or wrote (the blackboard). */
+  reads: string[];
+  writes: string[];
+  summary: string;
+}
+
+export type SyntheticScenarioType =
+  | 'high_possession'
+  | 'counter_attack_transition'
   | 'low_block_siege'
   | 'box_scramble';
 
 export interface TelemetryFrame {
   frameId: number;
   matchClock: string;
+  /** Absolute elapsed match seconds — the clock authority, with minute rollover. */
+  matchSeconds: number;
   scenario: SyntheticScenarioType;
+  score: { home: number; away: number };
   ball: BallTelemetry;
   players: PlayerTelemetry[];
   passingLanes: PassingLane[];
+  pitchControlCells: PitchControlCell[];
+  /** Most recent discrete match events, newest last (CHALLENGE.md Stage 1). */
+  events: MatchEvent[];
+  /** Every shot taken in the fixture, for the Shoot Map. */
+  shots: ShotRecord[];
+  /** Per-player match statistics, for the Player Spotlight and Formation cards. */
+  playerStats: PlayerMatchStats[];
   metrics: MatchMetrics;
   latestNarrative: NarrativeEvent;
+  agentTrace: AgentTrace[];
 }

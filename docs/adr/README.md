@@ -12,6 +12,9 @@ Accepted decisions for the **Premier League Studio: Synthetic Match Insights Eng
 | [0006](0006-agent-framework-and-mcp-blackboard.md) | Microsoft Agent Framework and Azure MCP with Shared Blackboard | Accepted |
 | [0007](0007-frontend-first-prototyping-sequence.md) | Frontend-First Prototyping Sequence with High-Fidelity Broadcast Radar | Accepted |
 | [0008](0008-frontend-stack-version-baseline.md) | Frontend Stack Version Baseline | Accepted |
+| [0009](0009-studio-port-to-next-app-router.md) | Studio Ported from the Feature Branch onto the Next.js App Router | Accepted |
+| [0010](0010-css-cascade-layering-without-ionic.md) | CSS Cascade Layering, and the Ionic Global Stylesheet | Accepted |
+| [0011](0011-synthetic-match-engine-calibration.md) | Synthetic Match Engine Calibration and the Goal-Mass Model | Accepted |
 
 ## How decisions are made
 
