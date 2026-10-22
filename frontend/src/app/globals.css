@@ -1,15 +1,20 @@
 @import "tailwindcss";
 
-/* Core Ionic CSS */
-@import "@ionic/react/css/core.css";
-@import "@ionic/react/css/normalize.css";
-@import "@ionic/react/css/structure.css";
-@import "@ionic/react/css/typography.css";
+/*
+ * NOTE: Ionic's global CSS is intentionally NOT imported.
+ * Ionic's stylesheets are unlayered, so they outrank every Tailwind v4
+ * `@layer utilities` rule in the cascade. Importing them silently defeated
+ * `px-*`/`py-*`/`rounded-*` on every <button> (normalize.css resets padding,
+ * border and border-radius), `bg-white`/`text-*` on every <a> (typography.css
+ * forces a transparent background and the Ionic primary colour), and locked
+ * the document scroll via structure.css's `body { position: fixed; overflow: hidden }`.
+ * The only Ionic element still rendered is <IonIcon>, which is a plain inline
+ * SVG and needs no stylesheet.
+ */
 
 /* Apple Dark & High-End Design System Tokens */
 :root {
   --font-geist: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
-  --ion-font-family: var(--font-geist);
 
   --bg-pitch-black: #000000;
   --bg-deep-surface: #0a0c10;
@@ -91,27 +96,9 @@ html, body {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Global Ionic Segment & Component Tuning */
-ion-segment {
-  --background: rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  padding: 3px;
-}
-
-ion-segment-button {
-  --color: rgba(245, 245, 247, 0.6);
-  --color-checked: #ffffff;
-  --indicator-color: rgba(255, 255, 255, 0.16);
-  --indicator-box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-  font-weight: 600;
-  font-size: 13px;
-  border-radius: 11px;
-  min-height: 34px;
-  transition: all 0.2s ease;
-}
-
-ion-card {
-  --background: transparent;
-  box-shadow: none;
-  margin: 0;
+/* Ionic icon rendering: <IonIcon> emits an inline SVG and needs no Ionic stylesheet */
+ion-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
