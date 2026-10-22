@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from time import perf_counter
 
-from ..models import AgentRole, AgentStatus, ExperiencePersona
+from ..models import AgentRole, AgentStatus
 from .base import (
     K_ANALYST_CONTEXT,
     K_CASUAL_CONTEXT,

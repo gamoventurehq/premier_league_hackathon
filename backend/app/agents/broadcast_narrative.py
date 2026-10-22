@@ -15,15 +15,14 @@ never loses its broadcast feed.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Any, Callable
 
 from ..models import AgentRole, AgentStatus, BroadcastLanguage, MultilingualNarrative
 from .base import (
     K_COMMENTATOR_CUE,
     K_CONTROL_VS_CHAOS,
-    K_GAME_RHYTHM,
     K_INFLECTION_CANDIDATES,
     K_MATCH_CLOCK,
     K_MULTILINGUAL_STREAM,
@@ -31,7 +30,6 @@ from .base import (
     K_NARRATIVE_ARC,
     K_PASS_DIFFICULTY_RATING,
     K_PITCH_CONTROL_AWAY,
-    K_PITCH_CONTROL_CONTESTED,
     K_PITCH_CONTROL_HOME,
     K_TACTICAL_PHASE,
     AgentContext,

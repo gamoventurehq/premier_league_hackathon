@@ -1,0 +1,64 @@
+# Premier League Studio: Synthetic Match Insights Engine
+#
+# `docker compose up` starts the whole studio: the FastAPI telemetry service
+# and the Next.js studio that consumes it. Neither service needs an Azure
+# credential to run - the Azure integrations are opt-in through the
+# environment variables listed in backend/README.md.
+#
+# This file is the only artefact of the backend that lives outside backend/.
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: pl-studio-backend:0.1.0
+    container_name: pl-studio-backend
+    ports:
+      - "8000:8000"
+    environment:
+      LOG_LEVEL: INFO
+      SIMULATION_HZ: "10"
+      PUBLISH_HZ: "5"
+      SIM_WARMUP_SECONDS: "480"
+      DEFAULT_SCENARIO: high_possession
+      CORS_ORIGINS: "*"
+      # Azure is optional. Uncomment and fill in to switch the service from
+      # the local rule-based narrative to Azure AI Foundry, to publish the
+      # telemetry to Event Hubs and to persist the Broadcast Overlay in
+      # Cosmos DB.
+      # AZURE_AI_FOUNDRY_ENDPOINT: ""
+      # AZURE_AI_FOUNDRY_DEPLOYMENT: ""
+      # AZURE_OPENAI_API_KEY: ""
+      # AZURE_EVENT_HUBS_CONNECTION_STRING: ""
+      # AZURE_EVENT_HUBS_NAME: ""
+      # COSMOS_DB_ACCOUNT: ""
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    image: node:22-alpine
+    container_name: pl-studio-frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"
+    environment:
+      NEXT_PUBLIC_TELEMETRY_WS: ws://localhost:8000/ws/telemetry
+      NEXT_PUBLIC_TELEMETRY_REST: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

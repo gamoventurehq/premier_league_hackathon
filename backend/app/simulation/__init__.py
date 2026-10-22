@@ -1,6 +1,6 @@
 """Synthetic match simulation: spatial geometry, derived metrics and the engine."""
 
-from .engine import SCENARIOS, SCENARIO_ORDER, MatchEngine, ScenarioProfile
+from .engine import SCENARIO_ORDER, SCENARIOS, MatchEngine, ScenarioProfile
 from .metrics import (
     aggregate_pass_difficulty,
     control_vs_chaos_index,

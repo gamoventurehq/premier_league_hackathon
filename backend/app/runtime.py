@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from time import perf_counter, time
+import time
 from typing import Any
 
 from .agents.swarm import AgentSwarm, SwarmResult
@@ -31,8 +31,8 @@ from .models import (
 from .services.cosmos import OverlayStore
 from .services.event_hubs import EventHubsPublisher
 from .services.foundry import FoundryNarrativeService
-from .services.overlay import build_overlay
 from .services.mcp import ToolRegistry, build_registry
+from .services.overlay import build_overlay
 from .simulation.engine import SCENARIOS, MatchEngine
 from .simulation.metrics import MATCH_LENGTH_SECONDS
 
@@ -53,6 +53,7 @@ class MatchRuntime:
         )
         self._lock = threading.RLock()
         self._wire: dict[str, Any] | None = None
+        self._wire_sent_at_ms: int = 0
         self._frame: TelemetryFrame | None = None
         self._narrative: NarrativeEvent | None = None
         self._traces: list[AgentTrace] = []
@@ -65,8 +66,10 @@ class MatchRuntime:
         self._thread: threading.Thread | None = None
         self._swarm_busy = False
         self._swarm_result: SwarmResult | None = None
-        self._started_at = time()
+        self._started_at = time.time()
         self._frame_counter = 0
+        self._last_tick_at: float = 0.0
+        self._worker_error: str | None = None
         self.tools: ToolRegistry = build_registry(self)
 
     # -- lifecycle ------------------------------------------------------------
@@ -90,7 +93,25 @@ class MatchRuntime:
 
     @property
     def ready(self) -> bool:
-        return self._ready.is_set()
+        """The service is ready only while the simulation thread is alive.
+
+        A finished warm-up is not enough: if the worker dies the health
+        endpoint must say so, otherwise a dead simulation looks healthy.
+        """
+        return self._ready.is_set() and self.simulation_alive and self._worker_error is None
+
+    @property
+    def simulation_alive(self) -> bool:
+        thread = self._thread
+        return thread is not None and thread.is_alive()
+
+    @property
+    def worker_error(self) -> str | None:
+        return self._worker_error
+
+    @property
+    def last_tick_at(self) -> float:
+        return self._last_tick_at
 
     def wait_until_ready(self, timeout: float = 30.0) -> bool:
         return self._ready.wait(timeout)
@@ -98,7 +119,12 @@ class MatchRuntime:
     # -- worker ----------------------------------------------------------------
 
     def _worker(self) -> None:
-        self._warm_up()
+        try:
+            self._warm_up()
+        except Exception as exc:  # noqa: BLE001 - the worker must report, not vanish
+            self._worker_error = f"warm-up failed: {exc}"
+            logger.exception("The simulation warm-up failed.")
+            return
         self._ready.set()
 
         dt = 1.0 / max(1, self.settings.simulation_hz)
@@ -106,14 +132,21 @@ class MatchRuntime:
         tick = 0
 
         while not self._stop.is_set():
-            started = perf_counter()
-            with self._lock:
-                self._apply_commands()
-                self.engine.step(dt)
-                tick += 1
-                if tick % publish_every == 0:
-                    self._build_and_publish()
-            elapsed = perf_counter() - started
+            started = time.perf_counter()
+            try:
+                with self._lock:
+                    self._apply_commands()
+                    self.engine.step(dt)
+                    tick += 1
+                    if tick % publish_every == 0:
+                        self._build_and_publish()
+            except Exception as exc:  # noqa: BLE001 - a dead simulation must be visible
+                self._worker_error = f"simulation tick failed: {exc}"
+                logger.exception("The simulation worker stopped on an unexpected error.")
+                self._ready.clear()
+                return
+            elapsed = time.perf_counter() - started
+            self._last_tick_at = time.time()
             time.sleep(max(0.0, dt - elapsed))
 
     def _warm_up(self) -> None:
@@ -158,6 +191,7 @@ class MatchRuntime:
         self._frame = frame
         self._frame_counter += 1
         self._wire = frame.to_wire()
+        self._wire_sent_at_ms = int(time.time() * 1000)
 
         if self._swarm_result is not None and self._swarm_result.inflection_event is not None:
             self.engine.add_external_event(self._swarm_result.inflection_event)
@@ -205,6 +239,26 @@ class MatchRuntime:
     def latest_wire(self) -> dict[str, Any] | None:
         """The most recently published payload (a drop-in TelemetryFrame)."""
         return self._wire
+
+    def latest_envelope(self) -> dict[str, Any] | None:
+        """The WebSocket envelope: the frame, the blackboard and the stamp.
+
+        ``sentAtMs`` is the wall-clock time the backend published the frame,
+        so the studio can measure the real round trip instead of guessing.
+        """
+        wire = self.latest_wire()
+        if wire is None:
+            return None
+        return {
+            "frame": wire,
+            "blackboard": self.blackboard_payload(),
+            "sentAtMs": self._wire_sent_at_ms,
+        }
+
+    def blackboard_payload(self) -> dict[str, Any]:
+        """A JSON-safe view of the shared tactical blackboard (ADR 0002)."""
+        snapshot = self.swarm.blackboard.snapshot()
+        return {key: _json_safe(value) for key, value in snapshot.items()}
 
     def latest_frame(self) -> TelemetryFrame | None:
         with self._lock:
@@ -289,12 +343,25 @@ class MatchRuntime:
 
     @property
     def uptime_seconds(self) -> float:
-        return round(time() - self._started_at, 2)
+        return round(time.time() - self._started_at, 2)
 
     @property
     def match_finished(self) -> bool:
         with self._lock:
             return self.engine.match_seconds >= MATCH_LENGTH_SECONDS
+
+
+def _json_safe(value: Any) -> Any:
+    """Reduce a blackboard value to something that survives JSON encoding."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if hasattr(value, "model_dump"):
+        return _json_safe(value.model_dump(mode="json"))
+    return str(value)
 
 
 __all__ = ["MatchRuntime"]

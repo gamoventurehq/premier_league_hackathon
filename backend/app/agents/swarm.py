@@ -18,7 +18,8 @@ replaced by its rule-based fallback, so the broadcast never stutters.
 from __future__ import annotations
 
 import logging
-from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any
@@ -40,6 +41,7 @@ from .base import (
     K_CLUB_CENTRIC_CONTEXT,
     K_INFLECTION_CANDIDATES,
     K_NARRATIVE,
+    K_PLAYER_CAM_CONTEXT,
     AgentContext,
     AgentOutcome,
     Blackboard,
@@ -193,6 +195,7 @@ class AgentSwarm:
             )
         analyst = self.blackboard.read(K_ANALYST_CONTEXT) or ""
         casual = self.blackboard.read(K_CASUAL_CONTEXT) or ""
+        player_cam = self.blackboard.read(K_PLAYER_CAM_CONTEXT) or ""
         club = self.blackboard.read(K_CLUB_CENTRIC_CONTEXT) or {"homeFrame": "", "awayFrame": ""}
         return NarrativeEvent(
             id=draft.id,
@@ -203,6 +206,7 @@ class AgentSwarm:
             tacticalExplanation=draft.tacticalExplanation,
             analystContext=analyst,
             casualContext=casual,
+            playerCamContext=player_cam,
             clubCentricContext={
                 "homeFrame": club.get("homeFrame", ""),
                 "awayFrame": club.get("awayFrame", ""),

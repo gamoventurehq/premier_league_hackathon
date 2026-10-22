@@ -9,8 +9,9 @@ be invoked directly through ``POST /api/mcp/invoke`` or proxied by an MCP host
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from ..models import ToolDescriptor
 

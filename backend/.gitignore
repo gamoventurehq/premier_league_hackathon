@@ -1,0 +1,16 @@
+# Python build and cache artefacts of the backend service.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local configuration and secrets. The service runs with zero Azure
+# credentials; anything that is added here is optional.
+.env
+.env.local

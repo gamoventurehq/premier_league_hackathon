@@ -22,6 +22,13 @@ PUBLISH_INTERVAL_SECONDS = 0.2
 async def telemetry_stream(websocket: WebSocket) -> None:
     """Stream the TelemetryFrame to a studio client.
 
+    The published envelope is::
+
+        {"frame": <TelemetryFrame>, "blackboard": {...}, "sentAtMs": <epoch ms>}
+
+    ``sentAtMs`` is the wall-clock time the backend published the frame, so
+    the studio can report the real round trip latency.
+
     Client messages::
 
         {"type": "set_scenario", "scenario": "low_block_siege"}
@@ -63,10 +70,12 @@ async def telemetry_stream(websocket: WebSocket) -> None:
     last_frame_id = -1
     try:
         while True:
-            wire = runtime.latest_wire()
-            if wire is not None and wire.get("frameId") != last_frame_id:
-                last_frame_id = wire["frameId"]
-                await websocket.send_json(wire)
+            envelope = runtime.latest_envelope()
+            if envelope is not None:
+                frame = envelope["frame"]
+                if frame.get("frameId") != last_frame_id:
+                    last_frame_id = frame["frameId"]
+                    await websocket.send_json(envelope)
             await asyncio.sleep(PUBLISH_INTERVAL_SECONDS)
     except WebSocketDisconnect:
         logger.info("Telemetry client disconnected.")

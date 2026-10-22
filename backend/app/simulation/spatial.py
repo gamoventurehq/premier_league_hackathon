@@ -109,6 +109,7 @@ class SimPlayer:
     passes_attempted: int = 0
     passes_completed: int = 0
     shots: int = 0
+    goals: int = 0
     turnovers_lost: int = 0
     top_speed_kmh: float = 0.0
     on_ball: bool = False

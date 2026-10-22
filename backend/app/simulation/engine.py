@@ -25,13 +25,14 @@ from ..models import (
     NarrativeEvent,
     PlayerMatchStats,
     PlayerTelemetry,
+    ScorePair,
     ShotOutcome,
     ShotRecord,
     SyntheticScenarioType,
     TeamSide,
     TelemetryFrame,
 )
-from .events import EventLog, make_event
+from .events import EventLog, make_event, new_event_id
 from .metrics import (
     MATCH_LENGTH_SECONDS,
     MatchObservations,
@@ -46,6 +47,7 @@ from .metrics import (
 )
 from .spatial import (
     BOUNDARY_MARGIN,
+    GOAL_HALF_WIDTH,
     PITCH_CENTRE_X,
     PITCH_CENTRE_Y,
     PITCH_LENGTH,
@@ -189,7 +191,7 @@ SCENARIOS: dict[SyntheticScenarioType, ScenarioProfile] = {
         decision_interval=2.1,
         verticality=0.52,
         interception_bias=1.05,
-        shot_bias=1.15,
+        shot_bias=0.95,
         press_intensity=0.85,
         duel_rate=0.14,
         tempo=0.95,
@@ -227,7 +229,7 @@ SCENARIOS: dict[SyntheticScenarioType, ScenarioProfile] = {
         decision_interval=2.8,
         verticality=0.30,
         interception_bias=1.35,
-        shot_bias=1.70,
+        shot_bias=1.55,
         press_intensity=0.60,
         duel_rate=0.10,
         tempo=0.80,
@@ -246,7 +248,7 @@ SCENARIOS: dict[SyntheticScenarioType, ScenarioProfile] = {
         decision_interval=1.3,
         verticality=0.78,
         interception_bias=1.70,
-        shot_bias=0.65,
+        shot_bias=0.60,
         press_intensity=2.00,
         duel_rate=0.75,
         tempo=1.55,
@@ -357,6 +359,24 @@ class MatchEngine:
     #: How likely each line is to shoot rather than pass.
     SHOT_ROLE_FACTOR = {"FW": 1.0, "MF": 0.28, "DF": 0.05, "GK": 0.0}
 
+    #: Pass completion model: base probability, and the sensitivity to the
+    #: interception risk and to the pressure on the passer.
+    PASS_COMPLETION_BASE = 0.925
+    PASS_COMPLETION_RISK = 0.37
+    PASS_COMPLETION_PRESSURE = 0.08
+
+    #: How much of the expected goals a shot actually converts into a goal.
+    GOAL_CONVERSION_FACTOR = 0.42
+
+    #: Base spread (metres) of the lateral error of a strike.
+    SHOT_ERROR_BASE = 4.0
+
+    #: How much the spread grows with every metre of distance to goal.
+    SHOT_ERROR_DISTANCE = 0.10
+
+    #: How much the spread grows with the pressure of the nearest defender.
+    SHOT_ERROR_PRESSURE = 1.6
+
     #: How far ahead of (or behind) the ball each line may sit when the team is
     #: in possession, as (minimum, maximum) metres in the attack direction.
     IN_POSSESSION_LEAD = {
@@ -379,6 +399,7 @@ class MatchEngine:
         )
         self.top_sprint_kmh: float = 0.0
         self.ball_progression_m: float = 0.0
+        self.shot_log: list[ShotRecord] = []
         self._sequence_team: TeamSide | None = None
         self._sequence_started_at: float = 0.0
         self._possession_side: TeamSide | None = None
@@ -414,6 +435,7 @@ class MatchEngine:
         self.observations = MatchObservations(possession_seconds={"home": 0.0, "away": 0.0})
         self.top_sprint_kmh = 0.0
         self.ball_progression_m = 0.0
+        self.shot_log = []
         self._lane_cache = []
         self._possession_weight = {TeamSide.HOME: 0.0, TeamSide.AWAY: 0.0}
         self._possession_ema = 0.5
@@ -877,9 +899,19 @@ class MatchEngine:
                 break
 
         lane = evaluate_lane(carrier, receiver, opponents, self.scenario.interception_bias)
+        # The completion probability is calibrated so that the aggregate pass
+        # completion of a Premier League fixture lands inside the 75-85% band
+        # in every Synthetic Match Scenario, while still responding to the
+        # two pressures the lane actually carries: the interception risk and
+        # the pressure on the passer.
         completion = max(
             0.20,
-            min(0.97, 0.980 - 0.52 * lane.interceptionRisk - 0.07 * lane.passerPressure),
+            min(
+                0.95,
+                self.PASS_COMPLETION_BASE
+                - self.PASS_COMPLETION_RISK * lane.interceptionRisk
+                - self.PASS_COMPLETION_PRESSURE * lane.passerPressure,
+            ),
         )
 
         self.observations.pass_attempts += 1
@@ -1119,6 +1151,7 @@ class MatchEngine:
         xg = expected_goals(shooter.x, shooter.y, team, distances)
         clock = format_match_clock(self.match_seconds)
         timestamp = int(self.match_seconds * 1000)
+        shot_distance = distance(shooter.x, shooter.y, goal_x, goal_y)
         self.events.append(
             self._event(
                 MatchEventType.SHOT,
@@ -1129,15 +1162,43 @@ class MatchEngine:
                 None,
                 shooter.x,
                 shooter.y,
-                f"{shooter.short_name} lets fly from {distance(shooter.x, shooter.y, goal_x, goal_y):.0f}m.",
+                f"{shooter.short_name} lets fly from {shot_distance:.0f}m.",
                 xg=xg,
             )
         )
         self.observations.shots += 1
         shooter.touches += 1
+        shooter.shots += 1
 
-        is_goal = self.rng.random() < xg * 0.42
+        is_goal = self.rng.random() < xg * self.GOAL_CONVERSION_FACTOR
+        on_target = self._shot_on_target(shooter, goal_y, shot_distance, distances)
         if is_goal:
+            outcome = ShotOutcome.GOAL
+            on_target = True
+        elif on_target:
+            outcome = ShotOutcome.SAVED
+        else:
+            outcome = ShotOutcome.MISSED
+
+        self.shot_log.append(
+            ShotRecord(
+                id=new_event_id("shot"),
+                team=team,
+                playerId=shooter.id,
+                playerName=shooter.name,
+                matchClock=clock,
+                timestampMs=timestamp,
+                xG=xg,
+                distanceToGoalM=round(shot_distance, 1),
+                outcome=outcome,
+                onTarget=on_target,
+                x=round(shooter.x, 2),
+                y=round(shooter.y, 2),
+            )
+        )
+
+        if is_goal:
+            shooter.goals += 1
             self.events.append(
                 self._event(
                     MatchEventType.GOAL,
@@ -1164,6 +1225,31 @@ class MatchEngine:
         self.observations.possession_changes += 1
         self._sequence_team = defending
         self._sequence_started_at = self.match_seconds
+
+    def _shot_on_target(
+        self,
+        shooter: SimPlayer,
+        goal_y: float,
+        shot_distance: float,
+        defender_distances: list[float],
+    ) -> bool:
+        """Was the shot on target?
+
+        The strike is modelled as a lateral error around the goal centre. The
+        spread grows with the distance to the goal and with the pressure of
+        the nearest defender, so a shot from thirty metres under pressure is
+        far less likely to find the frame than a close range effort.
+        """
+        pressure = 0.0
+        if defender_distances:
+            pressure = max(0.0, 1.0 - min(defender_distances) / 4.0)
+        sigma = (
+            self.SHOT_ERROR_BASE
+            + self.SHOT_ERROR_DISTANCE * shot_distance
+            + self.SHOT_ERROR_PRESSURE * pressure
+        )
+        error = self.rng.gauss(0.0, sigma)
+        return abs(goal_y + error - goal_y) <= GOAL_HALF_WIDTH
 
     def _deepest_player(self, team: TeamSide) -> SimPlayer:
         direction = attack_direction(team)
@@ -1259,7 +1345,7 @@ class MatchEngine:
     def _event(self, *args, **kwargs) -> MatchEvent:
         """Create a match event stamped with the score at that moment."""
         event = make_event(*args, **kwargs)
-        event.score = {"home": self.score["home"], "away": self.score["away"]}
+        event.score = ScorePair(home=self.score["home"], away=self.score["away"])
         return event
 
     def _player(self, player_id: str | None) -> SimPlayer | None:
@@ -1323,6 +1409,9 @@ class MatchEngine:
                 number=p.number,
                 team=p.team,
                 role=p.role,
+                position=granular_position(p.slot, self._lateral_of(p.id)),
+                x=round(p.x, 2),
+                y=round(p.y, 2),
                 vx=round(p.vx, 3),
                 vy=round(p.vy, 3),
                 speedKmH=round(p.speed_kmh, 1),
@@ -1375,10 +1464,56 @@ class MatchEngine:
             passingLanes=lanes,
             pitchControlCells=cells,
             events=self.events.recent(40),
+            shots=list(self.shot_log),
+            playerStats=self._player_stats(),
             metrics=metrics,
             latestNarrative=placeholder_narrative(format_match_clock(self.match_seconds)),
             agentTrace=[],
         )
+
+    def _lateral_of(self, player_id: str) -> float:
+        """The lateral station of a player on his line, between 0 and 1."""
+        for entry in SQUAD:
+            if entry.id == player_id:
+                return entry.lateral
+        return 0.5
+
+    def _player_stats(self) -> list[PlayerMatchStats]:
+        """The per-player match statistics, derived from the simulation ledger.
+
+        The rating is the studio's 0-10 scale. It is a transparent sum of the
+        things a player actually did in the simulation - touches, completed
+        passes, shots, goals, ball losses and distance covered - so a number
+        shown in the Player Spotlight can always be explained.
+        """
+        stats: list[PlayerMatchStats] = []
+        for p in self.state.players:
+            rating = 6.0
+            rating += 0.30 * min(p.shots, 4)
+            rating += 1.20 * p.goals
+            rating += 0.04 * min(p.passes_completed, 25)
+            rating += 0.02 * min(p.touches, 30)
+            rating -= 0.35 * min(p.turnovers_lost, 4)
+            rating += 0.6 * min(p.distance_meters, 12000.0) / 12000.0
+            stats.append(
+                PlayerMatchStats(
+                    id=p.id,
+                    name=p.name,
+                    shortName=p.short_name,
+                    number=p.number,
+                    team=p.team,
+                    role=p.role,
+                    position=granular_position(p.slot, self._lateral_of(p.id)),
+                    touches=p.touches,
+                    passesAttempted=p.passes_attempted,
+                    passesCompleted=p.passes_completed,
+                    shots=p.shots,
+                    distanceMeters=round(p.distance_meters, 1),
+                    topSpeedKmH=round(p.top_speed_kmh, 1),
+                    rating=round(max(0.0, min(10.0, rating)), 1),
+                )
+            )
+        return stats
 
     def add_external_event(self, event: MatchEvent) -> None:
         """Allow an agent (for example Tactical Reasoning) to append an event."""
@@ -1427,6 +1562,7 @@ def placeholder_narrative(match_clock: str) -> NarrativeEvent:
         },
         analystContext="Awaiting the first tactical reading.",
         casualContext="The match is under way.",
+        playerCamContext="The Player Cam is waiting for its first look at the pitch.",
         clubCentricContext={"homeFrame": "", "awayFrame": ""},
     )
 

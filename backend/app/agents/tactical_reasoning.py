@@ -7,7 +7,6 @@ Inflection Points.
 
 from __future__ import annotations
 
-import math
 from collections import Counter, deque
 from dataclasses import dataclass
 from time import perf_counter
@@ -93,7 +92,8 @@ class TacticalReasoningAgent:
         )
         summary = (
             f"Phase '{phase}', Game Rhythm {rhythm}, Control vs. Chaos Index {chaos:.1f}, "
-            f"PDR {pdr:.1f}.{inflection_note}"
+            f"PDR {pdr:.1f}, Pitch Control {home_control:.1f}% home / {away_control:.1f}% away "
+            f"({contested:.1f}% contested).{inflection_note}"
         )
         return AgentOutcome(
             role=self.role,
@@ -140,7 +140,6 @@ class TacticalReasoningAgent:
         if team is None:
             return "transition"
 
-        carrier_id = possession.get("carrier")
         ball_x = frame.ball.x
         direction = attack_direction(frame.ball.possessionTeam) if frame.ball.possessionTeam else 1
         forward = direction * (ball_x - PITCH_CENTRE_X)

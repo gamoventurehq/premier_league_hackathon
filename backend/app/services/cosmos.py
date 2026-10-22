@@ -7,6 +7,7 @@ logged no-op.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
@@ -79,10 +80,8 @@ class OverlayStore:
 
     def close(self) -> None:
         if self._client is not None:
-            try:
+            with contextlib.suppress(Exception):  # noqa: BLE001 - closing must never raise
                 self._client.close()
-            except Exception:  # noqa: BLE001
-                pass
             self._client = None
             self._container = None
 

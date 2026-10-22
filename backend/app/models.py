@@ -400,6 +400,10 @@ class HealthResponse(_Contract):
     frameId: int
     ready: bool
     uptimeSeconds: float
+    #: True only while the simulation worker thread is alive.
+    simulationAlive: bool
+    #: The reason the simulation died, when it did.
+    workerError: str | None = None
 
 
 __all__ = [

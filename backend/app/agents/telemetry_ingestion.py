@@ -17,11 +17,11 @@ from .base import (
     K_MATCH_EVENTS,
     K_MATCH_SECONDS,
     K_PASSING_LANES,
-    K_PLAYER_POSITIONS,
-    K_POSSESSION,
     K_PITCH_CONTROL_AWAY,
     K_PITCH_CONTROL_CONTESTED,
     K_PITCH_CONTROL_HOME,
+    K_PLAYER_POSITIONS,
+    K_POSSESSION,
     K_SCENARIO,
     K_SCORE,
     AgentContext,
@@ -125,7 +125,7 @@ class TelemetryIngestionAgent:
 
         latency = (perf_counter() - started) * 1000.0
         continuity = (
-            f" continuous from {previous_clock}."
+            f" continuous from {previous_clock} at {previous_score}."
             if previous_clock and previous_clock != frame.matchClock
             else "."
         )

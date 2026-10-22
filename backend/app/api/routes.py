@@ -18,7 +18,7 @@ from ..models import (
     SyntheticScenarioType,
     ToolDescriptor,
 )
-from ..simulation.engine import SCENARIOS, SCENARIO_ORDER
+from ..simulation.engine import SCENARIO_ORDER, SCENARIOS
 from ..simulation.metrics import format_match_clock
 
 logger = logging.getLogger(__name__)
@@ -38,8 +38,9 @@ async def health(request: Request) -> HealthResponse:
     """Service status, the enabled Azure capabilities and the active scenario."""
     runtime = _runtime(request)
     frame = runtime.latest_frame()
+    alive = runtime.simulation_alive
     return HealthResponse(
-        status="ok",
+        status="ok" if runtime.ready else ("degraded" if alive else "starting"),
         service=runtime.settings.app_name,
         version=runtime.settings.service_version,
         azure=runtime.settings.azure_capabilities(),
@@ -49,6 +50,8 @@ async def health(request: Request) -> HealthResponse:
         frameId=frame.frameId if frame else 0,
         ready=runtime.ready,
         uptimeSeconds=runtime.uptime_seconds,
+        simulationAlive=alive,
+        workerError=runtime.worker_error,
     )
 
 
