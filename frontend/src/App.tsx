@@ -26,7 +26,6 @@ import PersonaPage from "./pages/PersonaPage";
 import StudioControlPage from "./pages/StudioControlPage";
 import { SidebarNav } from "./components/SidebarNav";
 import { telemetryService } from "./services/telemetryService";
-import { useBaseMemory } from "./store/baseMemory";
 
 /* Core CSS required for Ionic components to work properly */
 import "@ionic/react/css/core.css";
@@ -59,7 +58,6 @@ const AppShell: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const theme = useBaseMemory((s) => s.theme);
 
   useEffect(() => {
     const path = location.pathname.replace("/", "");
@@ -67,14 +65,11 @@ const AppShell: React.FC = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    // Apply theme classes to document
-    const isDark = theme === "dark";
-    document.documentElement.classList.toggle("dark", isDark);
-    document.documentElement.classList.toggle("ion-palette-dark", isDark);
-    document.body.classList.toggle("dark", isDark);
-    document.body.classList.toggle("ion-palette-dark", isDark);
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+    // Permanent Dark Mode initialization
+    document.documentElement.classList.add("dark", "ion-palette-dark");
+    document.body.classList.add("dark", "ion-palette-dark");
+    document.documentElement.setAttribute("data-theme", "dark");
+  }, []);
 
   const handleSelectTab = (tab: string) => {
     setActiveTab(tab);

@@ -53,22 +53,49 @@ async def get_current_frame():
 @app.websocket("/ws/telemetry")
 async def websocket_telemetry_endpoint(websocket: WebSocket):
     await websocket.accept()
+    is_paused = False
+
+    async def receiver():
+        nonlocal is_paused
+        try:
+            while True:
+                data = await websocket.receive_text()
+                try:
+                    msg = json.loads(data)
+                    cmd = msg.get("command")
+                    if cmd == "pause":
+                        is_paused = True
+                    elif cmd in ("play", "resume"):
+                        is_paused = False
+                    elif cmd == "seek":
+                        target_sec = float(msg.get("time", 0.0))
+                        simulator.match_clock = target_sec
+                except Exception:
+                    pass
+        except (WebSocketDisconnect, asyncio.CancelledError):
+            pass
+
+    rx_task = asyncio.create_task(receiver())
+
     try:
         while True:
-            frame = simulator.generate_frame()
-            blackboard.update_state({
-                "latest_frame_id": frame.frame_id,
-                "current_game_rhythm": frame.game_rhythm,
-                "control_index": frame.control_chaos.control,
-                "chaos_index": frame.control_chaos.chaos,
-                "active_tactical_inflection": frame.active_tactical_inflection
-            })
-            payload = {
-                "frame": frame.model_dump(),
-                "blackboard": blackboard.model_dump()
-            }
-            await websocket.send_text(json.dumps(payload))
+            if not is_paused:
+                frame = simulator.generate_frame()
+                blackboard.update_state({
+                    "latest_frame_id": frame.frame_id,
+                    "current_game_rhythm": frame.game_rhythm,
+                    "control_index": frame.control_chaos.control,
+                    "chaos_index": frame.control_chaos.chaos,
+                    "active_tactical_inflection": frame.active_tactical_inflection
+                })
+                payload = {
+                    "frame": frame.model_dump(),
+                    "blackboard": blackboard.model_dump()
+                }
+                await websocket.send_text(json.dumps(payload))
             # 5Hz downsampled rate per ADR 0003
             await asyncio.sleep(0.2)
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, asyncio.CancelledError):
         pass
+    finally:
+        rx_task.cancel()

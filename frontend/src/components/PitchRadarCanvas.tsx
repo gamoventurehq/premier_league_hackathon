@@ -220,9 +220,46 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
     };
   }, [showVelocityVectors, showPassingLanes]);
 
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    const padX = 28;
+    const padY = 20;
+    const pitchDrawW = rect.width - padX * 2;
+    const pitchDrawH = rect.height - padY * 2;
+
+    const pitchX = ((clickX - padX) / pitchDrawW) * PITCH_LENGTH_METERS;
+    const pitchY = ((clickY - padY) / pitchDrawH) * PITCH_WIDTH_METERS;
+
+    const frame = baseMemory.getState().currentFrame;
+    if (!frame) return;
+
+    let closest: { id: string; dist: number } | null = null;
+    for (const p of frame.players) {
+      const d = Math.hypot(p.x - pitchX, p.y - pitchY);
+      if (d < 4.0 && (!closest || d < closest.dist)) {
+        closest = { id: p.player_id, dist: d };
+      }
+    }
+
+    if (closest) {
+      baseMemory.setSelectedPlayer(closest.id);
+    }
+  };
+
   return (
     <div className="radar-container" style={{ width: "100%", aspectRatio: "105/68", position: "relative" }}>
-      <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
+      <canvas
+        ref={canvasRef}
+        onClick={handleCanvasClick}
+        style={{ width: "100%", height: "100%", display: "block", cursor: "pointer" }}
+        title="Click on any player to spotlight across studio"
+      />
     </div>
   );
 };

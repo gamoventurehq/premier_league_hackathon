@@ -1,10 +1,28 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { IonIcon } from "@ionic/react";
 import { trophyOutline, openOutline, personOutline } from "ionicons/icons";
-import { useBaseMemory } from "../../store/baseMemory";
+import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 
 export const PlayerSpotlightCard: React.FC = () => {
+  const navigate = useNavigate();
   const selectedPlayerId = useBaseMemory((s) => s.selectedPlayerId);
+  const homeLineup = useBaseMemory((s) => s.homeLineup);
+  const awayLineup = useBaseMemory((s) => s.awayLineup);
+  const score = useBaseMemory((s) => s.score);
+
+  // Dynamically resolve the selected player from Single Core Memory
+  const allPlayers = [...homeLineup, ...awayLineup];
+  const player = allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6]; // default to CM
+  const isHome = player.team === "home";
+  const teamMeta = isHome ? score.homeMeta : score.awayMeta;
+
+  const { shoot, passing, dribbling, defending, shotAccuracyPct, avgRating } = player.attributes;
+
+  const handleOpenPlayerExperience = () => {
+    baseMemory.setPersona("player_cam");
+    navigate("/personas");
+  };
 
   return (
     <div
@@ -23,10 +41,15 @@ export const PlayerSpotlightCard: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <IonIcon icon={trophyOutline} style={{ color: "var(--ion-color-primary)", fontSize: "16px" }} />
           <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--ion-text-color)" }}>
-            Player of the Match
+            Player Spotlight
           </span>
         </div>
-        <IonIcon icon={openOutline} style={{ fontSize: "15px", color: "var(--studio-subtext)", cursor: "pointer" }} />
+        <IonIcon
+          icon={openOutline}
+          onClick={handleOpenPlayerExperience}
+          title="Open Player Cam Experience"
+          style={{ fontSize: "15px", color: "var(--studio-subtext)", cursor: "pointer" }}
+        />
       </div>
 
       {/* Player Profile & Rating */}
@@ -37,22 +60,22 @@ export const PlayerSpotlightCard: React.FC = () => {
               width: "44px",
               height: "44px",
               borderRadius: "50%",
-              backgroundColor: "rgba(124, 58, 237, 0.15)",
-              border: "2px solid #7c3aed",
+              backgroundColor: isHome ? "rgba(0, 229, 255, 0.15)" : "rgba(244, 63, 94, 0.15)",
+              border: `2px solid ${teamMeta.color}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#7c3aed",
+              color: teamMeta.color,
             }}
           >
             <IonIcon icon={personOutline} style={{ fontSize: "22px" }} />
           </div>
           <div>
             <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--ion-text-color)" }}>
-              K. De Bruyne
+              {player.name}
             </div>
             <div style={{ fontSize: "11px", color: "var(--studio-subtext)" }}>
-              Manchester City • #{selectedPlayerId ? selectedPlayerId.replace("home_", "") : "17"}
+              {teamMeta.name} • #{player.number} • {player.pos}
             </div>
           </div>
         </div>
@@ -60,16 +83,52 @@ export const PlayerSpotlightCard: React.FC = () => {
         {/* Rating Badge */}
         <div
           style={{
-            backgroundColor: "#10b981",
+            backgroundColor: player.rating >= 8.0 ? "#10b981" : player.rating >= 7.2 ? "#3b82f6" : "#f59e0b",
             color: "#ffffff",
             fontWeight: 900,
             fontSize: "13px",
             padding: "4px 8px",
             borderRadius: "6px",
-            boxShadow: "0 2px 6px rgba(16, 185, 129, 0.4)",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
           }}
         >
-          8.8
+          {player.rating.toFixed(1)}
+        </div>
+      </div>
+
+      {/* Live In-Match Telemetry Metrics */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          backgroundColor: "var(--studio-inner-bg)",
+          borderRadius: "8px",
+          padding: "6px 12px",
+          border: "1px solid var(--studio-panel-border)",
+          fontSize: "11px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ color: "var(--studio-subtext)" }}>Live Speed:</span>
+          <span style={{ fontWeight: 800, color: "#10b981", fontFamily: "monospace" }}>
+            {player.speed_kmh ? `${player.speed_kmh.toFixed(1)} km/h` : "14.2 km/h"}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ color: "var(--studio-subtext)" }}>Status:</span>
+          <span
+            style={{
+              fontWeight: 800,
+              color: player.is_ball_carrier ? "#ffd600" : "#38bdf8",
+              backgroundColor: player.is_ball_carrier ? "rgba(255, 214, 0, 0.15)" : "rgba(56, 189, 248, 0.12)",
+              padding: "2px 6px",
+              borderRadius: "4px",
+              fontSize: "10px",
+            }}
+          >
+            {player.is_ball_carrier ? "Ball Carrier" : "Off-Ball Track"}
+          </span>
         </div>
       </div>
 
@@ -78,10 +137,10 @@ export const PlayerSpotlightCard: React.FC = () => {
         {/* Attribute Bars */}
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {[
-            { label: "Shoot", val: 82, color: "#10b981" },
-            { label: "Passing", val: 94, color: "#00e5ff" },
-            { label: "Dribbling", val: 85, color: "#3b82f6" },
-            { label: "Defending", val: 68, color: "#f59e0b" },
+            { label: "Shoot", val: shoot, color: "#10b981" },
+            { label: "Passing", val: passing, color: "#00e5ff" },
+            { label: "Dribbling", val: dribbling, color: "#3b82f6" },
+            { label: "Defending", val: defending, color: "#f59e0b" },
           ].map((attr) => (
             <div key={attr.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ fontSize: "10px", color: "var(--studio-subtext)", width: "50px" }}>
@@ -102,6 +161,7 @@ export const PlayerSpotlightCard: React.FC = () => {
                     height: "100%",
                     backgroundColor: attr.color,
                     borderRadius: "3px",
+                    transition: "width 0.3s ease",
                   }}
                 />
               </div>
@@ -138,23 +198,24 @@ export const PlayerSpotlightCard: React.FC = () => {
             {/* Center target crosshair */}
             <div style={{ width: "100%", height: "1px", backgroundColor: "rgba(255,255,255,0.2)", position: "absolute" }} />
             <div style={{ height: "100%", width: "1px", backgroundColor: "rgba(255,255,255,0.2)", position: "absolute" }} />
-            {/* Ball hit spot */}
+            {/* Ball hit spot position derived from accuracy */}
             <div
               style={{
                 width: "8px",
                 height: "8px",
                 borderRadius: "50%",
-                backgroundColor: "#ffd600",
+                backgroundColor: teamMeta.color,
                 position: "absolute",
-                top: "14px",
-                right: "12px",
-                boxShadow: "0 0 6px #ffd600",
+                top: `${30 - Math.round(shotAccuracyPct * 0.15)}px`,
+                right: `${24 - Math.round(shotAccuracyPct * 0.12)}px`,
+                boxShadow: `0 0 6px ${teamMeta.color}`,
+                transition: "all 0.3s ease",
               }}
             />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", width: "100%", marginTop: "6px", fontSize: "9px" }}>
-            <span style={{ color: "var(--studio-subtext)" }}>Acc: <strong>78%</strong></span>
-            <span style={{ color: "var(--studio-subtext)" }}>Avg: <strong>85</strong></span>
+            <span style={{ color: "var(--studio-subtext)" }}>Acc: <strong>{shotAccuracyPct}%</strong></span>
+            <span style={{ color: "var(--studio-subtext)" }}>Avg: <strong>{avgRating}</strong></span>
           </div>
         </div>
       </div>

@@ -15,40 +15,23 @@ import {
   videocamOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
-
-interface MatchEventItem {
-  id: string;
-  time: string;
-  timeSec: number;
-  type: "goal" | "sub" | "card";
-  player: string;
-  playerId: string;
-  detail?: string;
-  score?: string;
-  subOut?: string;
-}
-
-const simulatedEvents: MatchEventItem[] = [
-  { id: "e1", time: "90'+1", timeSec: 5460, type: "card", player: "E. Eze Fouls", playerId: "away_2", detail: "Tactical breakdown" },
-  { id: "e2", time: "88'", timeSec: 5280, type: "sub", player: "A. Diallo", subOut: "N. Mazraoui", playerId: "away_7" },
-  { id: "e3", time: "87'", timeSec: 5220, type: "goal", player: "K. De Bruyne", score: "2 - 3", playerId: "home_7" },
-  { id: "e4", time: "84'", timeSec: 5040, type: "goal", player: "B. Saka", score: "2 - 2", playerId: "away_8" },
-  { id: "e5", time: "81'", timeSec: 4860, type: "sub", player: "P. Dorgu", subOut: "B. Šeško", playerId: "away_5" },
-  { id: "e6", time: "75'", timeSec: 4500, type: "sub", player: "J. Grealish", subOut: "P. Foden", playerId: "home_11" },
-  { id: "e7", time: "69'", timeSec: 4140, type: "goal", player: "E. Haaland", score: "1 - 2", playerId: "home_10" },
-  { id: "e8", time: "64'", timeSec: 3840, type: "card", player: "D. Rice Fouls", playerId: "away_7", detail: "Yellow card" },
-  { id: "e9", time: "42'", timeSec: 2520, type: "goal", player: "E. Haaland", score: "1 - 0", playerId: "home_10" },
-];
+import { MatchEventItem } from "../../types/telemetry";
+import { telemetryService } from "../../services/telemetryService";
 
 const TOTAL_MATCH_SEC = 5400; // 90 minutes
 
 export const MediaTimelinePanel: React.FC = () => {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const isPlaying = useBaseMemory((s) => s.isPlaying);
   const [selectedEventId, setSelectedEventId] = useState<string>("e3");
   const timelineTrackRef = useRef<HTMLDivElement | null>(null);
 
   const matchClock = useBaseMemory((s) => s.matchClock);
   const score = useBaseMemory((s) => s.score);
+  const events = useBaseMemory((s) => s.timelineEvents);
+  const currentFrame = useBaseMemory((s) => s.currentFrame);
+  const selectedPlayerId = useBaseMemory((s) => s.selectedPlayerId);
+  const homeLineup = useBaseMemory((s) => s.homeLineup);
+  const awayLineup = useBaseMemory((s) => s.awayLineup);
 
   const formatClock = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -67,17 +50,26 @@ export const MediaTimelinePanel: React.FC = () => {
     const targetSec = Math.round(pct * TOTAL_MATCH_SEC);
 
     baseMemory.setMatchClock(targetSec);
+    telemetryService.sendCommand({ command: "seek", time: targetSec });
   };
 
   const handleSkip = (deltaSec: number) => {
     const nextSec = Math.min(TOTAL_MATCH_SEC + 300, Math.max(0, matchClock + deltaSec));
     baseMemory.setMatchClock(nextSec);
+    telemetryService.sendCommand({ command: "seek", time: nextSec });
   };
 
   const handleSelectEvent = (evt: MatchEventItem) => {
     setSelectedEventId(evt.id);
     baseMemory.setMatchClock(evt.timeSec);
     baseMemory.setSelectedPlayer(evt.playerId);
+    telemetryService.sendCommand({ command: "seek", time: evt.timeSec });
+  };
+
+  const handleTogglePlay = () => {
+    const nextPlaying = !isPlaying;
+    baseMemory.setIsPlaying(nextPlaying);
+    telemetryService.sendCommand({ command: nextPlaying ? "play" : "pause" });
   };
 
   const playheadPercent = Math.min(100, Math.max(0, (matchClock / TOTAL_MATCH_SEC) * 100));
@@ -104,342 +96,564 @@ export const MediaTimelinePanel: React.FC = () => {
           position: "relative",
         }}
       >
-        {/* Main Feed with Broadcast Score Bug */}
+        {/* Main Feed with Broadcast Score Bug & Live Tracking Canvas */}
         <div
           style={{
             height: "140px",
-            background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+            backgroundColor: "#0d2818",
+            backgroundImage: "radial-gradient(ellipse at center, #14532d 0%, #052e16 100%)",
             position: "relative",
+            overflow: "hidden",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          {/* Live Score Bug Header */}
+          {/* Synthetic Turf Pitch Markings */}
           <div
             style={{
               position: "absolute",
-              top: "8px",
+              inset: "8px",
+              border: "1.5px solid rgba(255, 255, 255, 0.2)",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
               left: "50%",
-              transform: "translateX(-50%)",
+              top: "8px",
+              bottom: "8px",
+              width: "1.5px",
+              backgroundColor: "rgba(255, 255, 255, 0.2)",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              border: "1.5px solid rgba(255, 255, 255, 0.2)",
+              pointerEvents: "none",
+            }}
+          />
+
+          {/* Live Score Bug Header (Top Left) */}
+          <div
+            style={{
+              position: "absolute",
+              top: "10px",
+              left: "10px",
               display: "flex",
               alignItems: "center",
-              backgroundColor: "rgba(15, 23, 42, 0.9)",
-              border: "1px solid rgba(255,255,255,0.15)",
+              gap: "6px",
+              backgroundColor: "rgba(15, 23, 42, 0.85)",
+              padding: "4px 8px",
               borderRadius: "6px",
-              overflow: "hidden",
-              fontSize: "11px",
-              fontWeight: 800,
-              zIndex: 3,
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(4px)",
+              zIndex: 5,
             }}
           >
-            <span style={{ backgroundColor: "#0284c7", color: "#ffffff", padding: "2px 8px" }}>
-              {score.homeTeam}
+            <span style={{ fontSize: "11px", fontWeight: 900, color: score.homeMeta.color }}>
+              {score.homeMeta.shortCode}
             </span>
-            <span style={{ color: "#ffffff", padding: "2px 8px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 900, color: "#ffffff" }}>
               {score.homeScore} - {score.awayScore}
             </span>
-            <span style={{ backgroundColor: "#e11d48", color: "#ffffff", padding: "2px 8px" }}>
-              {score.awayTeam}
+            <span style={{ fontSize: "11px", fontWeight: 900, color: score.awayMeta.color }}>
+              {score.awayMeta.shortCode}
             </span>
-            <span style={{ color: "#10b981", padding: "2px 8px", fontFamily: "monospace" }}>
+            <span style={{ fontSize: "10px", color: "#94a3b8", fontFamily: "monospace", marginLeft: "4px" }}>
               {formatClock(matchClock)}
             </span>
           </div>
 
-          <div style={{ textAlign: "center", color: "var(--studio-subtext)", fontSize: "12px" }}>
-            <IonIcon icon={videocamOutline} style={{ fontSize: "28px", color: "var(--ion-color-secondary)", display: "block", margin: "0 auto 4px" }} />
-            <span>Simulated Broadcast Camera (Angle 1)</span>
-          </div>
-        </div>
-
-        {/* Dual Sub-Angles (Player Cam & Ball Tracking with bounding box) */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", height: "100px", borderTop: "1px solid var(--studio-panel-border)" }}>
-          {/* Angle 2: Player Cam */}
+          {/* Broadcast HUD Live Indicator (Top Right) */}
           <div
             style={{
-              backgroundColor: "#0b1220",
-              borderRight: "1px solid var(--studio-panel-border)",
+              position: "absolute",
+              top: "10px",
+              right: "10px",
               display: "flex",
-              flexDirection: "column",
               alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
+              gap: "5px",
+              backgroundColor: "rgba(15, 23, 42, 0.85)",
+              padding: "3px 8px",
+              borderRadius: "6px",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              fontSize: "9px",
+              fontFamily: "monospace",
+              color: "#f43f5e",
+              fontWeight: 800,
+              zIndex: 5,
             }}
           >
-            <span style={{ position: "absolute", top: "4px", left: "6px", fontSize: "9px", color: "#00e5ff", fontWeight: 700 }}>
-              Player Cam (K. De Bruyne)
-            </span>
-            <span style={{ fontSize: "11px", color: "#94a3b8" }}>Optical Isolation</span>
+            <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#f43f5e", animation: "pulse 1s infinite" }} />
+            <span>LIVE CAM-1</span>
           </div>
 
-          {/* Angle 3: Ball Physics Tracking */}
-          <div
-            style={{
-              backgroundColor: "#070c16",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
-            }}
-          >
-            <span style={{ position: "absolute", top: "4px", left: "6px", fontSize: "9px", color: "#ffd600", fontWeight: 700 }}>
-              Ball Tracking
-            </span>
-            {/* Visual Tracking Bounding Box */}
+          {/* Dynamic Spatial Ball Tracking in Broadcast View */}
+          {currentFrame?.ball && (
             <div
               style={{
-                width: "40px",
-                height: "40px",
-                border: "2px solid #ffd600",
-                borderRadius: "4px",
+                position: "absolute",
+                left: `${(currentFrame.ball.x / 105.0) * 100}%`,
+                top: `${(currentFrame.ball.y / 68.0) * 100}%`,
+                transform: "translate(-50%, -50%)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                pointerEvents: "none",
+                zIndex: 6,
+                transition: "left 0.2s linear, top 0.2s linear",
+              }}
+            >
+              <div
+                style={{
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  backgroundColor: "#ffd600",
+                  border: "1.5px solid #ffffff",
+                  boxShadow: "0 0 10px #ffd600, 0 0 16px rgba(255,214,0,0.8)",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "7px",
+                  fontWeight: 800,
+                  color: "#ffd600",
+                  backgroundColor: "rgba(0,0,0,0.6)",
+                  padding: "1px 3px",
+                  borderRadius: "2px",
+                  marginTop: "2px",
+                  fontFamily: "monospace",
+                }}
+              >
+                {currentFrame.ball.speed_kmh.toFixed(1)} km/h
+              </span>
+            </div>
+          )}
+
+          {/* Active Ball Carrier Reticle in View */}
+          {(() => {
+            const allPlayers = [...homeLineup, ...awayLineup];
+            const ballCarrier = allPlayers.find((p) => p.is_ball_carrier);
+            if (!ballCarrier) return null;
+            return (
+              <div
+                style={{
+                  position: "absolute",
+                  left: `${ballCarrier.x}%`,
+                  top: `${ballCarrier.y}%`,
+                  transform: "translate(-50%, -50%)",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  border: `1.5px dashed ${ballCarrier.team === "home" ? score.homeMeta.color : score.awayMeta.color}`,
+                  animation: "spin 4s linear infinite",
+                  pointerEvents: "none",
+                  zIndex: 4,
+                  transition: "left 0.2s linear, top 0.2s linear",
+                }}
+              />
+            );
+          })()}
+
+          {/* Corner PIP 1: Tactical Radar (22 Live Tracking Dots + Ball) */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "8px",
+              left: "8px",
+              width: "75px",
+              height: "46px",
+              backgroundColor: "rgba(5, 46, 22, 0.9)",
+              borderRadius: "6px",
+              border: "1px solid rgba(255, 255, 255, 0.25)",
+              overflow: "hidden",
+              zIndex: 7,
+            }}
+            title="Mini Radar Feed"
+          >
+            <div style={{ position: "relative", width: "100%", height: "100%" }}>
+              {homeLineup.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    position: "absolute",
+                    left: `${p.x}%`,
+                    top: `${p.y}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: "3px",
+                    height: "3px",
+                    borderRadius: "50%",
+                    backgroundColor: score.homeMeta.color,
+                    transition: "left 0.2s linear, top 0.2s linear",
+                  }}
+                />
+              ))}
+              {awayLineup.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    position: "absolute",
+                    left: `${p.x}%`,
+                    top: `${p.y}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: "3px",
+                    height: "3px",
+                    borderRadius: "50%",
+                    backgroundColor: score.awayMeta.color,
+                    transition: "left 0.2s linear, top 0.2s linear",
+                  }}
+                />
+              ))}
+              {currentFrame?.ball && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: `${(currentFrame.ball.x / 105.0) * 100}%`,
+                    top: `${(currentFrame.ball.y / 68.0) * 100}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: "4px",
+                    height: "4px",
+                    borderRadius: "50%",
+                    backgroundColor: "#ffd600",
+                    transition: "left 0.2s linear, top 0.2s linear",
+                  }}
+                />
+              )}
+              <span
+                style={{
+                  position: "absolute",
+                  bottom: "2px",
+                  left: "3px",
+                  fontSize: "7px",
+                  fontWeight: 900,
+                  color: "rgba(255,255,255,0.7)",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                RADAR
+              </span>
+            </div>
+          </div>
+
+          {/* Corner PIP 2: Live Player Cam Tracking */}
+          {(() => {
+            const allPlayers = [...homeLineup, ...awayLineup];
+            const activePlayer = allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6];
+            const teamColor = activePlayer.team === "home" ? score.homeMeta.color : score.awayMeta.color;
+            return (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "8px",
+                  right: "8px",
+                  width: "75px",
+                  height: "46px",
+                  backgroundColor: "rgba(15, 23, 42, 0.9)",
+                  borderRadius: "6px",
+                  border: `1px solid ${teamColor}`,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  padding: "4px",
+                  zIndex: 7,
+                }}
+                title={`Tracking ${activePlayer.name}`}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "8px", fontWeight: 900, color: teamColor }}>
+                    #{activePlayer.number}
+                  </span>
+                  <span style={{ fontSize: "7px", color: "#10b981", fontWeight: 800 }}>
+                    {activePlayer.speed_kmh ? `${activePlayer.speed_kmh.toFixed(1)}k` : "14k"}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: "7px",
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    marginTop: "1px",
+                  }}
+                >
+                  {activePlayer.name.split(" ").pop()}
+                </div>
+                <span style={{ fontSize: "6px", color: "var(--studio-subtext)", letterSpacing: "0.5px" }}>
+                  PLAYER CAM
+                </span>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Media Controls Bar */}
+        <div
+          style={{
+            padding: "8px 12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: "var(--studio-inner-bg)",
+            borderTop: "1px solid var(--studio-panel-border)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button
+              onClick={() => handleSkip(-30)}
+              style={{ background: "none", border: "none", color: "var(--studio-subtext)", cursor: "pointer", padding: "2px" }}
+              title="Skip back 30s"
+            >
+              <IonIcon icon={playSkipBackOutline} style={{ fontSize: "14px" }} />
+            </button>
+            <button
+              onClick={handleTogglePlay}
+              style={{
+                width: "26px",
+                height: "26px",
+                borderRadius: "50%",
+                background: "var(--ion-color-primary)",
+                border: "none",
+                color: "#ffffff",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 0 8px rgba(255, 214, 0, 0.4)",
+                cursor: "pointer",
               }}
             >
-              <div style={{ width: "12px", height: "12px", borderRadius: "50%", backgroundColor: "#ffffff" }} />
-            </div>
+              <IonIcon icon={isPlaying ? pauseOutline : playOutline} style={{ fontSize: "14px" }} />
+            </button>
+            <button
+              onClick={() => handleSkip(30)}
+              style={{ background: "none", border: "none", color: "var(--studio-subtext)", cursor: "pointer", padding: "2px" }}
+              title="Skip forward 30s"
+            >
+              <IonIcon icon={playSkipForwardOutline} style={{ fontSize: "14px" }} />
+            </button>
+            <span style={{ fontSize: "11px", fontFamily: "monospace", color: "var(--ion-text-color)", fontWeight: 700 }}>
+              {formatClock(matchClock)}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--studio-subtext)" }}>
+            <IonIcon icon={repeatOutline} style={{ fontSize: "14px", cursor: "pointer" }} />
+            <IonIcon icon={scanOutline} style={{ fontSize: "14px", cursor: "pointer" }} />
+            <IonIcon icon={settingsOutline} style={{ fontSize: "14px", cursor: "pointer" }} />
+            <IonIcon icon={expandOutline} style={{ fontSize: "14px", cursor: "pointer" }} />
           </div>
         </div>
-      </div>
 
-      {/* Media Playback Controls Bar */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "4px 8px",
-          color: "var(--studio-subtext)",
-        }}
-      >
-        <div style={{ display: "flex", gap: "10px" }}>
-          <IonIcon icon={repeatOutline} style={{ cursor: "pointer" }} />
-          <IonIcon icon={settingsOutline} style={{ cursor: "pointer" }} />
-        </div>
-
-        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-          <button
-            onClick={() => handleSkip(-300)}
-            title="Rewind 5 minutes"
-            style={{ background: "transparent", border: "none", color: "var(--studio-subtext)", cursor: "pointer" }}
-          >
-            <IonIcon icon={playSkipBackOutline} style={{ fontSize: "18px" }} />
-          </button>
-
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            style={{
-              background: "var(--ion-color-primary)",
-              border: "none",
-              borderRadius: "50%",
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#ffffff",
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(124, 58, 237, 0.4)",
-            }}
-          >
-            <IonIcon icon={isPlaying ? pauseOutline : playOutline} style={{ fontSize: "16px" }} />
-          </button>
-
-          <button
-            onClick={() => handleSkip(300)}
-            title="Fast Forward 5 minutes"
-            style={{ background: "transparent", border: "none", color: "var(--studio-subtext)", cursor: "pointer" }}
-          >
-            <IonIcon icon={playSkipForwardOutline} style={{ fontSize: "18px" }} />
-          </button>
-        </div>
-
-        <div style={{ display: "flex", gap: "10px" }}>
-          <IonIcon icon={scanOutline} style={{ cursor: "pointer" }} />
-          <IonIcon icon={expandOutline} style={{ cursor: "pointer" }} />
-        </div>
-      </div>
-
-      {/* Interactive Multi-Track Scrubber Timeline */}
-      <div
-        style={{
-          backgroundColor: "var(--studio-inner-bg)",
-          borderRadius: "10px",
-          padding: "10px",
-          border: "1px solid var(--studio-panel-border)",
-          userSelect: "none",
-        }}
-      >
-        {/* Time Markers */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: "9px",
-            color: "var(--studio-subtext)",
-            fontFamily: "monospace",
-            marginBottom: "6px",
-          }}
-        >
-          <span>00:00</span>
-          <span>45:00</span>
-          <span>90:00</span>
-        </div>
-
-        {/* Interactive Scrub Track */}
+        {/* Interactive Scrub Bar with Event Markers */}
         <div
           ref={timelineTrackRef}
           onClick={handleTimelineScrub}
           style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "5px",
+            height: "14px",
+            backgroundColor: "#020617",
             position: "relative",
             cursor: "pointer",
-            padding: "4px 0",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
           }}
         >
-          {/* Possession Track */}
-          <div style={{ height: "12px", backgroundColor: "rgba(244, 63, 94, 0.25)", borderRadius: "3px", width: "100%" }} />
-          {/* Momentum Track */}
-          <div style={{ height: "12px", backgroundColor: "rgba(0, 229, 255, 0.25)", borderRadius: "3px", width: "100%" }} />
-          {/* Event Chip Track */}
-          <div style={{ height: "12px", backgroundColor: "rgba(255, 214, 0, 0.15)", borderRadius: "3px", width: "100%", position: "relative" }}>
-            {/* Goal marker chip matching reference image (M. Cunha 69') */}
-            <div
-              style={{
-                position: "absolute",
-                left: "76%",
-                top: "-2px",
-                transform: "translateX(-50%)",
-                backgroundColor: "#7c3aed",
-                color: "#ffffff",
-                padding: "1px 6px",
-                borderRadius: "4px",
-                fontSize: "8px",
-                fontWeight: 800,
-                whiteSpace: "nowrap",
-                display: "flex",
-                alignItems: "center",
-                gap: "2px",
-              }}
-            >
-              <IonIcon icon={footballOutline} style={{ fontSize: "8px" }} />
-              <span>Cunha 69'</span>
-            </div>
-          </div>
-
-          {/* Draggable Scrubber Playhead Line with Glow */}
+          {/* Progress fill */}
           <div
             style={{
               position: "absolute",
+              left: 0,
               top: 0,
               bottom: 0,
-              left: `${playheadPercent}%`,
-              width: "3px",
-              backgroundColor: "#ffffff",
-              boxShadow: "0 0 10px #ffffff, 0 0 4px #7c3aed",
-              transform: "translateX(-50%)",
-              zIndex: 5,
+              width: `${playheadPercent}%`,
+              backgroundColor: "rgba(124, 58, 237, 0.4)",
             }}
-          >
-            {/* Playhead handle knob */}
-            <div
-              style={{
-                width: "9px",
-                height: "9px",
-                borderRadius: "50%",
-                backgroundColor: "#ffffff",
-                position: "absolute",
-                top: "-4px",
-                left: "-3px",
-                boxShadow: "0 0 6px rgba(0,0,0,0.5)",
-              }}
-            />
-          </div>
-        </div>
+          />
 
-        <div style={{ textAlign: "center", fontSize: "10px", color: "var(--studio-subtext)", marginTop: "4px" }}>
-          Click or scrub along the tracks to jump match time
+          {/* Event Tick Markers */}
+          {events.map((evt) => {
+            const markerPct = Math.min(100, Math.max(0, (evt.timeSec / TOTAL_MATCH_SEC) * 100));
+            const color =
+              evt.type === "goal"
+                ? "#ffd600"
+                : evt.type === "card"
+                ? "#ef4444"
+                : "#00e5ff";
+            return (
+              <div
+                key={evt.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelectEvent(evt);
+                }}
+                style={{
+                  position: "absolute",
+                  left: `${markerPct}%`,
+                  top: "2px",
+                  bottom: "2px",
+                  width: "3px",
+                  backgroundColor: color,
+                  borderRadius: "1px",
+                  zIndex: 2,
+                }}
+                title={`${evt.time} - ${evt.player} (${evt.type})`}
+              />
+            );
+          })}
+
+          {/* Playhead thumb */}
+          <div
+            style={{
+              position: "absolute",
+              left: `${playheadPercent}%`,
+              top: "-1px",
+              bottom: "-1px",
+              width: "4px",
+              backgroundColor: "#ffffff",
+              borderRadius: "2px",
+              boxShadow: "0 0 6px rgba(255,255,255,0.8)",
+              transform: "translateX(-50%)",
+              zIndex: 4,
+            }}
+          />
         </div>
       </div>
 
-      {/* Chronological Match Events Feed (Clickable with Player Focus) */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-          maxHeight: "280px",
-          overflowY: "auto",
-        }}
-      >
-        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--studio-subtext)", textTransform: "uppercase" }}>
-          Match Events Timeline (Click to Jump)
-        </span>
+      {/* Chronological Match Events Feed */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "12px", fontWeight: 800, color: "var(--ion-text-color)" }}>
+            Match Events Timeline
+          </span>
+          <span style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
+            Click event to seek
+          </span>
+        </div>
 
-        {simulatedEvents.map((evt) => {
-          const isSelected = selectedEventId === evt.id;
-          return (
-            <div
-              key={evt.id}
-              onClick={() => handleSelectEvent(evt)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "8px 10px",
-                backgroundColor: isSelected ? "rgba(124, 58, 237, 0.18)" : "var(--studio-inner-bg)",
-                borderRadius: "8px",
-                fontSize: "11px",
-                border: isSelected ? "1.5px solid #7c3aed" : "1px solid var(--studio-panel-border)",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontWeight: 800, fontFamily: "monospace", color: isSelected ? "#00e5ff" : "var(--ion-color-primary)", minWidth: "34px" }}>
-                  {evt.time}
-                </span>
-                {evt.type === "goal" && (
-                  <IonIcon icon={footballOutline} style={{ color: "#10b981", fontSize: "15px" }} />
+        <div
+          style={{
+            maxHeight: "360px",
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+            paddingRight: "2px",
+          }}
+        >
+          {events.map((evt) => {
+            const isSelected = evt.id === selectedEventId;
+            return (
+              <div
+                key={evt.id}
+                onClick={() => handleSelectEvent(evt)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 10px",
+                  borderRadius: "8px",
+                  backgroundColor: isSelected ? "rgba(124, 58, 237, 0.2)" : "var(--studio-inner-bg)",
+                  border: isSelected ? "1px solid var(--ion-color-primary)" : "1px solid var(--studio-panel-border)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 900,
+                      color: "var(--ion-color-primary)",
+                      fontFamily: "monospace",
+                      minWidth: "34px",
+                    }}
+                  >
+                    {evt.time}
+                  </span>
+
+                  {/* Event Type Icon */}
+                  <div
+                    style={{
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      backgroundColor:
+                        evt.type === "goal"
+                          ? "rgba(255, 214, 0, 0.15)"
+                          : evt.type === "card"
+                          ? "rgba(239, 68, 68, 0.15)"
+                          : "rgba(0, 229, 255, 0.15)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <IonIcon
+                      icon={
+                        evt.type === "goal"
+                          ? footballOutline
+                          : evt.type === "card"
+                          ? warningOutline
+                          : swapHorizontalOutline
+                      }
+                      style={{
+                        fontSize: "12px",
+                        color:
+                          evt.type === "goal"
+                            ? "#ffd600"
+                            : evt.type === "card"
+                            ? "#ef4444"
+                            : "#00e5ff",
+                      }}
+                    />
+                  </div>
+
+                  {/* Player & Event Info */}
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+                      {evt.player}
+                    </div>
+                    {evt.subOut && (
+                      <div style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
+                        Sub for: {evt.subOut}
+                      </div>
+                    )}
+                    {evt.detail && (
+                      <div style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
+                        {evt.detail}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Score badge if goal */}
+                {evt.score && (
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: 900,
+                      color: "#ffffff",
+                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    {evt.score}
+                  </span>
                 )}
-                {evt.type === "sub" && (
-                  <IonIcon icon={swapHorizontalOutline} style={{ color: "#38bdf8", fontSize: "15px" }} />
-                )}
-                {evt.type === "card" && (
-                  <IonIcon icon={warningOutline} style={{ color: "#f59e0b", fontSize: "15px" }} />
-                )}
-                <span style={{ fontWeight: 700, color: "var(--ion-text-color)" }}>
-                  {evt.player}
-                </span>
               </div>
-
-              {evt.score ? (
-                <span
-                  style={{
-                    backgroundColor: "rgba(16, 185, 129, 0.2)",
-                    color: "#10b981",
-                    padding: "2px 7px",
-                    borderRadius: "4px",
-                    fontWeight: 800,
-                    fontSize: "10px",
-                  }}
-                >
-                  {evt.score}
-                </span>
-              ) : evt.subOut ? (
-                <span style={{ color: "var(--studio-subtext)", fontSize: "10px" }}>
-                  ⇄ {evt.subOut}
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

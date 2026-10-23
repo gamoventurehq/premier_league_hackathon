@@ -1,22 +1,21 @@
 import React from "react";
 import { IonPage, IonContent, IonIcon } from "@ionic/react";
-import { sunnyOutline, moonOutline, radioOutline } from "ionicons/icons";
+import { radioOutline } from "ionicons/icons";
 import { MediaTimelinePanel } from "../components/dashboard/MediaTimelinePanel";
 import { MatchScoreCard } from "../components/dashboard/MatchScoreCard";
 import { FormationPitchCard } from "../components/dashboard/FormationPitchCard";
 import { PlayerSpotlightCard } from "../components/dashboard/PlayerSpotlightCard";
 import { ShootMapCard } from "../components/dashboard/ShootMapCard";
 import { AttackingShapeCard } from "../components/dashboard/AttackingShapeCard";
-import { useBaseMemory, baseMemory } from "../store/baseMemory";
+import { useBaseMemory } from "../store/baseMemory";
 
 export const DashboardPage: React.FC = () => {
-  const theme = useBaseMemory((s) => s.theme);
   const serverStatus = useBaseMemory((s) => s.serverStatus);
 
   return (
     <IonPage>
       <IonContent fullscreen className="ion-padding" style={{ backgroundColor: "var(--ion-background-color)" }}>
-        {/* Top Studio Bar with Prominent Theme Switcher */}
+        {/* Top Studio Bar */}
         <header
           style={{
             maxWidth: "1600px",
@@ -51,7 +50,7 @@ export const DashboardPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Right Controls: Server Live Badge + Prominent Light/Dark Mode Toggle */}
+          {/* Right Controls: Server Live Badge */}
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <div
               style={{
@@ -61,36 +60,15 @@ export const DashboardPage: React.FC = () => {
                 fontSize: "11px",
                 fontWeight: 700,
                 color: serverStatus.isConnected ? "#10b981" : "#f59e0b",
+                backgroundColor: "var(--studio-inner-bg)",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                border: "1px solid var(--studio-panel-border)",
               }}
             >
               <IonIcon icon={radioOutline} style={{ animation: "pulse 1.5s infinite" }} />
               <span>{serverStatus.isConnected ? "Live 5Hz Stream" : "Synthetic Fallback"}</span>
             </div>
-
-            {/* Prominent Light / Dark Theme Button (Strictly SVG Icons, No Emojis) */}
-            <button
-              onClick={() => baseMemory.toggleTheme()}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "6px 14px",
-                borderRadius: "10px",
-                backgroundColor: "var(--studio-inner-bg)",
-                border: "1px solid var(--studio-panel-border)",
-                color: "var(--ion-text-color)",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <IonIcon
-                icon={theme === "dark" ? sunnyOutline : moonOutline}
-                style={{ fontSize: "16px", color: theme === "dark" ? "#f59e0b" : "#475569" }}
-              />
-              <span>{theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}</span>
-            </button>
           </div>
         </header>
 

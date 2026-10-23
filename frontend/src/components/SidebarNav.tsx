@@ -6,12 +6,9 @@ import {
   analyticsOutline,
   peopleOutline,
   settingsOutline,
-  sunnyOutline,
-  moonOutline,
   personCircleOutline,
   shieldOutline,
 } from "ionicons/icons";
-import { useBaseMemory, baseMemory } from "../store/baseMemory";
 
 interface SidebarNavProps {
   activeTab: string;
@@ -22,8 +19,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   activeTab,
   onSelectTab,
 }) => {
-  const theme = useBaseMemory((s) => s.theme);
-
   return (
     <aside
       style={{
@@ -148,34 +143,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         </nav>
       </div>
 
-      {/* Bottom Section: Theme Switcher & Profile */}
+      {/* Bottom Section: Profile */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-        {/* Light / Dark Mode Toggle (Rule 1 & Rule 6: Strictly Icons, No Emojis) */}
-        <button
-          onClick={() => baseMemory.toggleTheme()}
-          title={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
-          style={{
-            background: "var(--studio-inner-bg)",
-            border: "1px solid var(--studio-panel-border)",
-            borderRadius: "50%",
-            width: "36px",
-            height: "36px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: theme === "dark" ? "#f59e0b" : "#475569",
-            transition: "all 0.2s ease",
-          }}
-        >
-          <IonIcon
-            icon={theme === "dark" ? sunnyOutline : moonOutline}
-            style={{ fontSize: "18px" }}
-          />
-        </button>
-
-        {/* Profile Avatar */}
-        <div style={{ color: "var(--studio-subtext)", cursor: "pointer" }}>
+        <div style={{ color: "var(--studio-subtext)", cursor: "pointer" }} title="Broadcaster Profile">
           <IonIcon icon={personCircleOutline} style={{ fontSize: "28px" }} />
         </div>
       </div>

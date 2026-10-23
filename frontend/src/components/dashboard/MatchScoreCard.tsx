@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { IonIcon } from "@ionic/react";
 import {
   openOutline,
@@ -10,6 +11,7 @@ import {
 import { useBaseMemory } from "../../store/baseMemory";
 
 export const MatchScoreCard: React.FC = () => {
+  const navigate = useNavigate();
   const score = useBaseMemory((s) => s.score);
   const matchClock = useBaseMemory((s) => s.matchClock);
   const serverStatus = useBaseMemory((s) => s.serverStatus);
@@ -19,6 +21,9 @@ export const MatchScoreCard: React.FC = () => {
     const s = Math.floor(secs % 60);
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
+
+  const homeGoals = score.goalscorers.filter((g) => g.team === "home");
+  const awayGoals = score.goalscorers.filter((g) => g.team === "away");
 
   return (
     <div
@@ -39,6 +44,8 @@ export const MatchScoreCard: React.FC = () => {
         </span>
         <IonIcon
           icon={openOutline}
+          onClick={() => navigate("/pitch")}
+          title="Open Full Pitch Radar"
           style={{ fontSize: "16px", color: "var(--studio-subtext)", cursor: "pointer" }}
         />
       </div>
@@ -61,26 +68,26 @@ export const MatchScoreCard: React.FC = () => {
               height: "48px",
               borderRadius: "50%",
               backgroundColor: "rgba(0, 229, 255, 0.12)",
-              border: "2px solid #00e5ff",
+              border: `2px solid ${score.homeMeta.color}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontWeight: 900,
-              color: "#00e5ff",
+              color: score.homeMeta.color,
               fontSize: "14px",
             }}
           >
-            {score.homeTeam}
+            {score.homeMeta.shortCode}
           </div>
           <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--ion-text-color)" }}>
-            Man City
+            {score.homeMeta.name}
           </span>
         </div>
 
         {/* Center Score & Match Clock */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
           <span style={{ fontSize: "11px", color: "var(--studio-subtext)", fontFamily: "monospace" }}>
-            25.01.2026 • 16:30
+            {score.date} • {score.time}
           </span>
           <div
             style={{
@@ -117,19 +124,19 @@ export const MatchScoreCard: React.FC = () => {
               height: "48px",
               borderRadius: "50%",
               backgroundColor: "rgba(244, 63, 94, 0.12)",
-              border: "2px solid #f43f5e",
+              border: `2px solid ${score.awayMeta.color}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontWeight: 900,
-              color: "#f43f5e",
+              color: score.awayMeta.color,
               fontSize: "14px",
             }}
           >
-            {score.awayTeam}
+            {score.awayMeta.shortCode}
           </div>
           <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--ion-text-color)" }}>
-            Arsenal
+            {score.awayMeta.name}
           </span>
         </div>
       </div>
@@ -148,21 +155,21 @@ export const MatchScoreCard: React.FC = () => {
         }}
       >
         <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: "4px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
-            <span>E. Haaland 42'</span>
-            <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "var(--ion-color-secondary)" }} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
-            <span>K. De Bruyne 68'</span>
-            <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "var(--ion-color-secondary)" }} />
-          </div>
+          {homeGoals.map((g, idx) => (
+            <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
+              <span>{g.player} {g.minute}</span>
+              <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: score.homeMeta.color }} />
+            </div>
+          ))}
         </div>
 
         <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: "4px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "var(--ion-color-tertiary)" }} />
-            <span>B. Saka 51'</span>
-          </div>
+          {awayGoals.map((g, idx) => (
+            <div key={idx} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: score.awayMeta.color }} />
+              <span>{g.player} {g.minute}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -179,17 +186,17 @@ export const MatchScoreCard: React.FC = () => {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
           <IonIcon icon={calendarOutline} />
-          <span>25/01/2026 - 16:30</span>
+          <span>{score.date} - {score.time}</span>
         </div>
         <span>•</span>
         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
           <IonIcon icon={trophyOutline} />
-          <span>Premier League</span>
+          <span>{score.competition}</span>
         </div>
         <span>•</span>
         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
           <IonIcon icon={locationOutline} />
-          <span>Etihad Stadium</span>
+          <span>{score.venue}</span>
         </div>
       </div>
     </div>
