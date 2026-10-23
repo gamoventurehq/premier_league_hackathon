@@ -41,7 +41,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       {/* Top Studio Brand Icon */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
         <div
-          title="Premier League Studio"
+          title="Gamoventure • Premier League Studio"
           style={{
             width: "38px",
             height: "38px",

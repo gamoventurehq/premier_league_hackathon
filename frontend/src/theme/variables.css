@@ -26,6 +26,13 @@
   --ion-color-warning: #f59e0b;
   --ion-color-danger: #ef4444;
 
+  --ion-color-dark: #1e293b;
+  --ion-color-dark-rgb: 30, 41, 59;
+  --ion-color-dark-contrast: #f8fafc;
+  --ion-color-dark-contrast-rgb: 248, 250, 252;
+  --ion-color-dark-shade: #0f172a;
+  --ion-color-dark-tint: #334155;
+
   /* Permanent Dark Mode Surface */
   --ion-background-color: #080d16;
   --ion-background-color-rgb: 8, 13, 22;

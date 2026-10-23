@@ -5,9 +5,11 @@ import {
   flashOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
+import { telemetryService } from "../../services/telemetryService";
 
 export const FormationPitchCard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("LINEUP");
+  const matchClock = useBaseMemory((s) => s.matchClock);
   const currentFrame = useBaseMemory((s) => s.currentFrame);
   const selectedPlayerId = useBaseMemory((s) => s.selectedPlayerId);
   const homeLineup = useBaseMemory((s) => s.homeLineup);
@@ -476,37 +478,49 @@ export const FormationPitchCard: React.FC = () => {
             Tactical Inflection Points
           </span>
 
-          {tacticalInflections.map((inflection) => (
-            <div
-              key={inflection.time}
-              style={{
-                backgroundColor: "var(--studio-inner-bg)",
-                borderRadius: "10px",
-                padding: "10px 12px",
-                border: "1px solid var(--studio-panel-border)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: 900, color: "#7c3aed", fontFamily: "monospace" }}>
-                    {inflection.time}
-                  </span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
-                    {inflection.title}
+          {tacticalInflections.map((inflection) => {
+            const isNear = inflection.timeSec !== undefined && Math.abs(matchClock - inflection.timeSec) < 45;
+            return (
+              <div
+                key={inflection.time + inflection.title}
+                onClick={() => {
+                  if (inflection.timeSec !== undefined) {
+                    baseMemory.setMatchClock(inflection.timeSec);
+                    telemetryService.sendCommand({ command: "seek", time: inflection.timeSec });
+                  }
+                }}
+                style={{
+                  backgroundColor: isNear ? "rgba(124, 58, 237, 0.18)" : "var(--studio-inner-bg)",
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  border: isNear ? "1.5px solid #7c3aed" : "1px solid var(--studio-panel-border)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                title={`Click to seek match clock to ${inflection.time}`}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 900, color: "#7c3aed", fontFamily: "monospace" }}>
+                      {inflection.time}
+                    </span>
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+                      {inflection.title}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "9px", fontWeight: 800, color: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.15)", padding: "2px 6px", borderRadius: "4px" }}>
+                    {inflection.impact}
                   </span>
                 </div>
-                <span style={{ fontSize: "9px", fontWeight: 800, color: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.15)", padding: "2px 6px", borderRadius: "4px" }}>
-                  {inflection.impact}
-                </span>
+                <p style={{ margin: 0, fontSize: "11px", color: "var(--studio-subtext)", lineHeight: "1.4" }}>
+                  {inflection.detail}
+                </p>
               </div>
-              <p style={{ margin: 0, fontSize: "11px", color: "var(--studio-subtext)", lineHeight: "1.4" }}>
-                {inflection.detail}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

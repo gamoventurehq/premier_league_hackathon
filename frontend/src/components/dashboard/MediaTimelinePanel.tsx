@@ -13,16 +13,24 @@ import {
   swapHorizontalOutline,
   warningOutline,
   videocamOutline,
+  tvOutline,
+  micOutline,
+  sparklesOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 import { MatchEventItem } from "../../types/telemetry";
 import { telemetryService } from "../../services/telemetryService";
+import { BroadcastOverlay, BroadcastOverlayMode } from "../broadcast/BroadcastOverlay";
+import { StudioRecapModal } from "../broadcast/StudioRecapModal";
 
 const TOTAL_MATCH_SEC = 5400; // 90 minutes
 
 export const MediaTimelinePanel: React.FC = () => {
   const isPlaying = useBaseMemory((s) => s.isPlaying);
   const [selectedEventId, setSelectedEventId] = useState<string>("e3");
+  const [isOverlayVisible, setIsOverlayVisible] = useState(true);
+  const [overlayMode, setOverlayMode] = useState<BroadcastOverlayMode>("auto");
+  const [isRecapModalOpen, setIsRecapModalOpen] = useState(false);
   const timelineTrackRef = useRef<HTMLDivElement | null>(null);
 
   const matchClock = useBaseMemory((s) => s.matchClock);
@@ -99,7 +107,7 @@ export const MediaTimelinePanel: React.FC = () => {
         {/* Main Feed with Broadcast Score Bug & Live Tracking Canvas */}
         <div
           style={{
-            height: "140px",
+            height: "230px",
             backgroundColor: "#0d2818",
             backgroundImage: "radial-gradient(ellipse at center, #14532d 0%, #052e16 100%)",
             position: "relative",
@@ -270,7 +278,7 @@ export const MediaTimelinePanel: React.FC = () => {
           <div
             style={{
               position: "absolute",
-              bottom: "8px",
+              top: "38px",
               left: "8px",
               width: "75px",
               height: "46px",
@@ -355,7 +363,7 @@ export const MediaTimelinePanel: React.FC = () => {
               <div
                 style={{
                   position: "absolute",
-                  bottom: "8px",
+                  top: "38px",
                   right: "8px",
                   width: "75px",
                   height: "46px",
@@ -397,6 +405,14 @@ export const MediaTimelinePanel: React.FC = () => {
               </div>
             );
           })()}
+
+          {/* Synchronized Broadcast TV Lower-Third Overlay */}
+          <BroadcastOverlay
+            isVisible={isOverlayVisible}
+            activeMode={overlayMode}
+            onModeChange={setOverlayMode}
+            onToggleVisible={() => setIsOverlayVisible(!isOverlayVisible)}
+          />
         </div>
 
         {/* Media Controls Bar */}
@@ -528,6 +544,105 @@ export const MediaTimelinePanel: React.FC = () => {
         </div>
       </div>
 
+      {/* Broadcast Graphics & Teleprompter Studio Toolbar */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          backgroundColor: "var(--studio-inner-bg)",
+          border: "1px solid var(--studio-panel-border)",
+          borderRadius: "10px",
+          padding: "10px 12px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <IonIcon icon={tvOutline} style={{ color: "var(--ion-color-primary)", fontSize: "14px" }} />
+            <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--ion-text-color)" }}>
+              Broadcast TV Lower-Third Overlays
+            </span>
+          </div>
+
+          <button
+            onClick={() => setIsRecapModalOpen(true)}
+            style={{
+              backgroundColor: "rgba(124, 58, 237, 0.2)",
+              border: "1px solid var(--ion-color-primary)",
+              color: "#c084fc",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              fontSize: "10px",
+              fontWeight: 800,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+            }}
+          >
+            <IonIcon icon={micOutline} style={{ fontSize: "12px" }} />
+            <span>HT Studio Script</span>
+          </button>
+        </div>
+
+        {/* Toggle & Mode Selector Pills */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+          <button
+            onClick={() => setIsOverlayVisible(!isOverlayVisible)}
+            style={{
+              backgroundColor: isOverlayVisible ? "#10b981" : "rgba(255, 255, 255, 0.08)",
+              color: isOverlayVisible ? "#ffffff" : "#94a3b8",
+              border: "none",
+              padding: "3px 8px",
+              borderRadius: "5px",
+              fontSize: "9px",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            Overlay: {isOverlayVisible ? "ON" : "OFF"}
+          </button>
+
+          {(
+            [
+              { key: "auto", label: "Auto-Live" },
+              { key: "dominance", label: "Dominance" },
+              { key: "goal", label: "Goal 42'" },
+              { key: "tactical", label: "Inflection" },
+              { key: "sprint", label: "Sprint Alert" },
+              { key: "cue", label: "Cue Card" },
+            ] as const
+          ).map((m) => (
+            <button
+              key={m.key}
+              onClick={() => {
+                setIsOverlayVisible(true);
+                setOverlayMode(m.key);
+              }}
+              style={{
+                backgroundColor:
+                  isOverlayVisible && overlayMode === m.key
+                    ? "var(--ion-color-primary)"
+                    : "rgba(255, 255, 255, 0.05)",
+                color:
+                  isOverlayVisible && overlayMode === m.key
+                    ? "#ffffff"
+                    : "#94a3b8",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                padding: "3px 8px",
+                borderRadius: "5px",
+                fontSize: "9px",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Chronological Match Events Feed */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -655,6 +770,12 @@ export const MediaTimelinePanel: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Automated Half-Time Match Recap & Studio Teleprompter Modal */}
+      <StudioRecapModal
+        isOpen={isRecapModalOpen}
+        onClose={() => setIsRecapModalOpen(false)}
+      />
     </div>
   );
 };

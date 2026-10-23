@@ -37,6 +37,7 @@ export interface BaseMemoryState {
   selectedPersona: PersonaMode;
   selectedLanguage: SupportedLanguage;
   selectedPlayerId: string;
+  activeScenario: string | null;
   serverStatus: ServerStatus;
 }
 
@@ -203,6 +204,7 @@ const initialState: BaseMemoryState = {
   selectedPersona: "analyst",
   selectedLanguage: "en",
   selectedPlayerId: "home_7",
+  activeScenario: null,
   serverStatus: {
     isConnected: false,
     latencyMs: 0,
@@ -228,6 +230,12 @@ class BaseMemoryStore {
   private notify() {
     this.listeners.forEach((listener) => listener());
   }
+
+  private scenarioCommandHandler: ((cmd: Record<string, unknown>) => void) | null = null;
+
+  setScenarioCommandHandler = (handler: (cmd: Record<string, unknown>) => void) => {
+    this.scenarioCommandHandler = handler;
+  };
 
   // --- Actions to update Single Base Memory from Server or UI ---
 
@@ -269,8 +277,12 @@ class BaseMemoryStore {
       };
     });
 
-    const ctrl = frame.control_chaos.control;
-    const chs = frame.control_chaos.chaos;
+    // If a synthetic scenario is active, preserve its macro tactical values
+    const ctrl = this.state.activeScenario ? this.state.blackboard.control_index : frame.control_chaos.control;
+    const chs = this.state.activeScenario ? this.state.blackboard.chaos_index : frame.control_chaos.chaos;
+    const rhythm = this.state.activeScenario ? this.state.blackboard.current_game_rhythm : frame.game_rhythm;
+    const activeInflection = this.state.activeScenario ? true : frame.active_tactical_inflection;
+
     const possHome = Math.min(75, Math.max(35, Math.round(ctrl * 0.4 + 35)));
     const pcHome = Math.min(80, Math.max(30, Math.round(ctrl * 0.5 + 30)));
 
@@ -300,10 +312,10 @@ class BaseMemoryStore {
       blackboard: {
         ...this.state.blackboard,
         latest_frame_id: frame.frame_id,
-        current_game_rhythm: frame.game_rhythm,
-        control_index: frame.control_chaos.control,
-        chaos_index: frame.control_chaos.chaos,
-        active_tactical_inflection: frame.active_tactical_inflection,
+        current_game_rhythm: rhythm,
+        control_index: ctrl,
+        chaos_index: chs,
+        active_tactical_inflection: activeInflection,
       },
     };
     this.notify();
@@ -314,6 +326,128 @@ class BaseMemoryStore {
       ...this.state,
       isPlaying: playing,
     };
+    this.notify();
+  };
+
+  injectScenario = (scenarioId: string) => {
+    let blackboardUpdate: Partial<TacticalBlackboard> = {};
+    let inflectionTitle = "";
+    let inflectionDetail = "";
+    let inflectionImpact = "";
+
+    if (scenarioId === "low_block_siege") {
+      blackboardUpdate = {
+        control_index: 82,
+        chaos_index: 18,
+        current_game_rhythm: "sustained_possession",
+        latest_pdr: 0.68,
+        active_tactical_inflection: true,
+        narrative_headline: "Man City sustained siege: 82% territorial control compressing Arsenal into 18m depth",
+        persona_overviews: {
+          analyst: "Central corridor compacted to 21.2m. City generating 1.84 xG via De Bruyne half-space delivery, Rest-Defense resting on halfway line.",
+          casual: "Total siege! City are relentless on the edge of the box, searching for the killer pass.",
+          player_cam: "Tracking Home #17 (De Bruyne): 42 passes completed, hovering in the right half-space channel with 94% execution.",
+          club_centric: "City asserting complete territorial authority with 82% control in Arsenal's defensive third.",
+        },
+      };
+      inflectionTitle = "Low-Block Siege Injected";
+      inflectionDetail = "Arsenal compressed to 18m block depth. City holding 82% pitch control.";
+      inflectionImpact = "Home Control 82%";
+    } else if (scenarioId === "rapid_counter") {
+      blackboardUpdate = {
+        control_index: 26,
+        chaos_index: 74,
+        current_game_rhythm: "transition_frenzy",
+        latest_pdr: 0.35,
+        active_tactical_inflection: true,
+        narrative_headline: "Arsenal rapid counter-attack: Saka breakaway punishing high defensive line in 3 touches",
+        persona_overviews: {
+          analyst: "Transition Frenzy triggered: City rest-defense fractured by vertical channel pass. Saka sprint velocity clocked at 33.2 km/h.",
+          casual: "Lightning breakaway! Saka bursts down the right wing with only the goalkeeper to beat!",
+          player_cam: "Tracking Away #8 (Saka): Sprint burst peaked at 33.2 km/h across 48 meters in open transition.",
+          club_centric: "Arsenal executing textbook vertical counter-strike, catching City's fullbacks stranded upfield.",
+        },
+      };
+      inflectionTitle = "Rapid Counter Injected";
+      inflectionDetail = "Saka sprint burst clocked at 33.2 km/h, breaking rest-defense.";
+      inflectionImpact = "Transition Chaos 74%";
+    } else if (scenarioId === "red_card_crisis") {
+      blackboardUpdate = {
+        control_index: 88,
+        chaos_index: 42,
+        current_game_rhythm: "numerical_asymmetry",
+        latest_pdr: 0.76,
+        active_tactical_inflection: true,
+        narrative_headline: "Red Card Crisis: Arsenal down to 10 men, forced into emergency 5-3-1 bunker",
+        persona_overviews: {
+          analyst: "Numerical asymmetry (-1 player) alters pitch control surface: City now control 84% of pitch space with 2-man overload on flanks.",
+          casual: "Red card drama! Arsenal are down to 10 men and fighting desperately to hold on to the point!",
+          player_cam: "Tracking Away #7 (Rice): High-strain defensive shift covering 4.8 km to bridge the missing midfield pivot.",
+          club_centric: "Arsenal in heroic defensive resistance, throwing bodies on the line to preserve the draw.",
+        },
+      };
+      inflectionTitle = "Red Card Crisis Injected";
+      inflectionDetail = "Arsenal down to 10 men. Emergency 5-3-1 bunker engaged.";
+      inflectionImpact = "Numerical Asymmetry -1";
+    } else if (scenarioId === "box_scramble") {
+      blackboardUpdate = {
+        control_index: 15,
+        chaos_index: 85,
+        current_game_rhythm: "penalty_box_chaos",
+        latest_pdr: 0.88,
+        active_tactical_inflection: true,
+        narrative_headline: "Total Chaos: 6 players contesting rebound in 6-yard box with 0.82 xG goalmouth scramble",
+        persona_overviews: {
+          analyst: "Maximum volatility state: Chaos index 85%. Ball velocity 0 mps with 8 defenders within 4m radius of goal line.",
+          casual: "Heart-in-mouth moment! Desperate goal-line clearances and blocks inside the 6-yard box!",
+          player_cam: "Tracking Home #10 (Haaland): 2 consecutive close-range attempts blocked by desperate sliding challenges.",
+          club_centric: "City inches away from the winner! Agonizing scramble on the goal-line!",
+        },
+      };
+      inflectionTitle = "Penalty Box Scramble Injected";
+      inflectionDetail = "Chaos Index spiked to 85% with 6 players contesting rebound in 6-yard box.";
+      inflectionImpact = "Max Chaos 85%";
+    }
+
+    const newInflection: TacticalInflectionItem = {
+      time: "Live",
+      timeSec: this.state.matchClock,
+      title: inflectionTitle,
+      detail: inflectionDetail,
+      impact: inflectionImpact,
+    };
+
+    this.state = {
+      ...this.state,
+      activeScenario: scenarioId,
+      blackboard: {
+        ...this.state.blackboard,
+        ...blackboardUpdate,
+      },
+      tacticalInflections: [newInflection, ...this.state.tacticalInflections],
+    };
+
+    if (this.scenarioCommandHandler) {
+      this.scenarioCommandHandler({ command: "inject_scenario", scenario: scenarioId });
+    }
+
+    this.notify();
+  };
+
+  resetScenario = () => {
+    this.state = {
+      ...this.state,
+      activeScenario: null,
+      blackboard: {
+        ...initialBlackboard,
+        latest_frame_id: this.state.blackboard.latest_frame_id,
+      },
+    };
+
+    if (this.scenarioCommandHandler) {
+      this.scenarioCommandHandler({ command: "reset_scenario" });
+    }
+
     this.notify();
   };
 

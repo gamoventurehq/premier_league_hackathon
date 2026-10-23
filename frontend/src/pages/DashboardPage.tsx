@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { IonPage, IonContent, IonIcon } from "@ionic/react";
-import { radioOutline } from "ionicons/icons";
+import { radioOutline, micOutline } from "ionicons/icons";
 import { MediaTimelinePanel } from "../components/dashboard/MediaTimelinePanel";
 import { MatchScoreCard } from "../components/dashboard/MatchScoreCard";
 import { FormationPitchCard } from "../components/dashboard/FormationPitchCard";
@@ -8,9 +8,11 @@ import { PlayerSpotlightCard } from "../components/dashboard/PlayerSpotlightCard
 import { ShootMapCard } from "../components/dashboard/ShootMapCard";
 import { AttackingShapeCard } from "../components/dashboard/AttackingShapeCard";
 import { useBaseMemory } from "../store/baseMemory";
+import { StudioRecapModal } from "../components/broadcast/StudioRecapModal";
 
 export const DashboardPage: React.FC = () => {
   const serverStatus = useBaseMemory((s) => s.serverStatus);
+  const [isRecapModalOpen, setIsRecapModalOpen] = useState(false);
 
   return (
     <IonPage>
@@ -29,7 +31,7 @@ export const DashboardPage: React.FC = () => {
             borderRadius: "14px",
           }}
         >
-          {/* Brand Info */}
+          {/* Brand Info with Gamoventure Attribution */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span
               style={{
@@ -43,15 +45,37 @@ export const DashboardPage: React.FC = () => {
                 textTransform: "uppercase",
               }}
             >
-              Premier League
+              Gamoventure
             </span>
             <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--ion-text-color)" }}>
-              Synthetic Match Insights Studio
+              Premier League Studio: Synthetic Match Insights
             </span>
           </div>
 
-          {/* Right Controls: Server Live Badge */}
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          {/* Right Controls: Teleprompter & Server Live Badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button
+              onClick={() => setIsRecapModalOpen(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                backgroundColor: "rgba(124, 58, 237, 0.2)",
+                border: "1px solid var(--ion-color-primary)",
+                color: "#c084fc",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                fontSize: "11px",
+                fontWeight: 800,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Open Automated Half-Time Studio Teleprompter & Video Chapters"
+            >
+              <IonIcon icon={micOutline} style={{ fontSize: "14px" }} />
+              <span>HT Studio Teleprompter</span>
+            </button>
+
             <div
               style={{
                 display: "flex",
@@ -71,6 +95,12 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
         </header>
+
+        {/* Studio Teleprompter Modal */}
+        <StudioRecapModal
+          isOpen={isRecapModalOpen}
+          onClose={() => setIsRecapModalOpen(false)}
+        />
 
         {/* 3-Column Studio Grid matching Reference Image */}
         <div className="studio-dashboard-grid" style={{ maxWidth: "1600px", margin: "0 auto" }}>

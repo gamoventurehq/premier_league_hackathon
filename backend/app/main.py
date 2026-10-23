@@ -1,5 +1,6 @@
 import asyncio
 import json
+import math
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -70,6 +71,11 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
                     elif cmd == "seek":
                         target_sec = float(msg.get("time", 0.0))
                         simulator.match_clock = target_sec
+                    elif cmd == "inject_scenario":
+                        scen = msg.get("scenario")
+                        simulator.set_scenario(scen)
+                    elif cmd == "reset_scenario":
+                        simulator.set_scenario(None)
                 except Exception:
                     pass
         except (WebSocketDisconnect, asyncio.CancelledError):
@@ -81,12 +87,14 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
         while True:
             if not is_paused:
                 frame = simulator.generate_frame()
+                pdr_val = round(min(0.95, max(0.15, 0.45 + 0.35 * math.sin(frame.match_clock_sec * 0.35))), 2)
                 blackboard.update_state({
                     "latest_frame_id": frame.frame_id,
                     "current_game_rhythm": frame.game_rhythm,
                     "control_index": frame.control_chaos.control,
                     "chaos_index": frame.control_chaos.chaos,
-                    "active_tactical_inflection": frame.active_tactical_inflection
+                    "active_tactical_inflection": frame.active_tactical_inflection,
+                    "latest_pdr": pdr_val
                 })
                 payload = {
                     "frame": frame.model_dump(),

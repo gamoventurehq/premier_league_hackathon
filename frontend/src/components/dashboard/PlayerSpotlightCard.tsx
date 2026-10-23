@@ -10,12 +10,18 @@ export const PlayerSpotlightCard: React.FC = () => {
   const homeLineup = useBaseMemory((s) => s.homeLineup);
   const awayLineup = useBaseMemory((s) => s.awayLineup);
   const score = useBaseMemory((s) => s.score);
+  const currentFrame = useBaseMemory((s) => s.currentFrame);
 
   // Dynamically resolve the selected player from Single Core Memory
   const allPlayers = [...homeLineup, ...awayLineup];
   const player = allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6]; // default to CM
   const isHome = player.team === "home";
   const teamMeta = isHome ? score.homeMeta : score.awayMeta;
+
+  // Real-time spatial speed and ball carrier state from 5Hz tracking stream
+  const liveTelemetry = currentFrame?.players?.find((p) => p.player_id === selectedPlayerId);
+  const liveSpeed = liveTelemetry?.speed_kmh ?? player.speed_kmh ?? 14.2;
+  const isCarrier = liveTelemetry?.is_ball_carrier ?? player.is_ball_carrier ?? false;
 
   const { shoot, passing, dribbling, defending, shotAccuracyPct, avgRating } = player.attributes;
 
@@ -112,7 +118,7 @@ export const PlayerSpotlightCard: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <span style={{ color: "var(--studio-subtext)" }}>Live Speed:</span>
           <span style={{ fontWeight: 800, color: "#10b981", fontFamily: "monospace" }}>
-            {player.speed_kmh ? `${player.speed_kmh.toFixed(1)} km/h` : "14.2 km/h"}
+            {`${liveSpeed.toFixed(1)} km/h`}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -120,14 +126,14 @@ export const PlayerSpotlightCard: React.FC = () => {
           <span
             style={{
               fontWeight: 800,
-              color: player.is_ball_carrier ? "#ffd600" : "#38bdf8",
-              backgroundColor: player.is_ball_carrier ? "rgba(255, 214, 0, 0.15)" : "rgba(56, 189, 248, 0.12)",
+              color: isCarrier ? "#ffd600" : "#38bdf8",
+              backgroundColor: isCarrier ? "rgba(255, 214, 0, 0.15)" : "rgba(56, 189, 248, 0.12)",
               padding: "2px 6px",
               borderRadius: "4px",
               fontSize: "10px",
             }}
           >
-            {player.is_ball_carrier ? "Ball Carrier" : "Off-Ball Track"}
+            {isCarrier ? "Ball Carrier" : "Off-Ball Track"}
           </span>
         </div>
       </div>
