@@ -136,8 +136,8 @@ class AgentSwarm:
             if outcome.status == AgentStatus.COMPLETE:
                 view.commit()
             elif outcome.status == AgentStatus.FALLBACK:
-                # view already committed or discarded by fallback handling in _run_agent
-                pass
+                # Clean up original staging view; fallback writes committed via isolated view
+                view.discard()
             else:
                 view.discard()
             traces.append(outcome.to_trace())
@@ -181,7 +181,7 @@ class AgentSwarm:
             return AgentOutcome(
                 role=agent.role,
                 label=agent.label,
-                status=AgentStatus.IDLE,  # Or non-committable failure state
+                status=AgentStatus.IDLE,
                 latency_ms=0.0,
                 summary=f"{agent.label} failed and has no rule-based fallback.",
                 reads=list(context.view.reads),

@@ -150,7 +150,8 @@ class BlackboardView:
         self._staged[key] = value
 
     def commit(self) -> None:
-        self.blackboard.write_batch(self._staged)
+        with self.blackboard._lock:
+            self.blackboard.write_batch(self._staged)
         self._staged.clear()
 
     def discard(self) -> None:
