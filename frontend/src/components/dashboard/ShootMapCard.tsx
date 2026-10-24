@@ -53,6 +53,10 @@ export const ShootMapCard: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         gap: "10px",
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       {/* Header with Dynamic Team Switcher */}
@@ -70,7 +74,7 @@ export const ShootMapCard: React.FC = () => {
             style={{
               padding: "3px 8px",
               borderRadius: "6px",
-              border: "none",
+              border: team === "home" ? `1px solid ${score.homeMeta.color}` : "1px solid rgba(255, 255, 255, 0.08)",
               backgroundColor: team === "home" ? "rgba(0, 229, 255, 0.2)" : "transparent",
               color: team === "home" ? score.homeMeta.color : "var(--studio-subtext)",
               fontSize: "11px",
@@ -86,7 +90,7 @@ export const ShootMapCard: React.FC = () => {
             style={{
               padding: "3px 8px",
               borderRadius: "6px",
-              border: "none",
+              border: team === "away" ? `1px solid ${score.awayMeta.color}` : "1px solid rgba(255, 255, 255, 0.08)",
               backgroundColor: team === "away" ? "rgba(244, 63, 94, 0.2)" : "transparent",
               color: team === "away" ? score.awayMeta.color : "var(--studio-subtext)",
               fontSize: "11px",

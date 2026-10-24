@@ -1,14 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { IonIcon } from "@ionic/react";
 import {
   personOutline,
   flashOutline,
+  chevronBackOutline,
+  chevronForwardOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 import { telemetryService } from "../../services/telemetryService";
 
 export const FormationPitchCard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("LINEUP");
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollTabs = (direction: "left" | "right") => {
+    if (tabScrollRef.current) {
+      tabScrollRef.current.scrollBy({
+        left: direction === "left" ? -100 : 100,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const handleTabClick = (tab: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setActiveTab(tab);
+    e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+  };
   const matchClock = useBaseMemory((s) => s.matchClock);
   const currentFrame = useBaseMemory((s) => s.currentFrame);
   const selectedPlayerId = useBaseMemory((s) => s.selectedPlayerId);
@@ -20,8 +37,18 @@ export const FormationPitchCard: React.FC = () => {
   const swarmCommentary = useBaseMemory((s) => s.swarmCommentary);
   const narrativeHeadline = useBaseMemory((s) => s.blackboard.narrative_headline);
 
+  const getShortName = (fullName: string) => {
+    const parts = fullName.trim().split(" ");
+    if (parts.length > 1) {
+      if (parts[0] === "De" || parts[0] === "Van") return `${parts[0]} ${parts[1]}`;
+      return parts[parts.length - 1];
+    }
+    return fullName;
+  };
+
   return (
     <div
+      className="studio-panel-box"
       style={{
         backgroundColor: "var(--studio-panel-bg)",
         border: "1px solid var(--studio-panel-border)",
@@ -30,9 +57,13 @@ export const FormationPitchCard: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         gap: "12px",
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
-      {/* Sticky Tab Switcher Bar */}
+      {/* Sticky Tab Switcher Bar with Scroll Option (952x608 & Responsive) */}
       <div
         style={{
           position: "sticky",
@@ -40,32 +71,106 @@ export const FormationPitchCard: React.FC = () => {
           zIndex: 15,
           backgroundColor: "var(--studio-panel-bg)",
           display: "flex",
-          gap: "8px",
-          overflowX: "auto",
+          alignItems: "center",
+          gap: "4px",
+          width: "100%",
           paddingBottom: "8px",
           borderBottom: "1px solid var(--studio-panel-border)",
+          boxSizing: "border-box",
         }}
       >
-        {["SUMMARY", "STATISTICS", "LINEUP", "PLAYERS", "COMMENTS"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: "6px 14px",
-              borderRadius: "8px",
-              border: "none",
-              backgroundColor: activeTab === tab ? "rgba(16, 185, 129, 0.2)" : "transparent",
-              color: activeTab === tab ? "#10b981" : "var(--studio-subtext)",
-              fontWeight: 700,
-              fontSize: "11px",
-              letterSpacing: "0.5px",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
-          >
-            {tab}
-          </button>
-        ))}
+        <button
+          type="button"
+          onClick={() => scrollTabs("left")}
+          aria-label="Scroll tabs left"
+          title="Scroll tabs left"
+          style={{
+            background: "rgba(255, 255, 255, 0.05)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: "6px",
+            color: "var(--studio-subtext)",
+            width: "22px",
+            height: "26px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+            padding: 0,
+            transition: "all 0.15s ease",
+          }}
+        >
+          <IonIcon icon={chevronBackOutline} style={{ fontSize: "14px" }} />
+        </button>
+
+        <div
+          ref={tabScrollRef}
+          className="studio-chip-scroll"
+          onWheel={(e) => {
+            if (e.deltaY !== 0) {
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            overflowX: "auto",
+            scrollBehavior: "smooth",
+            WebkitOverflowScrolling: "touch",
+            flex: 1,
+            minWidth: 0,
+            padding: "2px 0",
+          }}
+        >
+          {["SUMMARY", "STATISTICS", "LINEUP", "PLAYERS", "COMMENTS"].map((tab) => (
+            <button
+              key={tab}
+              onClick={(e) => handleTabClick(tab, e)}
+              style={{
+                padding: "5px 11px",
+                borderRadius: "8px",
+                border: activeTab === tab ? "1px solid rgba(16, 185, 129, 0.6)" : "1px solid rgba(255, 255, 255, 0.05)",
+                backgroundColor: activeTab === tab ? "rgba(16, 185, 129, 0.22)" : "rgba(255, 255, 255, 0.03)",
+                color: activeTab === tab ? "#34d399" : "var(--studio-subtext)",
+                boxShadow: activeTab === tab ? "0 0 10px rgba(16, 185, 129, 0.35)" : "none",
+                fontWeight: activeTab === tab ? 800 : 600,
+                fontSize: "11px",
+                letterSpacing: "0.5px",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => scrollTabs("right")}
+          aria-label="Scroll tabs right"
+          title="Scroll tabs right"
+          style={{
+            background: "rgba(255, 255, 255, 0.05)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: "6px",
+            color: "var(--studio-subtext)",
+            width: "22px",
+            height: "26px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+            padding: 0,
+            transition: "all 0.15s ease",
+          }}
+        >
+          <IonIcon icon={chevronForwardOutline} style={{ fontSize: "14px" }} />
+        </button>
       </div>
 
       {/* Tab 1: Tactical Lineup & Pitch */}
@@ -193,7 +298,7 @@ export const FormationPitchCard: React.FC = () => {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {p.name}
+                    {getShortName(p.name)}
                   </span>
                   <span
                     style={{
@@ -264,7 +369,7 @@ export const FormationPitchCard: React.FC = () => {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {p.name}
+                    {getShortName(p.name)}
                   </span>
                   <span
                     style={{
@@ -308,14 +413,16 @@ export const FormationPitchCard: React.FC = () => {
           {/* Head Coach / Managers Bar */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "8px",
               paddingTop: "6px",
               borderTop: "1px solid var(--studio-panel-border)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
               <div
                 style={{
                   width: "30px",
@@ -326,12 +433,13 @@ export const FormationPitchCard: React.FC = () => {
                   alignItems: "center",
                   justifyContent: "center",
                   color: score.homeMeta.color,
+                  flexShrink: 0,
                 }}
               >
                 <IonIcon icon={personOutline} style={{ fontSize: "16px" }} />
               </div>
-              <div>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {score.homeMeta.manager}
                 </div>
                 <div style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
@@ -340,9 +448,9 @@ export const FormationPitchCard: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px", minWidth: 0 }}>
+              <div style={{ textAlign: "right", minWidth: 0 }}>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {score.awayMeta.manager}
                 </div>
                 <div style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
@@ -359,6 +467,7 @@ export const FormationPitchCard: React.FC = () => {
                   alignItems: "center",
                   justifyContent: "center",
                   color: score.awayMeta.color,
+                  flexShrink: 0,
                 }}
               >
                 <IonIcon icon={personOutline} style={{ fontSize: "16px" }} />

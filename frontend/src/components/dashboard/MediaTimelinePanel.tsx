@@ -22,6 +22,7 @@ import { MatchEventItem } from "../../types/telemetry";
 import { telemetryService } from "../../services/telemetryService";
 import { BroadcastOverlay, BroadcastOverlayMode } from "../broadcast/BroadcastOverlay";
 import { StudioRecapModal } from "../broadcast/StudioRecapModal";
+import { StudioChipScroller } from "../StudioChipScroller";
 
 const TOTAL_MATCH_SEC = 5400; // 90 minutes
 
@@ -84,6 +85,7 @@ export const MediaTimelinePanel: React.FC = () => {
 
   return (
     <div
+      className="studio-panel-box"
       style={{
         backgroundColor: "var(--studio-panel-bg)",
         border: "1px solid var(--studio-panel-border)",
@@ -92,6 +94,10 @@ export const MediaTimelinePanel: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         gap: "14px",
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       {/* Multi-Angle Video Panel */}
@@ -107,7 +113,10 @@ export const MediaTimelinePanel: React.FC = () => {
         {/* Main Feed with Broadcast Score Bug & Live Tracking Canvas */}
         <div
           style={{
-            height: "230px",
+            width: "100%",
+            aspectRatio: "16/9",
+            minHeight: "190px",
+            maxHeight: "250px",
             backgroundColor: "#0d2818",
             backgroundImage: "radial-gradient(ellipse at center, #14532d 0%, #052e16 100%)",
             position: "relative",
@@ -556,7 +565,7 @@ export const MediaTimelinePanel: React.FC = () => {
           padding: "10px 12px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <IonIcon icon={tvOutline} style={{ color: "var(--ion-color-primary)", fontSize: "14px" }} />
             <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--ion-text-color)" }}>
@@ -578,6 +587,7 @@ export const MediaTimelinePanel: React.FC = () => {
               display: "flex",
               alignItems: "center",
               gap: "5px",
+              flexShrink: 0,
             }}
           >
             <IonIcon icon={micOutline} style={{ fontSize: "12px" }} />
@@ -586,18 +596,20 @@ export const MediaTimelinePanel: React.FC = () => {
         </div>
 
         {/* Toggle & Mode Selector Pills */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+        <StudioChipScroller gap="6px" marginTopTrack={6}>
           <button
             onClick={() => setIsOverlayVisible(!isOverlayVisible)}
             style={{
               backgroundColor: isOverlayVisible ? "#10b981" : "rgba(255, 255, 255, 0.08)",
               color: isOverlayVisible ? "#ffffff" : "#94a3b8",
               border: "none",
-              padding: "3px 8px",
+              padding: "4px 9px",
               borderRadius: "5px",
               fontSize: "9px",
               fontWeight: 800,
               cursor: "pointer",
+              flexShrink: 0,
+              whiteSpace: "nowrap",
             }}
           >
             Overlay: {isOverlayVisible ? "ON" : "OFF"}
@@ -629,18 +641,20 @@ export const MediaTimelinePanel: React.FC = () => {
                     ? "#ffffff"
                     : "#94a3b8",
                 border: "1px solid rgba(255, 255, 255, 0.08)",
-                padding: "3px 8px",
+                padding: "4px 9px",
                 borderRadius: "5px",
                 fontSize: "9px",
                 fontWeight: 700,
                 cursor: "pointer",
                 transition: "all 0.15s ease",
+                flexShrink: 0,
+                whiteSpace: "nowrap",
               }}
             >
               {m.label}
             </button>
           ))}
-        </div>
+        </StudioChipScroller>
       </div>
 
       {/* Chronological Match Events Feed */}
@@ -682,7 +696,7 @@ export const MediaTimelinePanel: React.FC = () => {
                   transition: "all 0.15s ease",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1, overflow: "hidden" }}>
                   <span
                     style={{
                       fontSize: "11px",
@@ -690,6 +704,7 @@ export const MediaTimelinePanel: React.FC = () => {
                       color: "var(--ion-color-primary)",
                       fontFamily: "monospace",
                       minWidth: "34px",
+                      flexShrink: 0,
                     }}
                   >
                     {evt.time}
@@ -710,6 +725,7 @@ export const MediaTimelinePanel: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      flexShrink: 0,
                     }}
                   >
                     <IonIcon
@@ -733,17 +749,17 @@ export const MediaTimelinePanel: React.FC = () => {
                   </div>
 
                   {/* Player & Event Info */}
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+                  <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {evt.player}
                     </div>
                     {evt.subOut && (
-                      <div style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
+                      <div style={{ fontSize: "10px", color: "var(--studio-subtext)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Sub for: {evt.subOut}
                       </div>
                     )}
                     {evt.detail && (
-                      <div style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
+                      <div style={{ fontSize: "10px", color: "var(--studio-subtext)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {evt.detail}
                       </div>
                     )}
@@ -760,6 +776,8 @@ export const MediaTimelinePanel: React.FC = () => {
                       backgroundColor: "rgba(255, 255, 255, 0.1)",
                       padding: "2px 6px",
                       borderRadius: "4px",
+                      flexShrink: 0,
+                      marginLeft: "6px",
                     }}
                   >
                     {evt.score}

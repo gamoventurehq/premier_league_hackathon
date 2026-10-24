@@ -21,6 +21,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 }) => {
   return (
     <aside
+      className="studio-sidebar-nav"
       style={{
         width: "64px",
         minWidth: "64px",

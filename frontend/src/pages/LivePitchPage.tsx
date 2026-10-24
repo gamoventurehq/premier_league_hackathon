@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   IonContent,
   IonHeader,
@@ -15,6 +16,8 @@ import {
   IonCardTitle,
   IonCardSubtitle,
   IonProgressBar,
+  useIonViewDidEnter,
+  useIonViewWillEnter,
 } from "@ionic/react";
 import {
   eyeOutline,
@@ -28,15 +31,36 @@ import {
   personOutline,
   flashOutline,
   videocamOutline,
+  timeOutline,
+  layersOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
 import { PitchRadarCanvas, CameraAngle } from "../components/PitchRadarCanvas";
+import { StudioChipScroller } from "../components/StudioChipScroller";
 
 const LivePitchPage: React.FC = () => {
   const [cameraAngle, setCameraAngle] = useState<CameraAngle>("overhead");
   const [showVectors, setShowVectors] = useState(true);
   const [showLanes, setShowLanes] = useState(true);
   const [showPitchControl, setShowPitchControl] = useState(true);
+  const [mobileTab, setMobileTab] = useState<"pitch" | "player" | "all">("pitch");
+  const [viewEpoch, setViewEpoch] = useState(0);
+  const location = useLocation();
+
+  // Wake up and refresh canvas every time this view enters or is navigated to
+  useIonViewDidEnter(() => {
+    setViewEpoch((v) => v + 1);
+  });
+
+  useIonViewWillEnter(() => {
+    setViewEpoch((v) => v + 1);
+  });
+
+  useEffect(() => {
+    if (location.pathname === "/pitch") {
+      setViewEpoch((v) => v + 1);
+    }
+  }, [location.pathname]);
 
   // Subscribe to Single Base Memory
   const score = useBaseMemory((s) => s.score);
@@ -54,17 +78,35 @@ const LivePitchPage: React.FC = () => {
   const currentFrame = useBaseMemory((s) => s.currentFrame);
 
   const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
+    const clamped = Math.min(5400, Math.max(0, Math.floor(secs || 0)));
+    const m = Math.floor(clamped / 60);
+    const s = Math.floor(clamped % 60);
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Resolve currently spotlighted player from Single Core Memory
+  // Resolve currently spotlighted player from Single Core Memory with robust fallbacks
   const allLineupPlayers = [...homeLineup, ...awayLineup];
+  const defaultPlayer = {
+    id: "home_7",
+    number: 17,
+    name: "K. De Bruyne",
+    pos: "CM",
+    rating: 8.8,
+    x: 38,
+    y: 30,
+    team: "home" as const,
+    speed_kmh: 14.2,
+    is_ball_carrier: false,
+    attributes: { shoot: 86, passing: 96, dribbling: 87, defending: 64, shotAccuracyPct: 82, avgRating: 8.8 },
+  };
   const profile =
-    allLineupPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6];
+    allLineupPlayers.find((p) => p.id === selectedPlayerId) ||
+    homeLineup[6] ||
+    homeLineup[0] ||
+    defaultPlayer;
   const isHome = profile.team === "home";
-  const teamMeta = isHome ? score.homeMeta : score.awayMeta;
+  const defaultMeta = { name: isHome ? "Man City" : "Arsenal", color: isHome ? "#00e5ff" : "#f43f5e" };
+  const teamMeta = (isHome ? score?.homeMeta : score?.awayMeta) || defaultMeta;
 
   // Resolve real-time spatial telemetry from current frame
   const liveTelemetry = currentFrame?.players?.find(
@@ -104,56 +146,60 @@ const LivePitchPage: React.FC = () => {
 
       <IonContent fullscreen className="ion-padding">
         {/* iOS Broadcast Scoreboard Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "#0f172a",
-            padding: "10px 16px",
-            borderRadius: "12px",
-            marginBottom: "14px",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontWeight: 800, color: "#00e5ff", fontSize: "15px" }}>
+        <div className="studio-scoreboard-header" style={{ marginBottom: "14px" }}>
+          <div className="studio-ribbon-row-teams">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#00e5ff", fontSize: "14px" }}>
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#00e5ff", boxShadow: "0 0 8px #00e5ff", flexShrink: 0 }} />
               {score.homeTeam}
             </span>
             <span
               style={{
-                background: "#1e293b",
+                background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
                 padding: "3px 10px",
-                borderRadius: "6px",
+                borderRadius: "8px",
                 fontWeight: 900,
                 color: "#ffffff",
-                letterSpacing: "1px",
-                fontSize: "14px",
+                letterSpacing: "1.5px",
+                fontSize: "13px",
+                flexShrink: 0,
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.4)",
               }}
             >
               {score.homeScore} - {score.awayScore}
             </span>
-            <span style={{ fontWeight: 800, color: "#f43f5e", fontSize: "15px" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#f43f5e", fontSize: "14px" }}>
               {score.awayTeam}
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f43f5e", boxShadow: "0 0 8px #f43f5e", flexShrink: 0 }} />
             </span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <IonIcon
-              icon={radioOutline}
-              color="danger"
-              style={{ animation: "pulse 1.5s infinite" }}
-            />
-            <span
-              style={{
-                fontFamily: "monospace",
-                fontWeight: 700,
-                fontSize: "14px",
-                color: "#f8fafc",
-              }}
-            >
-              {formatTime(matchClock)}
-            </span>
+          <div className="studio-ribbon-row-meta">
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+              <IonIcon
+                icon={radioOutline}
+                color="danger"
+                style={{ animation: "pulse 1.5s infinite", fontSize: "13px" }}
+              />
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#f43f5e", letterSpacing: "0.5px" }}>
+                LIVE 5Hz
+              </span>
+            </div>
+            <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <IonIcon icon={timeOutline} style={{ color: "#38bdf8", fontSize: "13px" }} />
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  color: "#f8fafc",
+                }}
+              >
+                {formatTime(matchClock)}
+              </span>
+            </div>
+            <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
             <span
               style={{
                 background: "#1e293b",
@@ -172,22 +218,72 @@ const LivePitchPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Mobile View Switcher */}
+        <div className="ion-hide-md-up" style={{ marginBottom: "12px" }}>
+          <div
+            style={{
+              display: "flex",
+              backgroundColor: "rgba(15, 23, 42, 0.95)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "10px",
+              padding: "3px",
+              gap: "4px",
+              boxShadow: "inset 0 1px 3px rgba(0,0,0,0.5)",
+            }}
+          >
+            {[
+              { id: "pitch", label: "Radar", icon: mapOutline },
+              { id: "player", label: "Spotlight", icon: personOutline },
+              { id: "all", label: "All", icon: layersOutline },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setMobileTab(tab.id as any)}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px",
+                  padding: "7px 2px",
+                  borderRadius: "8px",
+                  border: mobileTab === tab.id ? "1px solid rgba(56, 189, 248, 0.6)" : "1px solid transparent",
+                  backgroundColor: mobileTab === tab.id ? "rgba(56, 189, 248, 0.28)" : "transparent",
+                  color: mobileTab === tab.id ? "#ffffff" : "var(--studio-subtext)",
+                  boxShadow: mobileTab === tab.id ? "0 2px 10px rgba(56, 189, 248, 0.35)" : "none",
+                  fontSize: "10.5px",
+                  fontWeight: mobileTab === tab.id ? 800 : 600,
+                  whiteSpace: "nowrap",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <IonIcon icon={tab.icon} style={{ fontSize: "12px", color: mobileTab === tab.id ? "#38bdf8" : "var(--studio-subtext)" }} />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Responsive Studio Pitch Workspace Layout */}
         <div
+          className="studio-pitch-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 1.8fr) minmax(360px, 1fr)",
             gap: "16px",
             alignItems: "start",
           }}
         >
           {/* Left Column: 60FPS Pitch Radar Canvas & Controls */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0 }}>
+          <div
+            className={mobileTab !== "all" && mobileTab !== "pitch" ? "ion-hide-md-down" : ""}
+            style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0 }}
+          >
             <PitchRadarCanvas
               showVelocityVectors={showVectors}
               showPassingLanes={showLanes}
               showPitchControl={showPitchControl}
               cameraAngle={cameraAngle}
+              viewEpoch={viewEpoch}
             />
 
             {/* Viewport & Layer Visibility Controls */}
@@ -210,78 +306,123 @@ const LivePitchPage: React.FC = () => {
                     Camera Angle
                   </span>
                 </div>
-                <div style={{ display: "flex", gap: "6px" }}>
-                  {(
-                    [
-                      { id: "overhead", label: "Overhead (105m)" },
-                      { id: "pressing", label: "Pressing Zone" },
-                      { id: "attacking", label: "Attacking Box" },
-                    ] as const
-                  ).map((cam) => {
-                    const isActive = cameraAngle === cam.id;
-                    return (
-                      <button
-                        key={cam.id}
-                        onClick={() => setCameraAngle(cam.id)}
-                        style={{
-                          background: isActive ? "#0284c7" : "rgba(255, 255, 255, 0.05)",
-                          color: isActive ? "#ffffff" : "#94a3b8",
-                          border: isActive ? "1px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
-                          borderRadius: "6px",
-                          padding: "4px 10px",
-                          fontSize: "11px",
-                          fontWeight: isActive ? 700 : 500,
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        {cam.label}
-                      </button>
-                    );
-                  })}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <StudioChipScroller marginTopTrack={6} gap="6px">
+                    {(
+                      [
+                        { id: "overhead", label: "Overhead (105m)" },
+                        { id: "pressing", label: "Pressing Zone" },
+                        { id: "attacking", label: "Attacking Box" },
+                      ] as const
+                    ).map((cam) => {
+                      const isActive = cameraAngle === cam.id;
+                      return (
+                        <button
+                          key={cam.id}
+                          onClick={() => setCameraAngle(cam.id)}
+                          style={{
+                            background: isActive ? "#0284c7" : "rgba(255, 255, 255, 0.05)",
+                            color: isActive ? "#ffffff" : "#94a3b8",
+                            border: isActive ? "1px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
+                            borderRadius: "6px",
+                            padding: "4px 10px",
+                            fontSize: "11px",
+                            fontWeight: isActive ? 700 : 500,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            flexShrink: 0,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {cam.label}
+                        </button>
+                      );
+                    })}
+                  </StudioChipScroller>
                 </div>
               </div>
 
-              {/* Layer Visibility Toggles */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", paddingTop: "6px", borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <IonButton
-                  size="small"
-                  fill={showPitchControl ? "solid" : "outline"}
-                  color="success"
-                  onClick={() => setShowPitchControl(!showPitchControl)}
-                  style={{ textTransform: "none", fontSize: "11px" }}
-                >
-                  <IonIcon slot="start" icon={mapOutline} />
-                  Pitch Control Zones
-                </IonButton>
+              {/* Layer Visibility Toggles with Permanent Non-Vanishing Scroll Line */}
+              <div style={{ borderTop: "1px solid rgba(255, 255, 255, 0.05)", paddingTop: "6px" }}>
+                <StudioChipScroller marginTopTrack={6} gap="8px">
+                  <button
+                    onClick={() => setShowPitchControl(!showPitchControl)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      border: showPitchControl ? "1.5px solid #10b981" : "1px solid rgba(255, 255, 255, 0.12)",
+                      backgroundColor: showPitchControl ? "rgba(16, 185, 129, 0.22)" : "rgba(255, 255, 255, 0.04)",
+                      color: showPitchControl ? "#34d399" : "#94a3b8",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <IonIcon icon={mapOutline} style={{ fontSize: "13px" }} />
+                    <span>Pitch Control Zones</span>
+                  </button>
 
-                <IonButton
-                  size="small"
-                  fill={showVectors ? "solid" : "outline"}
-                  color="secondary"
-                  onClick={() => setShowVectors(!showVectors)}
-                  style={{ textTransform: "none", fontSize: "11px" }}
-                >
-                  <IonIcon slot="start" icon={eyeOutline} />
-                  Velocity Vectors
-                </IonButton>
+                  <button
+                    onClick={() => setShowVectors(!showVectors)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      border: showVectors ? "1.5px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.12)",
+                      backgroundColor: showVectors ? "rgba(56, 189, 248, 0.22)" : "rgba(255, 255, 255, 0.04)",
+                      color: showVectors ? "#38bdf8" : "#94a3b8",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <IonIcon icon={eyeOutline} style={{ fontSize: "13px" }} />
+                    <span>Velocity Vectors</span>
+                  </button>
 
-                <IonButton
-                  size="small"
-                  fill={showLanes ? "solid" : "outline"}
-                  color="primary"
-                  onClick={() => setShowLanes(!showLanes)}
-                  style={{ textTransform: "none", fontSize: "11px" }}
-                >
-                  <IonIcon slot="start" icon={gitNetworkOutline} />
-                  Passing Lanes
-                </IonButton>
+                  <button
+                    onClick={() => setShowLanes(!showLanes)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      border: showLanes ? "1.5px solid var(--ion-color-primary)" : "1px solid rgba(255, 255, 255, 0.12)",
+                      backgroundColor: showLanes ? "rgba(124, 58, 237, 0.25)" : "rgba(255, 255, 255, 0.04)",
+                      color: showLanes ? "#c084fc" : "#94a3b8",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <IonIcon icon={gitNetworkOutline} style={{ fontSize: "13px" }} />
+                    <span>Passing Lanes</span>
+                  </button>
+                </StudioChipScroller>
               </div>
             </div>
           </div>
 
           {/* Right Column: Player Telemetry Inspector & Tactical Dominance */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: 0 }}>
+          <div
+            className={mobileTab !== "all" && mobileTab !== "player" ? "ion-hide-md-down" : ""}
+            style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box" }}
+          >
             {/* Quick Player Spotlight Switcher */}
             <div
               style={{
@@ -292,18 +433,28 @@ const LivePitchPage: React.FC = () => {
                 display: "flex",
                 flexDirection: "column",
                 gap: "8px",
+                width: "100%",
+                maxWidth: "100%",
+                boxSizing: "border-box",
+                overflow: "hidden",
               }}
             >
-              <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase" }}>
-                Spotlight Key Players
-              </span>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase" }}>
+                  Spotlight Key Players
+                </span>
+                <span style={{ fontSize: "10px", color: "#64748b" }}>Swipe ⇄</span>
+              </div>
+              <StudioChipScroller gap="6px" marginTopTrack={6}>
                 {homePresets.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => baseMemory.setSelectedPlayer(p.id)}
                     style={{
-                      padding: "4px 8px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "5px 9px",
                       borderRadius: "6px",
                       border: selectedPlayerId === p.id ? "1.5px solid #00e5ff" : "1px solid rgba(255,255,255,0.1)",
                       backgroundColor: selectedPlayerId === p.id ? "rgba(0, 229, 255, 0.2)" : "#1e293b",
@@ -312,8 +463,11 @@ const LivePitchPage: React.FC = () => {
                       fontWeight: 700,
                       cursor: "pointer",
                       transition: "all 0.15s ease",
+                      flexShrink: 0,
+                      whiteSpace: "nowrap",
                     }}
                   >
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#00e5ff", flexShrink: 0 }} />
                     {p.label}
                   </button>
                 ))}
@@ -322,7 +476,10 @@ const LivePitchPage: React.FC = () => {
                     key={p.id}
                     onClick={() => baseMemory.setSelectedPlayer(p.id)}
                     style={{
-                      padding: "4px 8px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "5px 9px",
                       borderRadius: "6px",
                       border: selectedPlayerId === p.id ? "1.5px solid #f43f5e" : "1px solid rgba(255,255,255,0.1)",
                       backgroundColor: selectedPlayerId === p.id ? "rgba(244, 63, 94, 0.2)" : "#1e293b",
@@ -331,18 +488,21 @@ const LivePitchPage: React.FC = () => {
                       fontWeight: 700,
                       cursor: "pointer",
                       transition: "all 0.15s ease",
+                      flexShrink: 0,
+                      whiteSpace: "nowrap",
                     }}
                   >
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#f43f5e", flexShrink: 0 }} />
                     {p.label}
                   </button>
                 ))}
-              </div>
+              </StudioChipScroller>
             </div>
 
             {/* Selected Player Spatial Telemetry Inspector */}
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader style={{ paddingBottom: "8px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
                   <IonCardSubtitle style={{ color: teamMeta.color, fontWeight: 800 }}>
                     <IonIcon icon={personOutline} style={{ marginRight: "4px" }} />
                     {teamMeta.name} • #{profile.number} {profile.pos}
@@ -453,13 +613,13 @@ const LivePitchPage: React.FC = () => {
             {/* Tactical Dominance & Rhythm Card */}
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader style={{ paddingBottom: "8px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 800 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                  <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 800, margin: 0 }}>
                     <IonIcon icon={pulseOutline} style={{ marginRight: "4px" }} />
                     Tactical Dominance
                   </IonCardSubtitle>
                   {activeInflection && (
-                    <IonBadge color="danger" style={{ fontWeight: 800 }}>
+                    <IonBadge color="danger" style={{ fontWeight: 800, flexShrink: 0 }}>
                       Inflection Active
                     </IonBadge>
                   )}

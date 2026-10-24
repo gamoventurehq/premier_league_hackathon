@@ -128,8 +128,8 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
         }}
       >
         {/* Header Bar with Gamoventure Attribution & Mode Tag */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
             <span
               style={{
                 backgroundColor: "#7c3aed",
@@ -251,8 +251,8 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
         )}
 
         {resolvedMode === "goal" && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
               <div
                 style={{
                   backgroundColor: "rgba(255, 214, 0, 0.2)",
@@ -262,21 +262,22 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
                   display: "flex",
                   alignItems: "center",
                   gap: "4px",
+                  flexShrink: 0,
                 }}
               >
                 <IonIcon icon={footballOutline} style={{ color: "#ffd600", fontSize: "14px" }} />
                 <span style={{ fontSize: "10px", fontWeight: 900, color: "#ffd600" }}>GOAL 42'</span>
               </div>
-              <div>
-                <div style={{ fontSize: "12px", fontWeight: 900, color: "#ffffff" }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: "12px", fontWeight: 900, color: "#ffffff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   E. HAALAND <span style={{ fontSize: "10px", color: "#94a3b8" }}>(MAN CITY)</span>
                 </div>
-                <div style={{ fontSize: "8px", color: "#cbd5e1" }}>
+                <div style={{ fontSize: "8px", color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   14-Pass Build-up Sequence • Shot Velocity: <strong style={{ color: "#ffd600" }}>108.4 km/h</strong>
                 </div>
               </div>
             </div>
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: "11px", fontWeight: 900, color: "#10b981", fontFamily: "monospace" }}>
                 0.78 xG
               </div>
@@ -286,8 +287,8 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
         )}
 
         {resolvedMode === "tactical" && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
               <div
                 style={{
                   backgroundColor: "rgba(0, 229, 255, 0.2)",
@@ -297,21 +298,22 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
                   display: "flex",
                   alignItems: "center",
                   gap: "4px",
+                  flexShrink: 0,
                 }}
               >
                 <IonIcon icon={flashOutline} style={{ color: "#00e5ff", fontSize: "14px" }} />
                 <span style={{ fontSize: "9px", fontWeight: 900, color: "#00e5ff" }}>INFLECTION</span>
               </div>
-              <div>
-                <div style={{ fontSize: "11px", fontWeight: 900, color: "#ffffff" }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: "11px", fontWeight: 900, color: "#ffffff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   RAPID COUNTER-TRANSITION • B. SAKA (84')
                 </div>
-                <div style={{ fontSize: "8px", color: "#cbd5e1" }}>
+                <div style={{ fontSize: "8px", color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   Low-Block Turnover • 4 Touches Box-to-Box in 5.2s • Line Gap: 18.2m
                 </div>
               </div>
             </div>
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: "10px", fontWeight: 900, color: "#38bdf8", fontFamily: "monospace" }}>
                 MOMENTUM +34%
               </div>
@@ -321,8 +323,8 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
         )}
 
         {resolvedMode === "sprint" && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
               <div
                 style={{
                   backgroundColor: "rgba(16, 185, 129, 0.2)",
@@ -332,21 +334,22 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
                   display: "flex",
                   alignItems: "center",
                   gap: "4px",
+                  flexShrink: 0,
                 }}
               >
                 <IonIcon icon={speedometerOutline} style={{ color: "#10b981", fontSize: "14px" }} />
                 <span style={{ fontSize: "9px", fontWeight: 900, color: "#10b981" }}>SPRINT BURST</span>
               </div>
-              <div>
-                <div style={{ fontSize: "11px", fontWeight: 900, color: "#ffffff" }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: "11px", fontWeight: 900, color: "#ffffff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {maxSpeedPlayer?.name ?? "B. SAKA"} • <span style={{ color: "#10b981" }}>{maxSpeedPlayer?.speed_kmh?.toFixed(1) ?? "33.8"} km/h</span>
                 </div>
-                <div style={{ fontSize: "8px", color: "#cbd5e1" }}>
+                <div style={{ fontSize: "8px", color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   Match-High Velocity • 9th Sprint &gt; 25 km/h • High-Intensity Run
                 </div>
               </div>
             </div>
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: "10px", fontWeight: 900, color: "#10b981", fontFamily: "monospace" }}>
                 94% WORK RATE
               </div>
@@ -356,8 +359,8 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
         )}
 
         {resolvedMode === "cue" && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
               <div
                 style={{
                   backgroundColor: "rgba(168, 85, 247, 0.2)",
@@ -367,21 +370,22 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
                   display: "flex",
                   alignItems: "center",
                   gap: "4px",
+                  flexShrink: 0,
                 }}
               >
                 <IonIcon icon={chatbubbleEllipsesOutline} style={{ color: "#a855f7", fontSize: "14px" }} />
                 <span style={{ fontSize: "9px", fontWeight: 900, color: "#a855f7" }}>CUE CARD</span>
               </div>
-              <div>
-                <div style={{ fontSize: "11px", fontWeight: 900, color: "#ffffff" }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: "11px", fontWeight: 900, color: "#ffffff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   ZONE 14 CENTRAL OVERLOAD
                 </div>
-                <div style={{ fontSize: "8px", color: "#cbd5e1" }}>
+                <div style={{ fontSize: "8px", color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   City overload on right half-space forcing Arsenal into 5-4-1 low-block defensive shape.
                 </div>
               </div>
             </div>
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: "9px", fontWeight: 800, color: "#c084fc" }}>
                 SUBPLOT ACTIVE
               </div>
@@ -403,7 +407,7 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
             alignItems: "center",
             justifyContent: "center",
             zIndex: 9999,
-            padding: "20px",
+            padding: "12px",
           }}
           onClick={() => setShowJsonPayload(false)}
         >
@@ -414,11 +418,13 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
               borderRadius: "14px",
               maxWidth: "600px",
               width: "100%",
-              padding: "20px",
+              maxHeight: "85dvh",
+              padding: "14px 12px",
               boxShadow: "0 20px 40px rgba(0,0,0,0.8)",
               display: "flex",
               flexDirection: "column",
-              gap: "14px",
+              gap: "12px",
+              overflow: "hidden",
             }}
             onClick={(e) => e.stopPropagation()}
           >

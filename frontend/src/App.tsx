@@ -73,11 +73,14 @@ const AppShell: React.FC = () => {
 
   const handleSelectTab = (tab: string) => {
     setActiveTab(tab);
-    navigate(`/${tab}`);
+    const targetPath = `/${tab}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
   };
 
   return (
-    <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
+    <div style={{ display: "flex", width: "100%", height: "100%", minHeight: "100dvh", maxHeight: "100dvh", overflow: "hidden", position: "relative", backgroundColor: "#080d16" }}>
       {/* Desktop/Tablet Left Navigation Rail (Matching Reference Design) */}
       <SidebarNav activeTab={activeTab} onSelectTab={handleSelectTab} />
 
@@ -94,30 +97,55 @@ const AppShell: React.FC = () => {
           </IonRouterOutlet>
 
           {/* Bottom iOS Tab Bar (visible on mobile screens) */}
-          <IonTabBar slot="bottom" mode="ios" className="ion-hide-md-up">
-            <IonTabButton tab="dashboard" href="/dashboard">
+          <IonTabBar slot="bottom" mode="ios" className="ion-hide-md-up studio-mobile-tab-bar">
+            <IonTabButton
+              tab="dashboard"
+              href="/dashboard"
+              selected={activeTab === "dashboard"}
+              onClick={() => handleSelectTab("dashboard")}
+            >
               <IonIcon aria-hidden="true" icon={homeOutline} />
               <IonLabel>Dashboard</IonLabel>
             </IonTabButton>
 
-            <IonTabButton tab="pitch" href="/pitch">
+            <IonTabButton
+              tab="pitch"
+              href="/pitch"
+              selected={activeTab === "pitch"}
+              onClick={() => handleSelectTab("pitch")}
+            >
               <IonIcon aria-hidden="true" icon={footballOutline} />
               <IonLabel>Pitch</IonLabel>
             </IonTabButton>
 
-            <IonTabButton tab="tactical" href="/tactical">
+            <IonTabButton
+              tab="tactical"
+              href="/tactical"
+              selected={activeTab === "tactical"}
+              onClick={() => handleSelectTab("tactical")}
+            >
               <IonIcon aria-hidden="true" icon={analyticsOutline} />
               <IonLabel>Tactical</IonLabel>
             </IonTabButton>
 
-            <IonTabButton tab="personas" href="/personas">
+            <IonTabButton
+              tab="personas"
+              href="/personas"
+              selected={activeTab === "personas"}
+              onClick={() => handleSelectTab("personas")}
+            >
               <IonIcon aria-hidden="true" icon={peopleOutline} />
               <IonLabel>Personas</IonLabel>
             </IonTabButton>
 
-            <IonTabButton tab="diagnostics" href="/diagnostics">
+            <IonTabButton
+              tab="diagnostics"
+              href="/diagnostics"
+              selected={activeTab === "diagnostics"}
+              onClick={() => handleSelectTab("diagnostics")}
+            >
               <IonIcon aria-hidden="true" icon={settingsOutline} />
-              <IonLabel>Diagnostics</IonLabel>
+              <IonLabel>Studio</IonLabel>
             </IonTabButton>
           </IonTabBar>
         </IonTabs>

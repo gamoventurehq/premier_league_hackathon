@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import { IonIcon } from "@ionic/react";
 import {
   micOutline,
@@ -16,6 +17,7 @@ import {
   checkmarkCircleOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
+import { StudioChipScroller } from "../StudioChipScroller";
 
 interface StudioRecapModalProps {
   isOpen: boolean;
@@ -150,6 +152,17 @@ export const StudioRecapModal: React.FC<StudioRecapModalProps> = ({ isOpen, onCl
     return () => cancelAnimationFrame(animId);
   }, [isPrompterScrolling, prompterSpeed, activeTab]);
 
+  // Keyboard Escape listener to dismiss modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSeekChapter = (sec: number) => {
@@ -182,18 +195,19 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
 
 *Report generated synthetically by Gamoventure Premier League Studio Insights Engine.*`;
 
-  return (
+  const modalContent = (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(3, 7, 18, 0.85)",
-        backdropFilter: "blur(12px)",
+        backgroundColor: "rgba(2, 6, 23, 0.92)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 99999,
-        padding: "16px",
+        zIndex: 9999999,
+        padding: "max(12px, env(safe-area-inset-top, 12px)) 12px max(12px, env(safe-area-inset-bottom, 12px)) 12px",
       }}
       onClick={onClose}
     >
@@ -201,29 +215,36 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
         style={{
           width: "100%",
           maxWidth: "1050px",
-          maxHeight: "90vh",
+          maxHeight: "calc(100dvh - 24px)",
+          height: "92dvh",
           backgroundColor: "var(--studio-panel-bg)",
           border: "1px solid var(--studio-panel-border)",
-          borderRadius: "18px",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(124, 58, 237, 0.25)",
+          borderRadius: "16px",
+          boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.95), 0 0 30px rgba(124, 58, 237, 0.4)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          position: "relative",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Bar with Gamoventure Branding & Studio Score */}
+        {/* Sticky Header Bar with High-Visibility Red/White Close Button */}
         <div
           style={{
-            padding: "16px 20px",
+            padding: "10px 14px",
             borderBottom: "1px solid var(--studio-panel-border)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "rgba(15, 23, 42, 0.8)",
+            backgroundColor: "rgba(15, 23, 42, 0.98)",
+            flexWrap: "nowrap",
+            gap: "10px",
+            position: "sticky",
+            top: 0,
+            zIndex: 100,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "3px", minWidth: 0, flex: "1 1 auto" }}>
             <span
               style={{
                 backgroundColor: "#7c3aed",
@@ -231,26 +252,28 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
                 fontSize: "9px",
                 fontWeight: 900,
                 letterSpacing: "0.5px",
-                padding: "3px 8px",
+                padding: "2px 7px",
                 borderRadius: "5px",
                 textTransform: "uppercase",
+                display: "inline-block",
+                flexShrink: 0,
               }}
             >
-              Gamoventure Studio
+              Gamoventure
             </span>
-            <div>
-              <div style={{ fontSize: "15px", fontWeight: 900, color: "var(--ion-text-color)" }}>
-                Automated Half-Time Match Recap & Studio Teleprompter
+            <div style={{ minWidth: 0, width: "100%" }}>
+              <div style={{ fontSize: "12.5px", fontWeight: 900, color: "var(--ion-text-color)", lineHeight: "1.25", whiteSpace: "normal" }}>
+                Half-Time Studio Teleprompter
               </div>
-              <div style={{ fontSize: "11px", color: "var(--studio-subtext)" }}>
-                {score.homeTeam} 1 - 1 {score.awayTeam} • Half-Time Interval (45'+2') • Etihad Stadium
+              <div style={{ fontSize: "9.5px", color: "var(--studio-subtext)", marginTop: "2px", lineHeight: "1.2", whiteSpace: "normal" }}>
+                {score.homeTeam} 1 - 1 {score.awayTeam} • Interval (45'+2')
               </div>
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
             {copiedNotification && (
-              <span style={{ fontSize: "11px", color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ fontSize: "10px", color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: "3px" }}>
                 <IonIcon icon={checkmarkCircleOutline} />
                 Copied!
               </span>
@@ -260,225 +283,271 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
               style={{
                 backgroundColor: "var(--studio-inner-bg)",
                 border: "1px solid var(--studio-panel-border)",
-                borderRadius: "8px",
-                padding: "6px 12px",
+                borderRadius: "6px",
+                padding: "5px 8px",
                 color: "var(--ion-text-color)",
                 fontSize: "11px",
                 fontWeight: 700,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                gap: "5px",
+                gap: "4px",
               }}
+              title="Copy Teleprompter Script"
             >
               <IonIcon icon={copyOutline} />
-              <span>Copy Script</span>
+              <span style={{ fontSize: "10px" }}>Copy</span>
             </button>
+
+            {/* Clean top-right close '✕' button */}
             <button
               onClick={onClose}
+              aria-label="Close"
               style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--studio-subtext)",
+                width: "30px",
+                height: "30px",
+                borderRadius: "50%",
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
+                color: "#f8fafc",
+                fontSize: "14px",
+                fontWeight: 700,
                 cursor: "pointer",
-                padding: "4px",
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s ease",
+                flexShrink: 0,
+                marginLeft: "4px",
               }}
-              title="Close Modal"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#ef4444";
+                e.currentTarget.style.borderColor = "#ef4444";
+                e.currentTarget.style.color = "#ffffff";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.16)";
+                e.currentTarget.style.color = "#f8fafc";
+              }}
+              title="Close (Esc)"
             >
-              <IonIcon icon={closeCircleOutline} style={{ fontSize: "22px" }} />
+              ✕
             </button>
           </div>
         </div>
 
-        {/* Tab Navigation Navigation Controls */}
+        {/* Tab Navigation Navigation Controls with Permanent Grey Scroll Line */}
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "8px 20px",
+            padding: "8px 14px",
             backgroundColor: "var(--studio-inner-bg)",
             borderBottom: "1px solid var(--studio-panel-border)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <button
-              onClick={() => setActiveTab("teleprompter")}
-              style={{
-                backgroundColor: activeTab === "teleprompter" ? "var(--ion-color-primary)" : "transparent",
-                border: "none",
-                borderRadius: "6px",
-                padding: "6px 14px",
-                color: activeTab === "teleprompter" ? "#ffffff" : "var(--studio-subtext)",
-                fontSize: "11px",
-                fontWeight: 800,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <IonIcon icon={micOutline} />
-              <span>Broadcast Teleprompter</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("chapters")}
-              style={{
-                backgroundColor: activeTab === "chapters" ? "var(--ion-color-primary)" : "transparent",
-                border: "none",
-                borderRadius: "6px",
-                padding: "6px 14px",
-                color: activeTab === "chapters" ? "#ffffff" : "var(--studio-subtext)",
-                fontSize: "11px",
-                fontWeight: 800,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <IonIcon icon={bookmarkOutline} />
-              <span>Video Chapter Markers</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("article")}
-              style={{
-                backgroundColor: activeTab === "article" ? "var(--ion-color-primary)" : "transparent",
-                border: "none",
-                borderRadius: "6px",
-                padding: "6px 14px",
-                color: activeTab === "article" ? "#ffffff" : "var(--studio-subtext)",
-                fontSize: "11px",
-                fontWeight: 800,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <IonIcon icon={documentTextOutline} />
-              <span>Digital Publication</span>
-            </button>
-          </div>
-
-          {/* Teleprompter Playback & Font Size Controls (Shown when on prompter tab) */}
-          {activeTab === "teleprompter" && (
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              {/* Font Size Pills */}
-              <div style={{ display: "flex", alignItems: "center", gap: "4px", backgroundColor: "rgba(255,255,255,0.05)", padding: "2px", borderRadius: "6px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+            <div style={{ flex: "1 1 320px", maxWidth: "100%", minWidth: 0 }}>
+              <StudioChipScroller gap="8px" marginTopTrack={6} alwaysShowTrack={true}>
                 <button
-                  onClick={() => setFontSize("standard")}
+                  onClick={() => setActiveTab("teleprompter")}
                   style={{
-                    background: fontSize === "standard" ? "var(--ion-color-primary)" : "transparent",
-                    border: "none",
-                    borderRadius: "4px",
-                    color: fontSize === "standard" ? "#ffffff" : "#94a3b8",
-                    padding: "3px 8px",
-                    fontSize: "9px",
-                    fontWeight: 700,
+                    backgroundColor: activeTab === "teleprompter" ? "var(--ion-color-primary)" : "transparent",
+                    border: activeTab === "teleprompter" ? "1px solid var(--ion-color-primary)" : "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "6px",
+                    padding: "6px 14px",
+                    color: activeTab === "teleprompter" ? "#ffffff" : "var(--studio-subtext)",
+                    fontSize: "11px",
+                    fontWeight: 800,
                     cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  Standard
+                  <IonIcon icon={micOutline} />
+                  <span>Teleprompter</span>
                 </button>
-                <button
-                  onClick={() => setFontSize("large")}
-                  style={{
-                    background: fontSize === "large" ? "var(--ion-color-primary)" : "transparent",
-                    border: "none",
-                    borderRadius: "4px",
-                    color: fontSize === "large" ? "#ffffff" : "#94a3b8",
-                    padding: "3px 8px",
-                    fontSize: "9px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  Large
-                </button>
-                <button
-                  onClick={() => setFontSize("prompter")}
-                  style={{
-                    background: fontSize === "prompter" ? "var(--ion-color-primary)" : "transparent",
-                    border: "none",
-                    borderRadius: "4px",
-                    color: fontSize === "prompter" ? "#ffffff" : "#94a3b8",
-                    padding: "3px 8px",
-                    fontSize: "9px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  Studio 24px
-                </button>
-              </div>
 
-              {/* Speed Pills */}
-              <div style={{ display: "flex", alignItems: "center", gap: "4px", backgroundColor: "rgba(255,255,255,0.05)", padding: "2px", borderRadius: "6px" }}>
-                {[0.5, 1.0, 1.5, 2.0].map((s) => (
+                <button
+                  onClick={() => setActiveTab("chapters")}
+                  style={{
+                    backgroundColor: activeTab === "chapters" ? "var(--ion-color-primary)" : "transparent",
+                    border: activeTab === "chapters" ? "1px solid var(--ion-color-primary)" : "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "6px",
+                    padding: "6px 14px",
+                    color: activeTab === "chapters" ? "#ffffff" : "var(--studio-subtext)",
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <IonIcon icon={bookmarkOutline} />
+                  <span>Chapters</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("article")}
+                  style={{
+                    backgroundColor: activeTab === "article" ? "var(--ion-color-primary)" : "transparent",
+                    border: activeTab === "article" ? "1px solid var(--ion-color-primary)" : "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "6px",
+                    padding: "6px 14px",
+                    color: activeTab === "article" ? "#ffffff" : "var(--studio-subtext)",
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <IonIcon icon={documentTextOutline} />
+                  <span>Publication</span>
+                </button>
+              </StudioChipScroller>
+            </div>
+
+            {/* Teleprompter Playback & Font Size Controls (Shown when on prompter tab) */}
+            {activeTab === "teleprompter" && (
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                {/* Font Size Pills */}
+                <div style={{ display: "flex", alignItems: "center", gap: "3px", backgroundColor: "rgba(255,255,255,0.05)", padding: "2px", borderRadius: "6px" }}>
                   <button
-                    key={s}
-                    onClick={() => setPrompterSpeed(s)}
+                    onClick={() => setFontSize("standard")}
                     style={{
-                      background: prompterSpeed === s ? "#38bdf8" : "transparent",
+                      background: fontSize === "standard" ? "var(--ion-color-primary)" : "transparent",
                       border: "none",
                       borderRadius: "4px",
-                      color: prompterSpeed === s ? "#020617" : "#94a3b8",
-                      padding: "3px 6px",
+                      color: fontSize === "standard" ? "#ffffff" : "#94a3b8",
+                      padding: "3px 7px",
                       fontSize: "9px",
-                      fontWeight: 800,
+                      fontWeight: 700,
                       cursor: "pointer",
                     }}
                   >
-                    {s}x
+                    Standard
                   </button>
-                ))}
-              </div>
+                  <button
+                    onClick={() => setFontSize("large")}
+                    style={{
+                      background: fontSize === "large" ? "var(--ion-color-primary)" : "transparent",
+                      border: "none",
+                      borderRadius: "4px",
+                      color: fontSize === "large" ? "#ffffff" : "#94a3b8",
+                      padding: "3px 7px",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Large
+                  </button>
+                  <button
+                    onClick={() => setFontSize("prompter")}
+                    style={{
+                      background: fontSize === "prompter" ? "var(--ion-color-primary)" : "transparent",
+                      border: "none",
+                      borderRadius: "4px",
+                      color: fontSize === "prompter" ? "#ffffff" : "#94a3b8",
+                      padding: "3px 7px",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    24px
+                  </button>
+                </div>
 
-              {/* Scroll Auto Play/Pause */}
-              <button
-                onClick={() => setIsPrompterScrolling(!isPrompterScrolling)}
-                style={{
-                  backgroundColor: isPrompterScrolling ? "#ef4444" : "#10b981",
-                  border: "none",
-                  borderRadius: "6px",
-                  padding: "5px 10px",
-                  color: "#ffffff",
-                  fontSize: "10px",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                <IonIcon icon={isPrompterScrolling ? pauseOutline : playOutline} />
-                <span>{isPrompterScrolling ? "Pause Auto-Scroll" : "Start Auto-Scroll"}</span>
-              </button>
-            </div>
-          )}
+                {/* Speed Pills */}
+                <div style={{ display: "flex", alignItems: "center", gap: "3px", backgroundColor: "rgba(255,255,255,0.05)", padding: "2px", borderRadius: "6px" }}>
+                  {[0.5, 1.0, 1.5, 2.0].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setPrompterSpeed(s)}
+                      style={{
+                        background: prompterSpeed === s ? "#38bdf8" : "transparent",
+                        border: "none",
+                        borderRadius: "4px",
+                        color: prompterSpeed === s ? "#020617" : "#94a3b8",
+                        padding: "3px 6px",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {s}x
+                    </button>
+                  ))}
+                </div>
+
+                {/* Scroll Auto Play/Pause */}
+                <button
+                  onClick={() => setIsPrompterScrolling(!isPrompterScrolling)}
+                  style={{
+                    backgroundColor: isPrompterScrolling ? "#ef4444" : "#10b981",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "4px 9px",
+                    color: "#ffffff",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <IonIcon icon={isPrompterScrolling ? pauseOutline : playOutline} />
+                  <span>{isPrompterScrolling ? "Pause" : "Auto-Scroll"}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Modal Main Body */}
-        <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
+        {/* Modal Main Body: Exactly ONE visible grey scroll line per screen */}
+        <div
+          className={`studio-recap-modal-body ${activeTab !== "teleprompter" ? "studio-visible-scrollbar" : ""}`}
+          style={{
+            padding: "16px 14px",
+            overflowY: activeTab !== "teleprompter" ? "auto" : "hidden",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           {/* TAB 1: Studio Teleprompter */}
           {activeTab === "teleprompter" && (
             <div
               ref={prompterContainerRef}
+              className="studio-visible-scrollbar"
               style={{
-                height: "460px",
+                flex: 1,
+                height: "100%",
+                maxHeight: "58dvh",
+                minHeight: "260px",
                 overflowY: "auto",
-                padding: "20px",
+                padding: "16px 16px 16px 14px",
                 backgroundColor: "#020617",
                 borderRadius: "12px",
                 border: "1px solid rgba(255, 255, 255, 0.1)",
                 display: "flex",
                 flexDirection: "column",
-                gap: "24px",
+                gap: "20px",
               }}
             >
               {TELEPROMPTER_SCRIPT.map((segment, idx) => (
@@ -535,10 +604,12 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
           {/* TAB 2: Streaming Video Chapter Markers */}
           {activeTab === "chapters" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div style={{ fontSize: "12px", color: "var(--studio-subtext)" }}>
-                Click any chapter to seek the match clock and synchronize the studio video timeline.
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <div style={{ fontSize: "12px", color: "var(--studio-subtext)" }}>
+                  Click any chapter to seek the match clock and synchronize the studio video timeline.
+                </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
                 {CHAPTER_MARKERS.map((ch, idx) => {
                   const isCurrent = Math.abs(matchClock - ch.timeSec) < 300;
                   return (
@@ -607,8 +678,8 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
           {/* TAB 3: Instant Digital Publication */}
           {activeTab === "article" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "12px", color: "var(--studio-subtext)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <span style={{ fontSize: "12px", color: "var(--studio-subtext)", minWidth: "180px", flex: "1 1 auto" }}>
                   Ready-to-publish digital match report formatted under Premier League editorial guidelines.
                 </span>
                 <button
@@ -629,6 +700,7 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
                     display: "flex",
                     alignItems: "center",
                     gap: "4px",
+                    flexShrink: 0,
                   }}
                 >
                   <IonIcon icon={copyOutline} />
@@ -645,8 +717,6 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
                   color: "#e2e8f0",
                   fontSize: "12px",
                   lineHeight: "1.7",
-                  maxHeight: "400px",
-                  overflowY: "auto",
                   whiteSpace: "pre-wrap",
                   fontFamily: "monospace",
                 }}
@@ -659,4 +729,6 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
       </div>
     </div>
   );
+
+  return ReactDOM.createPortal(modalContent, document.body);
 };

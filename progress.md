@@ -39,6 +39,20 @@
 
 ## Detailed Activity & Change Log
 
+### [2026-10-24 23:05] - Pull Request #1 Updated: Responsive UX Polish, StudioChipScroller Drag Engine & Pitch Radar Lifecycle Hardening
+- **Pull Request**: [#1 feat: Premier League Studio - Synthetic Match Insights Engine & Studio Dashboard](https://github.com/gamoventurehq/premier_league_hackathon/pull/1)
+- **Branch**: `feature/ionic-studio-dashboard` -> `main`
+- **Scope**:
+  - **StudioChipScroller Drag & Scrub Engine**: Implemented interactive pointer scrub, mouse grab-to-scroll, and mouse wheel support across all horizontal chip rows with a generous 16.5px hit area and `#94a3b8` neutral grey styling.
+  - **Live Pitch Radar Lifecycle Hardening**: Fixed canvas freeze caused by 0-dimension uncaught exceptions during Ionic tab transitions. Added zero-dimension guards, immortal `try/catch/finally` RAF loop, `ResizeObserver` wakeup, and `@ionic/react` lifecycle synchronization (`useIonViewDidEnter`, `viewEpoch`).
+  - **Radar Layout & Badge Collision Elimination**: Relocated Pitch Control dominance badge to the lower-left corner, fully eliminating overlap with the FPS badge.
+  - **StudioRecapModal UX Streamlining**: Removed redundant "Scroll Down" buttons, eliminated duplicate vertical scroll tracks (enforcing single `.studio-visible-scrollbar` per modal screen), and wrapped Gamoventure header badge without truncation.
+  - **Responsive Layout Adaptation**: Perfected layouts across narrow mobile viewports (330x680) through desktop fullscreen (850x608, 1600px+).
+- **Verification**:
+  - Frontend unit tests: 9/9 passing across 3 test files (vitest).
+  - Production build: `npm run build` passed with 0 errors in 3.86s.
+  - Backend pytest: 3/3 passing in 0.52s.
+
 ### [2026-10-23 17:35] - Pull Request #1 Updated: 100% Frontend Features, Broadcast Overlays & Forensic Real-Time Polish
 - **Pull Request**: [#1 feat: Premier League Studio - Synthetic Match Insights Engine & Studio Dashboard](https://github.com/gamoventurehq/premier_league_hackathon/pull/1)
 - **Branch**: `feature/ionic-studio-dashboard` -> `main`

@@ -161,7 +161,7 @@ const initialBlackboard: TacticalBlackboard = {
 const initialState: BaseMemoryState = {
   matchClock: 1458, // 24:18 min
   isPlaying: true,
-  clockOffset: 1458,
+  clockOffset: 0,
   score: {
     homeTeam: "MCI",
     awayTeam: "ARS",
@@ -299,8 +299,10 @@ class BaseMemoryStore {
       return st;
     });
 
-    // Effective clock incorporates user scrub seek offset
-    const effectiveClock = Math.max(0, frame.match_clock_sec + this.state.clockOffset);
+    // In synthetic simulation, frame.match_clock_sec is already the absolute match clock
+    const effectiveClock = this.state.serverStatus.isConnected
+      ? Math.max(0, frame.match_clock_sec + this.state.clockOffset)
+      : Math.min(5400, Math.max(0, frame.match_clock_sec));
 
     this.state = {
       ...this.state,
@@ -498,11 +500,12 @@ class BaseMemoryStore {
   };
 
   setMatchClock = (sec: number) => {
+    const clamped = Math.min(5400, Math.max(0, sec));
     const rawClock = this.state.currentFrame?.match_clock_sec ?? 0;
-    const newOffset = sec - rawClock;
+    const newOffset = clamped - rawClock;
     this.state = {
       ...this.state,
-      matchClock: sec,
+      matchClock: clamped,
       clockOffset: newOffset,
     };
     this.notify();
