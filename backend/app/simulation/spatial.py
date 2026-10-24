@@ -167,9 +167,7 @@ def reflect(value: float, low: float, high: float, margin: float) -> float:
     return value
 
 
-def reflect_velocity(
-    value: float, position: float, low: float, high: float, margin: float
-) -> float:
+def reflect_velocity(value: float, position: float, low: float, high: float, margin: float) -> float:
     """Reflect a velocity component when a player is at the boundary.
 
     The velocity is only reversed when the player is actually *at* the
@@ -297,9 +295,7 @@ def receiver_coverage(receiver: SimPlayer, opponents: list[SimPlayer]) -> float:
     return round(min(1.0, 0.6 * proximity + 0.4 * density), 4)
 
 
-def defender_velocity_alignment(
-    passer: SimPlayer, receiver: SimPlayer, opponents: list[SimPlayer]
-) -> float:
+def defender_velocity_alignment(passer: SimPlayer, receiver: SimPlayer, opponents: list[SimPlayer]) -> float:
     """0..1 closing rate of the opposition onto the pass axis.
 
     Each opponent velocity vector is projected onto the pass axis: the
@@ -412,11 +408,7 @@ def evaluate_lane(
     # distance and defender velocity vectors (plus the implied corridor
     # obstruction from the interceptor density).
     pdr = 100.0 * (
-        0.24 * pressure
-        + 0.24 * coverage
-        + 0.16 * trajectory
-        + 0.20 * alignment
-        + 0.16 * obstruction
+        0.24 * pressure + 0.24 * coverage + 0.16 * trajectory + 0.20 * alignment + 0.16 * obstruction
     )
     pdr = round(max(0.0, min(100.0, pdr)), 2)
 

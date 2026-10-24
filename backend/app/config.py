@@ -62,7 +62,9 @@ class Settings(BaseSettings):
 
     @property
     def foundry_enabled(self) -> bool:
-        return bool(self.azure_ai_foundry_endpoint and (self.azure_openai_api_key or self.azure_ai_foundry_deployment))
+        return bool(
+            self.azure_ai_foundry_endpoint and (self.azure_openai_api_key or self.azure_ai_foundry_deployment)
+        )
 
     @property
     def event_hubs_enabled(self) -> bool:

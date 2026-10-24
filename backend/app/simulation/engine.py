@@ -107,6 +107,7 @@ SQUAD: tuple[SquadPlayer, ...] = (
     SquadPlayer("a11", "Kai Havertz", "Havertz", 29, TeamSide.AWAY, "FW", "fwd", 0.72, 0.0),
 )
 
+
 def granular_position(slot: str, lateral: float) -> str:
     """The granular formation position of a player, e.g. "LB", "AM", "ST".
 
@@ -531,6 +532,24 @@ class MatchEngine:
                 break
             self.step(dt)
 
+    def jump_to_seconds(self, target_seconds: float, dt: float = 0.5) -> None:
+        """Jump match time to target_seconds cleanly, advancing or rewinding simulation."""
+        target_seconds = max(0.0, min(float(MATCH_LENGTH_SECONDS), float(target_seconds)))
+        if not self.state.players:
+            self.reset(self.scenario.id, start_seconds=0.0, warmup_seconds=0.0)
+        if target_seconds < self.match_seconds:
+            self.reset(self.scenario.id, start_seconds=0.0, warmup_seconds=0.0)
+            if target_seconds > 0.0:
+                self.fast_forward(target_seconds, dt=dt)
+            self.match_seconds = target_seconds
+        elif target_seconds > self.match_seconds:
+            self.fast_forward(target_seconds - self.match_seconds, dt=dt)
+            self.match_seconds = target_seconds
+
+    def jump_to(self, target_seconds: float, dt: float = 0.5) -> None:
+        """Alias for jump_to_seconds for backward compatibility."""
+        self.jump_to_seconds(target_seconds, dt=dt)
+
     def _update_possession_ema(self, dt: float) -> None:
         """Track a rolling estimate of the possession share.
 
@@ -748,12 +767,8 @@ class MatchEngine:
 
                 player.x = reflect(player.x + player.vx * dt, 0.0, PITCH_LENGTH, BOUNDARY_MARGIN)
                 player.y = reflect(player.y + player.vy * dt, 0.0, PITCH_WIDTH, BOUNDARY_MARGIN)
-                player.vx = reflect_velocity(
-                    player.vx, player.x, 0.0, PITCH_LENGTH, BOUNDARY_MARGIN
-                )
-                player.vy = reflect_velocity(
-                    player.vy, player.y, 0.0, PITCH_WIDTH, BOUNDARY_MARGIN
-                )
+                player.vx = reflect_velocity(player.vx, player.x, 0.0, PITCH_LENGTH, BOUNDARY_MARGIN)
+                player.vy = reflect_velocity(player.vy, player.y, 0.0, PITCH_WIDTH, BOUNDARY_MARGIN)
 
                 travelled = math.hypot(player.vx, player.vy) * dt
                 player.distance_meters += travelled
@@ -846,11 +861,7 @@ class MatchEngine:
         if forward > 6.0 and goal_distance < 40.0 and role_factor > 0.0:
             closeness = math.exp(-max(0.0, goal_distance - 5.0) / self.SHOT_DISTANCE_DECAY)
             shot_probability = (
-                self.SHOT_BASE_RATE
-                * scenario.shot_bias
-                * role_factor
-                * closeness
-                * (1.0 - 0.06 * congestion)
+                self.SHOT_BASE_RATE * scenario.shot_bias * role_factor * closeness * (1.0 - 0.06 * congestion)
             )
             if self.rng.random() < shot_probability:
                 self._take_shot(carrier, opponents)
@@ -1283,9 +1294,7 @@ class MatchEngine:
             # The ball is dead: the defending side restarts from the restart
             # position. The match never stops.
             conceding = loser.team if loser else TeamSide.HOME
-            winner = self._restart_player(
-                TeamSide.AWAY if conceding is TeamSide.HOME else TeamSide.HOME
-            )
+            winner = self._restart_player(TeamSide.AWAY if conceding is TeamSide.HOME else TeamSide.HOME)
         if winner is not None:
             self._set_carrier(winner)
             self._sequence_team = winner.team
@@ -1368,11 +1377,7 @@ class MatchEngine:
         if carrier is None:
             return list(self._lane_cache)
         opponents = self._opponents(carrier.team)
-        teammates = [
-            p
-            for p in self._teammates(carrier.team)
-            if p.id != carrier.id and p.role != "GK"
-        ]
+        teammates = [p for p in self._teammates(carrier.team) if p.id != carrier.id and p.role != "GK"]
         lanes = []
         for mate in teammates:
             lane = evaluate_lane(carrier, mate, opponents, self.scenario.interception_bias)

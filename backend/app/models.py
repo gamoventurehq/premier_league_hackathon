@@ -402,10 +402,28 @@ class HealthResponse(_Contract):
     uptimeSeconds: float
     #: True only while the simulation worker thread is alive.
     simulationAlive: bool
+    alive: bool = True
     #: The reason the simulation died, when it did.
     workerError: str | None = None
+    worker_errors: int = 0
     #: Wall-clock time (epoch seconds) of the last published frame.
     lastTickAt: float = 0.0
+    heartbeat_fresh: bool = True
+
+
+class PlaybackJumpRequest(_Contract):
+    seconds: float
+
+
+class PlaybackSpeedRequest(_Contract):
+    speed: float
+
+
+class PlaybackStatus(_Contract):
+    paused: bool
+    speed: float
+    matchClock: str
+    matchSeconds: float
 
 
 __all__ = [
@@ -432,6 +450,9 @@ __all__ = [
     "PitchControlCell",
     "PitchControlSplit",
     "PitchPosition",
+    "PlaybackJumpRequest",
+    "PlaybackSpeedRequest",
+    "PlaybackStatus",
     "PlayerMatchStats",
     "PlayerRole",
     "PlayerTelemetry",

@@ -411,7 +411,7 @@ class BroadcastNarrativeAgent:
         latency = (perf_counter() - started) * 1000.0
         summary = (
             f"Multilingual Broadcast Stream written in 5 languages via the {source}: "
-            f"\"{draft.headline.en[:72]}\" at {draft.matchClock}."
+            f'"{draft.headline.en[:72]}" at {draft.matchClock}.'
         )
         return AgentOutcome(
             role=self.role,
@@ -429,7 +429,9 @@ class BroadcastNarrativeAgent:
         view = context.view
         draft = self.generator.build(context, variant=self._variant % 2)
         self._variant += 1
-        view.write(K_NARRATIVE_ARC, NARRATIVE_ARCS.get(context.frame.scenario.value, context.frame.scenario.value))
+        view.write(
+            K_NARRATIVE_ARC, NARRATIVE_ARCS.get(context.frame.scenario.value, context.frame.scenario.value)
+        )
         view.write(
             K_MULTILINGUAL_STREAM,
             {

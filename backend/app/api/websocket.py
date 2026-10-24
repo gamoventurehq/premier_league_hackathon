@@ -68,13 +68,16 @@ async def telemetry_stream(websocket: WebSocket) -> None:
 
     reader = asyncio.create_task(receiver())
     last_frame_id = -1
+    last_sent_at = -1
     try:
         while True:
             envelope = runtime.latest_envelope()
             if envelope is not None:
+                sent_at = envelope.get("sentAtMs", 0)
                 frame = envelope["frame"]
-                if frame.get("frameId") != last_frame_id:
-                    last_frame_id = frame["frameId"]
+                if (frame.get("frameId") != last_frame_id or runtime.is_paused) and sent_at != last_sent_at:
+                    last_frame_id = frame.get("frameId", -1)
+                    last_sent_at = sent_at
                     await websocket.send_json(envelope)
             await asyncio.sleep(PUBLISH_INTERVAL_SECONDS)
     except WebSocketDisconnect:
@@ -98,6 +101,28 @@ async def _handle_client_message(runtime, payload: dict) -> None:
             runtime.set_persona(ExperiencePersona(str(payload.get("persona"))))
         except ValueError:
             logger.warning("Ignoring unknown experience persona: %s", payload.get("persona"))
+    elif message_type in ("jump_time", "scrub_time", "jump"):
+        target_sec = (
+            payload.get("seconds")
+            if "seconds" in payload
+            else (payload.get("matchSeconds") or payload.get("time"))
+        )
+        if target_sec is not None:
+            try:
+                runtime.jump_to_seconds(float(target_sec))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to jump time: %s", exc)
+    elif message_type == "pause":
+        runtime.pause()
+    elif message_type == "resume":
+        runtime.resume()
+    elif message_type == "set_speed":
+        speed = payload.get("speed")
+        if speed is not None:
+            try:
+                runtime.set_speed(float(speed))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to set playback speed: %s", exc)
 
 
 __all__ = ["PUBLISH_INTERVAL_SECONDS", "router"]

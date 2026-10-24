@@ -145,5 +145,145 @@ class TelemetryIngestionAgent:
             writes=list(view.writes),
         )
 
+    def fallback(self, context: AgentContext) -> AgentOutcome:
+        """ADR 0004 rule-based fallback for raw telemetry ingestion.
+
+        Safely extracts and writes canonical fields from context.frame to context.view
+        so downstream agents and overlay always have telemetry even if ingestion throws.
+        """
+        started = perf_counter()
+        frame = context.frame
+        view = context.view
+
+        clock = getattr(frame, "matchClock", "00:00")
+        seconds = getattr(frame, "matchSeconds", 0.0)
+        scenario_obj = getattr(frame, "scenario", None)
+        scenario = getattr(scenario_obj, "value", str(scenario_obj or "kickoff"))
+
+        score_obj = getattr(frame, "score", None)
+        score = {
+            "home": getattr(score_obj, "home", 0) if score_obj else 0,
+            "away": getattr(score_obj, "away", 0) if score_obj else 0,
+        }
+
+        ball_obj = getattr(frame, "ball", None)
+        ball_possession_team = (
+            getattr(getattr(ball_obj, "possessionTeam", None), "value", None)
+            if ball_obj and getattr(ball_obj, "possessionTeam", None)
+            else None
+        )
+        ball = {
+            "x": getattr(ball_obj, "x", 52.5) if ball_obj else 52.5,
+            "y": getattr(ball_obj, "y", 34.0) if ball_obj else 34.0,
+            "speedKmH": getattr(ball_obj, "speedKmH", 0.0) if ball_obj else 0.0,
+            "possessionTeam": ball_possession_team,
+            "possessionPlayerId": getattr(ball_obj, "possessionPlayerId", None) if ball_obj else None,
+        }
+
+        players = getattr(frame, "players", []) or []
+        player_positions = []
+        for p in players:
+            team_obj = getattr(p, "team", None)
+            team_val = getattr(team_obj, "value", str(team_obj or "home"))
+            role_obj = getattr(p, "role", None)
+            role_val = getattr(role_obj, "value", str(role_obj or "midfielder"))
+            player_positions.append(
+                {
+                    "id": getattr(p, "id", ""),
+                    "team": team_val,
+                    "role": role_val,
+                    "x": getattr(p, "x", 0.0),
+                    "y": getattr(p, "y", 0.0),
+                    "speedKmH": getattr(p, "speedKmH", 0.0),
+                    "onBall": getattr(p, "onBall", False),
+                }
+            )
+
+        metrics = getattr(frame, "metrics", None)
+        possession_share = getattr(metrics, "possessionShare", None) if metrics else None
+        possession = {
+            "team": ball_possession_team,
+            "carrier": getattr(ball_obj, "possessionPlayerId", None) if ball_obj else None,
+            "share": {
+                "home": getattr(possession_share, "home", 50.0) if possession_share else 50.0,
+                "away": getattr(possession_share, "away", 50.0) if possession_share else 50.0,
+            },
+        }
+
+        pitch_control = getattr(metrics, "pitchControl", None) if metrics else None
+        pc_home = getattr(pitch_control, "home", 50.0) if pitch_control else 50.0
+        pc_away = getattr(pitch_control, "away", 50.0) if pitch_control else 50.0
+        pc_contested = getattr(pitch_control, "contested", 0.0) if pitch_control else 0.0
+
+        lanes = getattr(frame, "passingLanes", []) or []
+        passing_lanes = [
+            {
+                "passerId": getattr(lane, "passerId", ""),
+                "receiverId": getattr(lane, "receiverId", ""),
+                "passDifficultyRating": getattr(lane, "passDifficultyRating", 0.0),
+                "interceptionRisk": getattr(lane, "interceptionRisk", 0.0),
+            }
+            for lane in lanes
+        ]
+
+        events = getattr(frame, "events", []) or []
+        match_events = []
+        for e in events:
+            type_obj = getattr(e, "type", None)
+            type_val = getattr(type_obj, "value", str(type_obj or "pass"))
+            team_obj = getattr(e, "team", None)
+            team_val = getattr(team_obj, "value", None) if team_obj else None
+            match_events.append(
+                {
+                    "id": getattr(e, "id", ""),
+                    "type": type_val,
+                    "matchClock": getattr(e, "matchClock", clock),
+                    "team": team_val,
+                    "description": getattr(e, "description", ""),
+                }
+            )
+
+        game_rhythm_obj = getattr(metrics, "gameRhythm", None) if metrics else None
+        game_rhythm_val = (
+            getattr(game_rhythm_obj, "value", str(game_rhythm_obj or "balanced"))
+            if game_rhythm_obj
+            else "balanced"
+        )
+        fast_path = {
+            "controlVsChaosIndex": getattr(metrics, "controlVsChaosIndex", 50.0) if metrics else 50.0,
+            "passDifficultyRating": getattr(metrics, "passDifficultyRating", 50.0) if metrics else 50.0,
+            "gameRhythm": game_rhythm_val,
+            "fastPathLatencyMs": getattr(metrics, "fastPathLatencyMs", 0.0) if metrics else 0.0,
+        }
+
+        view.write(K_MATCH_CLOCK, clock)
+        view.write(K_MATCH_SECONDS, seconds)
+        view.write(K_SCENARIO, scenario)
+        view.write(K_SCORE, score)
+        view.write(K_BALL, ball)
+        view.write(K_PLAYER_POSITIONS, player_positions)
+        view.write(K_POSSESSION, possession)
+        view.write(K_PITCH_CONTROL_HOME, pc_home)
+        view.write(K_PITCH_CONTROL_AWAY, pc_away)
+        view.write(K_PITCH_CONTROL_CONTESTED, pc_contested)
+        view.write(K_PASSING_LANES, passing_lanes)
+        view.write(K_MATCH_EVENTS, match_events)
+        view.write(K_FAST_PATH_METRICS, fast_path)
+
+        latency = (perf_counter() - started) * 1000.0
+        summary = (
+            f"Rule-based fallback normalized telemetry for {clock} "
+            f"({len(player_positions)} players, {len(match_events)} events)."
+        )
+        return AgentOutcome(
+            role=self.role,
+            label=self.label,
+            status=AgentStatus.FALLBACK,
+            latency_ms=latency,
+            summary=summary,
+            reads=list(view.reads),
+            writes=list(view.writes),
+        )
+
 
 __all__ = ["TelemetryIngestionAgent"]
