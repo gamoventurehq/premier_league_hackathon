@@ -42,6 +42,8 @@ async def health(request: Request) -> HealthResponse:
     runtime = _runtime(request)
     frame = runtime.latest_frame()
     alive = runtime.simulation_alive
+    heartbeat_fresh = runtime.heartbeat_fresh
+    worker_errors = 1 if runtime.worker_error else 0
     return HealthResponse(
         status="ok" if runtime.ready else ("degraded" if alive else "starting"),
         service=runtime.settings.app_name,
@@ -54,7 +56,10 @@ async def health(request: Request) -> HealthResponse:
         ready=runtime.ready,
         uptimeSeconds=runtime.uptime_seconds,
         simulationAlive=alive,
+        alive=alive,
+        heartbeat_fresh=heartbeat_fresh,
         workerError=runtime.worker_error,
+        worker_errors=worker_errors,
         lastTickAt=runtime.last_tick_at,
     )
 

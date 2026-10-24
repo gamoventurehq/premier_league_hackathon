@@ -35,6 +35,53 @@ class McpTool:
         )
 
 
+def validate_input_schema(schema: dict[str, Any], arguments: dict[str, Any]) -> None:
+    """Validate tool call arguments strictly against its JSON schema."""
+    if not isinstance(arguments, dict):
+        raise ValueError(f"Arguments must be an object (dict), got {type(arguments).__name__}")
+
+    # Required properties check
+    required = schema.get("required", [])
+    for req_field in required:
+        if req_field not in arguments:
+            raise ValueError(f"Missing required argument: '{req_field}'")
+
+    properties = schema.get("properties", {})
+    # additionalProperties check
+    if schema.get("additionalProperties") is False:
+        extra_keys = set(arguments.keys()) - set(properties.keys())
+        if extra_keys:
+            raise ValueError(f"Unexpected arguments: {sorted(extra_keys)}")
+
+    # Property-level type and constraint validation
+    for key, val in arguments.items():
+        if key not in properties:
+            continue
+        prop_spec = properties[key]
+        prop_type = prop_spec.get("type")
+
+        if prop_type == "string":
+            if not isinstance(val, str):
+                raise ValueError(f"Argument '{key}' must be a string, got {type(val).__name__}")
+        elif prop_type == "number":
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                raise ValueError(f"Argument '{key}' must be a number, got {type(val).__name__}")
+        elif prop_type == "integer":
+            if not isinstance(val, int) or isinstance(val, bool):
+                raise ValueError(f"Argument '{key}' must be an integer, got {type(val).__name__}")
+        elif prop_type == "boolean" and not isinstance(val, bool):
+            raise ValueError(f"Argument '{key}' must be a boolean, got {type(val).__name__}")
+
+        if "enum" in prop_spec and val not in prop_spec["enum"]:
+            raise ValueError(f"Argument '{key}' must be one of {prop_spec['enum']}, got '{val}'")
+
+        if "minimum" in prop_spec and isinstance(val, (int, float)) and val < prop_spec["minimum"]:
+            raise ValueError(f"Argument '{key}' must be >= {prop_spec['minimum']}, got {val}")
+
+        if "maximum" in prop_spec and isinstance(val, (int, float)) and val > prop_spec["maximum"]:
+            raise ValueError(f"Argument '{key}' must be <= {prop_spec['maximum']}, got {val}")
+
+
 @dataclass(slots=True)
 class ToolRegistry:
     """A registry of callable MCP tools."""
@@ -51,7 +98,9 @@ class ToolRegistry:
         tool = self.tools.get(name)
         if tool is None:
             raise KeyError(f"Unknown tool: {name}")
-        return tool.handler(arguments or {})
+        args = arguments if arguments is not None else {}
+        validate_input_schema(tool.input_schema, args)
+        return tool.handler(args)
 
 
 def build_registry(provider: Any) -> ToolRegistry:
@@ -215,9 +264,13 @@ def build_registry(provider: Any) -> ToolRegistry:
                 "required": ["seconds"],
                 "additionalProperties": False,
             },
-            implementation="app.runtime.MatchRuntime.jump_to",
+            implementation="app.runtime.MatchRuntime.jump_to_seconds",
             handler=lambda args: {
-                "matchSeconds": provider.jump_to(float(args["seconds"])),
+                **(
+                    provider.jump_to_seconds(float(args["seconds"])).model_dump()
+                    if hasattr(provider, "jump_to_seconds")
+                    else {"matchSeconds": provider.jump_to(float(args["seconds"]))}
+                ),
                 "status": "ok",
             },
         )

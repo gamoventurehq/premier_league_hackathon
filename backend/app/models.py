@@ -402,10 +402,13 @@ class HealthResponse(_Contract):
     uptimeSeconds: float
     #: True only while the simulation worker thread is alive.
     simulationAlive: bool
+    alive: bool = True
     #: The reason the simulation died, when it did.
     workerError: str | None = None
+    worker_errors: int = 0
     #: Wall-clock time (epoch seconds) of the last published frame.
     lastTickAt: float = 0.0
+    heartbeat_fresh: bool = True
 
 
 class PlaybackJumpRequest(_Contract):
