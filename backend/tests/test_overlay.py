@@ -6,6 +6,7 @@ models (ADR 0005).
 from __future__ import annotations
 
 import re
+import time
 from typing import Any
 
 import pytest
@@ -416,3 +417,31 @@ def test_the_websocket_accepts_the_control_messages(client):
             if scenario == "box_scramble":
                 break
         assert scenario == "box_scramble"
+
+
+def test_a_dead_simulation_is_never_reported_as_ready(monkeypatch):
+    """The readiness check is honest: a worker that dies is not ready.
+
+    A silent death is the failure mode this guards against: the service
+    would keep answering /health with 200 while the match clock stood
+    still.
+    """
+    from app.config import Settings
+    from app.runtime import MatchRuntime
+    from app.simulation.engine import MatchEngine
+
+    def exploding_step(self, dt):  # noqa: ANN001 - the failure is the point
+        raise RuntimeError("The simulation state machine exploded.")
+
+    monkeypatch.setattr(MatchEngine, "step", exploding_step)
+    runtime = MatchRuntime(Settings(sim_warmup_seconds=0))
+    runtime.start()
+    try:
+        deadline = time.time() + 30.0
+        while time.time() < deadline and runtime.worker_error is None:
+            time.sleep(0.1)
+        assert runtime.worker_error is not None
+        assert runtime.simulation_alive is False
+        assert runtime.ready is False
+    finally:
+        runtime.stop()

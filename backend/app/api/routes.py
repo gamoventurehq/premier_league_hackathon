@@ -52,7 +52,14 @@ async def health(request: Request) -> HealthResponse:
         uptimeSeconds=runtime.uptime_seconds,
         simulationAlive=alive,
         workerError=runtime.worker_error,
+        lastTickAt=runtime.last_tick_at,
     )
+
+
+@router.get("/api/health", response_model=HealthResponse, tags=["service"])
+async def api_health(request: Request) -> HealthResponse:
+    """Alias for /health per R2 contract."""
+    return await health(request)
 
 
 @router.get("/api/scenarios", response_model=list[ScenarioSummary], tags=["synthetic match scenario"])

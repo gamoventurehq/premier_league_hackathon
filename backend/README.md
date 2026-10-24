@@ -33,10 +33,18 @@ curl -s http://127.0.0.1:8000/health | python -m json.tool
   "azure": { "foundry": false, "eventHubs": false, "cosmos": false, "mcp": false },
   "scenario": "high_possession",
   "matchClock": "68:51",
+  "frameId": 48,
   "ready": true,
-  "simulationAlive": true
+  "simulationAlive": true,
+  "workerError": null
 }
 ```
+
+`ready` is honest: it is true only while the simulation worker is alive, has
+not failed and has published a frame recently. `simulationAlive` is the liveness
+of the worker thread, `workerError` carries the reason the simulation died and
+`lastTickAt` is the wall-clock time of the last published frame. A service
+whose match clock stands still reports `ready: false`.
 
 The simulation starts on its own thread, warms up 480 simulated seconds of
 match history and then publishes telemetry at 5 Hz. The studio connects to

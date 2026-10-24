@@ -1,0 +1,30 @@
+[
+  {
+    "tier": "Tier 1 (Feature Coverage)",
+    "file": "test_tier1_feature_coverage.py",
+    "exit_code": 0,
+    "status": "PASSED",
+    "duration_seconds": 36.47
+  },
+  {
+    "tier": "Tier 2 (Boundary Cases)",
+    "file": "test_tier2_boundary_cases.py",
+    "exit_code": 0,
+    "status": "PASSED",
+    "duration_seconds": 0.12
+  },
+  {
+    "tier": "Tier 3 (Cross-Feature)",
+    "file": "test_tier3_cross_feature.py",
+    "exit_code": 0,
+    "status": "PASSED",
+    "duration_seconds": 1.4
+  },
+  {
+    "tier": "Tier 4 (Real-World Scenarios)",
+    "file": "test_tier4_real_world.py",
+    "exit_code": 0,
+    "status": "PASSED",
+    "duration_seconds": 1.2
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "name": "premier-league-studio-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Premier League Studio: Synthetic Match Insights Engine",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "lint": "npm --prefix frontend run lint",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "test": "npm --prefix frontend run test.unit -- --run",
+    "test:unit": "npm --prefix frontend run test.unit -- --run",
+    "test:e2e": "./run_e2e.sh"
+  }
+}

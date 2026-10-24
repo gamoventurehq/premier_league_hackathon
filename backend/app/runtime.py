@@ -93,12 +93,16 @@ class MatchRuntime:
 
     @property
     def ready(self) -> bool:
-        """The service is ready only while the simulation thread is alive.
+        """The service is ready only while the simulation is actually ticking.
 
-        A finished warm-up is not enough: if the worker dies the health
-        endpoint must say so, otherwise a dead simulation looks healthy.
+        A finished warm-up is not enough, and neither is a live thread
+        object: the worker has to have published recently. If the worker
+        dies - or stops publishing - the health endpoint must say so,
+        otherwise a dead simulation looks healthy.
         """
-        return self._ready.is_set() and self.simulation_alive and self._worker_error is None
+        if not (self._ready.is_set() and self.simulation_alive and self._worker_error is None):
+            return False
+        return self.heartbeat_fresh
 
     @property
     def simulation_alive(self) -> bool:
@@ -110,6 +114,13 @@ class MatchRuntime:
         return self._worker_error
 
     @property
+    def heartbeat_fresh(self) -> bool:
+        """True when the worker published a frame recently."""
+        if self._last_tick_at <= 0.0:
+            return False
+        return (time.time() - self._last_tick_at) <= self.HEARTBEAT_STALE_SECONDS
+
+    @property
     def last_tick_at(self) -> float:
         return self._last_tick_at
 
@@ -117,6 +128,10 @@ class MatchRuntime:
         return self._ready.wait(timeout)
 
     # -- worker ----------------------------------------------------------------
+
+    #: How long the worker may stay silent before the service is reported
+    #: as not ready. The worker ticks at 10 Hz, so this is generous.
+    HEARTBEAT_STALE_SECONDS = 15.0
 
     def _worker(self) -> None:
         try:
@@ -126,6 +141,7 @@ class MatchRuntime:
             logger.exception("The simulation warm-up failed.")
             return
         self._ready.set()
+        self._last_tick_at = time.time()
 
         dt = 1.0 / max(1, self.settings.simulation_hz)
         publish_every = max(1, self.settings.simulation_hz // max(1, self.settings.publish_hz))
@@ -133,6 +149,7 @@ class MatchRuntime:
 
         while not self._stop.is_set():
             started = time.perf_counter()
+            self._last_tick_at = time.time()
             try:
                 with self._lock:
                     self._apply_commands()

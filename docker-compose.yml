@@ -1,7 +1,7 @@
 # Premier League Studio: Synthetic Match Insights Engine
 #
 # `docker compose up` starts the whole studio: the FastAPI telemetry service
-# and the Next.js studio that consumes it. Neither service needs an Azure
+# and the Ionic React + Vite studio that consumes it. Neither service needs an Azure
 # credential to run - the Azure integrations are opt-in through the
 # environment variables listed in backend/README.md.
 #
@@ -49,8 +49,10 @@ services:
     image: node:22-alpine
     container_name: pl-studio-frontend
     working_dir: /app
-    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
     environment:
+      VITE_TELEMETRY_WS: ws://localhost:8000/ws/telemetry
+      VITE_TELEMETRY_REST: http://localhost:8000
       NEXT_PUBLIC_TELEMETRY_WS: ws://localhost:8000/ws/telemetry
       NEXT_PUBLIC_TELEMETRY_REST: http://localhost:8000
     volumes:

@@ -404,6 +404,8 @@ class HealthResponse(_Contract):
     simulationAlive: bool
     #: The reason the simulation died, when it did.
     workerError: str | None = None
+    #: Wall-clock time (epoch seconds) of the last published frame.
+    lastTickAt: float = 0.0
 
 
 __all__ = [

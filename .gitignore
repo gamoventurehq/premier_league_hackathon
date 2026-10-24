@@ -38,3 +38,6 @@ __pycache__/
 env/
 venv/
 .venv/
+
+# Agent metadata
+.agents/

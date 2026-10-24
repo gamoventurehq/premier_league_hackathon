@@ -7,6 +7,14 @@
  * `backend/app/models.py` — the WebSocket payload is the same shape.
  */
 
+export const PITCH_LENGTH_METERS = 105.0;
+export const PITCH_WIDTH_METERS = 68.0;
+
+export interface Vector2D {
+  x: number;
+  y: number;
+}
+
 export interface PitchPosition {
   x: number; // 0.0 to 105.0 meters (ADR 0003)
   y: number; // 0.0 to 68.0 meters (ADR 0003)
@@ -287,3 +295,100 @@ export interface TelemetryFrame {
   latestNarrative: NarrativeEvent;
   agentTrace: AgentTrace[];
 }
+
+/**
+ * Studio Kinematics & Blackboard Types
+ * Used by Ionic React Visualizer components and high-frequency canvas.
+ */
+
+export interface PlayerKinematics {
+  player_id: string;
+  name: string;
+  team: 'home' | 'away';
+  shirt_number: number;
+  position: string;
+  x: number;
+  y: number;
+  velocity_mps: number;
+  speed_kmh: number;
+  heading_deg: number;
+  is_ball_carrier?: boolean;
+
+  // Canonical Pydantic fields compatibility
+  id?: string;
+  number?: number;
+  onBall?: boolean;
+  vx?: number;
+  vy?: number;
+  speedKmH?: number;
+  shortName?: string;
+  role?: string;
+  distanceMeters?: number;
+  touches?: number;
+}
+
+export interface BallKinematics {
+  x: number;
+  y: number;
+  z: number;
+  velocity_mps: number;
+  speed_kmh: number;
+  carrier_player_id?: string | null;
+
+  // Canonical Pydantic fields compatibility
+  vx?: number;
+  vy?: number;
+  vz?: number;
+  speedKmH?: number;
+  possessionTeam?: TeamSide | null;
+  possessionPlayerId?: string | null;
+}
+
+export interface ControlChaosIndex {
+  control: number;
+  chaos: number;
+}
+
+export interface FrameTelemetry {
+  frame_id: number;
+  timestamp_ms: number;
+  match_clock_sec: number;
+  ball: BallKinematics;
+  players: PlayerKinematics[];
+  control_chaos: ControlChaosIndex;
+  game_rhythm: string;
+  active_tactical_inflection: boolean;
+
+  // Canonical Pydantic fields compatibility
+  frameId?: number;
+  matchClock?: string;
+  matchSeconds?: number;
+  scenario?: string;
+  score?: { home: number; away: number };
+  passingLanes?: PassingLane[];
+  pitchControlCells?: PitchControlCell[];
+  metrics?: MatchMetrics;
+  latestNarrative?: NarrativeEvent;
+  agentTrace?: AgentTrace[];
+}
+
+export interface TacticalBlackboard {
+  latest_frame_id: number;
+  current_game_rhythm: string;
+  control_index: number;
+  chaos_index: number;
+  active_tactical_inflection: boolean;
+  latest_pdr: number;
+  narrative_headline: string;
+  persona_overviews: {
+    analyst: string;
+    casual: string;
+    player_cam: string;
+    club_centric?: string;
+  };
+}
+
+export type PersonaMode = ExperiencePersona;
+export type SupportedLanguage = BroadcastLanguage;
+export type StudioPlayerTelemetry = PlayerKinematics;
+export type StudioBallTelemetry = BallKinematics;
