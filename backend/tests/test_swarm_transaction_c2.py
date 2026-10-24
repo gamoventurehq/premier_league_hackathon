@@ -113,8 +113,18 @@ class FourteenKeyTelemetryAgent:
                 context.view.write(k, "high_possession")
             elif k == "match_clock":
                 context.view.write(k, f"{it}:00")
-            elif k == "match_seconds":
+            elif k in (
+                "match_seconds",
+                "pitch_control_home",
+                "pitch_control_away",
+                "pitch_control_contested",
+                "control_vs_chaos",
+            ):
                 context.view.write(k, float(it))
+            elif k in ("score", "ball_state", "possession", "fast_path_metrics"):
+                context.view.write(k, {"iteration": it})
+            elif k in ("player_positions", "passing_lanes", "match_events"):
+                context.view.write(k, [{"iteration": it}])
             else:
                 context.view.write(k, {"iteration": it})
         return AgentOutcome(
@@ -174,6 +184,8 @@ def test_multikey_transaction_atomicity_20_parallel_threads_100_iterations(
             while not stop_event.is_set():
                 snap = swarm.blackboard.snapshot()
                 count += 1
+                if count % 10 == 0:
+                    time.sleep(0)
 
                 # Check 14-key presence
                 present_keys = [k for k in TELEMETRY_14_KEYS if k in snap]
