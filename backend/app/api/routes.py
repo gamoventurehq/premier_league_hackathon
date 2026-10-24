@@ -14,6 +14,9 @@ from ..models import (
     InvokeRequest,
     InvokeResponse,
     NarrativeEvent,
+    PlaybackJumpRequest,
+    PlaybackSpeedRequest,
+    PlaybackStatus,
     ScenarioSummary,
     SyntheticScenarioType,
     ToolDescriptor,
@@ -163,6 +166,41 @@ async def set_persona(request: Request, persona: str) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"Unknown experience persona: {persona}") from exc
     return {"persona": value.value}
+
+
+@router.get("/api/playback/status", response_model=PlaybackStatus, tags=["playback"])
+async def get_playback_status(request: Request) -> PlaybackStatus:
+    """The current simulation playback state (paused, speed, clock)."""
+    runtime = _runtime(request)
+    return runtime.playback_status()
+
+
+@router.post("/api/playback/jump", response_model=PlaybackStatus, tags=["playback"])
+async def jump_playback(request: Request, payload: PlaybackJumpRequest) -> PlaybackStatus:
+    """Jump the match simulation to the specified seconds."""
+    runtime = _runtime(request)
+    return runtime.jump_to_seconds(payload.seconds)
+
+
+@router.post("/api/playback/pause", response_model=PlaybackStatus, tags=["playback"])
+async def pause_playback(request: Request) -> PlaybackStatus:
+    """Pause the match simulation."""
+    runtime = _runtime(request)
+    return runtime.pause()
+
+
+@router.post("/api/playback/resume", response_model=PlaybackStatus, tags=["playback"])
+async def resume_playback(request: Request) -> PlaybackStatus:
+    """Resume the match simulation."""
+    runtime = _runtime(request)
+    return runtime.resume()
+
+
+@router.post("/api/playback/speed", response_model=PlaybackStatus, tags=["playback"])
+async def set_playback_speed(request: Request, payload: PlaybackSpeedRequest) -> PlaybackStatus:
+    """Set the match simulation playback speed multiplier."""
+    runtime = _runtime(request)
+    return runtime.set_speed(payload.speed)
 
 
 __all__ = ["router"]

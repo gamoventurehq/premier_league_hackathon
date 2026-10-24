@@ -33,7 +33,7 @@ SYSTEM_PROMPT = (
 class FoundryNarrativeService:
     """Calls an Azure AI Foundry chat completion to write the narrative."""
 
-    def __init__(self, settings: Settings, timeout: float = 1.2) -> None:
+    def __init__(self, settings: Settings, timeout: float = 0.35) -> None:
         self._settings = settings
         self._timeout = timeout
         self._warned = False
@@ -66,8 +66,7 @@ class FoundryNarrativeService:
             f"Pitch Control: home {metrics.pitchControl.home:.1f}% / away "
             f"{metrics.pitchControl.away:.1f}% / contested {metrics.pitchControl.contested:.1f}%\n"
             f"Possession: home {metrics.possessionShare.home:.1f}% / away {metrics.possessionShare.away:.1f}%\n"
-            f"Recent events: "
-            + "; ".join(event.description for event in frame.events[-4:])
+            f"Recent events: " + "; ".join(event.description for event in frame.events[-4:])
         )
 
     def __call__(self, context: AgentContext) -> NarrativeDraft:
@@ -111,11 +110,16 @@ class FoundryNarrativeService:
         parsed = json.loads(content)
         languages = [language.value for language in BroadcastLanguage]
         headline = MultilingualNarrative(
-            **{language: str(parsed["headline"].get(language, parsed["headline"]["en"])) for language in languages}
+            **{
+                language: str(parsed["headline"].get(language, parsed["headline"]["en"]))
+                for language in languages
+            }
         )
         explanation = MultilingualNarrative(
             **{
-                language: str(parsed["tacticalExplanation"].get(language, parsed["tacticalExplanation"]["en"]))
+                language: str(
+                    parsed["tacticalExplanation"].get(language, parsed["tacticalExplanation"]["en"])
+                )
                 for language in languages
             }
         )

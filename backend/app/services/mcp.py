@@ -146,9 +146,7 @@ def build_registry(provider: Any) -> ToolRegistry:
     registry.register(
         McpTool(
             name="get_match_events",
-            description=(
-                "Return the most recent discrete match events of the synthetic match, newest last."
-            ),
+            description=("Return the most recent discrete match events of the synthetic match, newest last."),
             input_schema={
                 "type": "object",
                 "properties": {
@@ -174,6 +172,54 @@ def build_registry(provider: Any) -> ToolRegistry:
             input_schema={"type": "object", "properties": {}, "additionalProperties": False},
             implementation="app.agents.swarm.AgentSwarm.run",
             handler=lambda args: provider.get_agent_trace(),
+        )
+    )
+
+    registry.register(
+        McpTool(
+            name="get_player_spotlight",
+            description=(
+                "Return detailed player kinematics, performance statistics, and match rating for "
+                "a specified player ID or name."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "playerId": {
+                        "type": "string",
+                        "description": "Player identifier or name (e.g. 'h11' or 'Haaland').",
+                    }
+                },
+                "required": ["playerId"],
+                "additionalProperties": False,
+            },
+            implementation="app.runtime.MatchRuntime.get_player_spotlight",
+            handler=lambda args: provider.get_player_spotlight(str(args["playerId"])),
+        )
+    )
+
+    registry.register(
+        McpTool(
+            name="jump_match_time",
+            description="Scrub the synthetic match simulation to a target match second.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "seconds": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 5400.0,
+                        "description": "Target match second to jump to.",
+                    }
+                },
+                "required": ["seconds"],
+                "additionalProperties": False,
+            },
+            implementation="app.runtime.MatchRuntime.jump_to",
+            handler=lambda args: {
+                "matchSeconds": provider.jump_to(float(args["seconds"])),
+                "status": "ok",
+            },
         )
     )
 

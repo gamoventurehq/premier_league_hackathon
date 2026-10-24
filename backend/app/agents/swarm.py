@@ -119,7 +119,9 @@ class AgentSwarm:
 
     # -- execution ------------------------------------------------------------
 
-    def run(self, frame: TelemetryFrame, persona: ExperiencePersona | str = ExperiencePersona.ANALYST) -> SwarmResult:
+    def run(
+        self, frame: TelemetryFrame, persona: ExperiencePersona | str = ExperiencePersona.ANALYST
+    ) -> SwarmResult:
         """Run one cycle of the swarm over the given frame."""
         if isinstance(persona, str):
             persona = ExperiencePersona(persona)
@@ -131,8 +133,11 @@ class AgentSwarm:
             view = BlackboardView(blackboard=self.blackboard)
             context = AgentContext(frame=frame, view=view, persona=persona)
             outcome = self._run_agent(agent, context, budget)
-            if outcome.status is AgentStatus.COMPLETE:
+            if outcome.status == AgentStatus.COMPLETE:
                 view.commit()
+            elif outcome.status == AgentStatus.FALLBACK:
+                # view already committed or discarded by fallback handling in _run_agent
+                pass
             else:
                 view.discard()
             traces.append(outcome.to_trace())
@@ -152,34 +157,60 @@ class AgentSwarm:
 
     def _run_agent(self, agent, context: AgentContext, budget: float) -> AgentOutcome:
         """Run one agent under a deadline, falling back when it fails."""
-        deadline = FAST_AGENT_DEADLINE if agent.role.value != "broadcast_narrative" else budget
-        timeout = max(0.05, min(deadline, budget))
+        deadline = min(FAST_AGENT_DEADLINE, budget)
+        timeout = max(0.05, deadline)
         future: Future[AgentOutcome] = self._executor.submit(agent.run, context)
         try:
             return future.result(timeout=timeout)
         except FutureTimeoutError:
             future.cancel()
-            logger.warning("Agent %s exceeded its %.0fms deadline, using the fallback.", agent.role.value, timeout * 1000)
+            context.view.discard()
+            logger.warning(
+                "Agent %s exceeded its %.0fms deadline, using the fallback.", agent.role.value, timeout * 1000
+            )
             return self._fallback(agent, context)
         except Exception as exc:  # noqa: BLE001 - the swarm must survive agent failures
+            context.view.discard()
             logger.warning("Agent %s failed (%s), using the fallback.", agent.role.value, exc)
             return self._fallback(agent, context)
 
     def _fallback(self, agent, context: AgentContext) -> AgentOutcome:
         fallback = getattr(agent, "fallback", None)
         if fallback is None:
+            context.view.discard()
             return AgentOutcome(
                 role=agent.role,
                 label=agent.label,
-                status=AgentStatus.FALLBACK,
+                status=AgentStatus.IDLE,  # Or non-committable failure state
                 latency_ms=0.0,
                 summary=f"{agent.label} failed and has no rule-based fallback.",
                 reads=list(context.view.reads),
-                writes=list(context.view.writes),
+                writes=[],
             )
-        outcome = fallback(context)
-        outcome.status = AgentStatus.FALLBACK
-        return outcome
+        # Give fallback a clean, isolated view connected to the blackboard to avoid zombie thread pollution
+        fallback_view = BlackboardView(blackboard=self.blackboard)
+        fallback_context = AgentContext(
+            frame=context.frame,
+            view=fallback_view,
+            persona=context.persona,
+        )
+        try:
+            outcome = fallback(fallback_context)
+            fallback_view.commit()
+            outcome.status = AgentStatus.FALLBACK
+            return outcome
+        except Exception as exc:  # noqa: BLE001
+            fallback_view.discard()
+            logger.exception("Agent %s fallback failed (%s).", agent.role.value, exc)
+            return AgentOutcome(
+                role=agent.role,
+                label=agent.label,
+                status=AgentStatus.IDLE,
+                latency_ms=0.0,
+                summary=f"{agent.label} fallback failed.",
+                reads=list(fallback_view.reads),
+                writes=[],
+            )
 
     # -- composition ----------------------------------------------------------
 

@@ -25,6 +25,7 @@ from .models import (
     ExperiencePersona,
     MatchEvent,
     NarrativeEvent,
+    PlaybackStatus,
     SyntheticScenarioType,
     TelemetryFrame,
 )
@@ -34,7 +35,7 @@ from .services.foundry import FoundryNarrativeService
 from .services.mcp import ToolRegistry, build_registry
 from .services.overlay import build_overlay
 from .simulation.engine import SCENARIOS, MatchEngine
-from .simulation.metrics import MATCH_LENGTH_SECONDS
+from .simulation.metrics import MATCH_LENGTH_SECONDS, format_match_clock
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,9 @@ class MatchRuntime:
         self._persona = ExperiencePersona.ANALYST
         self._scenario = SyntheticScenarioType(self.settings.default_scenario)
         self._commands: list[str] = []
+        self._paused: bool = False
+        self._speed: float = 1.0
+        self._playback_speed: float = 1.0
         self._ready = threading.Event()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -153,10 +157,11 @@ class MatchRuntime:
             try:
                 with self._lock:
                     self._apply_commands()
-                    self.engine.step(dt)
-                    tick += 1
-                    if tick % publish_every == 0:
-                        self._build_and_publish()
+                    if not self._paused:
+                        self.engine.step(dt * self._speed)
+                        tick += 1
+                        if tick % publish_every == 0:
+                            self._build_and_publish()
             except Exception as exc:  # noqa: BLE001 - a dead simulation must be visible
                 self._worker_error = f"simulation tick failed: {exc}"
                 logger.exception("The simulation worker stopped on an unexpected error.")
@@ -252,6 +257,63 @@ class MatchRuntime:
     @staticmethod
     def scenario_anchor(scenario: SyntheticScenarioType) -> float:
         return SCENARIOS[scenario].anchor_seconds
+
+    # -- playback control -----------------------------------------------------
+
+    @property
+    def is_paused(self) -> bool:
+        with self._lock:
+            return self._paused
+
+    def pause(self) -> PlaybackStatus:
+        with self._lock:
+            self._paused = True
+            return self.playback_status()
+
+    def resume(self) -> PlaybackStatus:
+        with self._lock:
+            self._paused = False
+            return self.playback_status()
+
+    @property
+    def speed(self) -> float:
+        with self._lock:
+            return self._speed
+
+    @property
+    def playback_speed(self) -> float:
+        with self._lock:
+            return self._speed
+
+    def set_speed(self, multiplier: float) -> PlaybackStatus:
+        with self._lock:
+            self._speed = max(0.1, min(10.0, float(multiplier)))
+            self._playback_speed = self._speed
+            return self.playback_status()
+
+    def set_playback_speed(self, speed: float) -> float:
+        """Alias for backward compatibility."""
+        return self.set_speed(speed).speed
+
+    def jump_to_seconds(self, target_seconds: float) -> PlaybackStatus:
+        with self._lock:
+            self.engine.jump_to_seconds(target_seconds)
+            self._build_and_publish()
+            return self.playback_status()
+
+    def jump_to(self, seconds: float) -> float:
+        """Alias for backward compatibility returning matchSeconds."""
+        status = self.jump_to_seconds(seconds)
+        return status.matchSeconds
+
+    def playback_status(self) -> PlaybackStatus:
+        with self._lock:
+            return PlaybackStatus(
+                paused=self._paused,
+                speed=self._speed,
+                matchClock=format_match_clock(self.engine.match_seconds),
+                matchSeconds=round(self.engine.match_seconds, 2),
+            )
 
     def latest_wire(self) -> dict[str, Any] | None:
         """The most recently published payload (a drop-in TelemetryFrame)."""
@@ -357,6 +419,29 @@ class MatchRuntime:
 
     def get_agent_trace(self) -> list[dict[str, Any]]:
         return [trace.model_dump() for trace in self.latest_traces()]
+
+    def get_player_spotlight(self, player_id: str) -> dict[str, Any]:
+        with self._lock:
+            frame = self._frame or self.engine.build_frame()
+            player = next(
+                (
+                    p
+                    for p in frame.players
+                    if p.id == player_id
+                    or p.name.lower() == player_id.lower()
+                    or p.shortName.lower() == player_id.lower()
+                ),
+                None,
+            )
+            if player is None:
+                raise KeyError(f"Unknown player: {player_id}")
+            stats = next((s for s in frame.playerStats if s.id == player.id), None)
+            return {
+                "player": player.model_dump(),
+                "stats": stats.model_dump() if stats else None,
+                "matchClock": frame.matchClock,
+                "matchSeconds": frame.matchSeconds,
+            }
 
     @property
     def uptime_seconds(self) -> float:

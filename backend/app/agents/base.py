@@ -9,6 +9,7 @@ of the multi-agent architecture rather than a static list.
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
@@ -84,27 +85,42 @@ class Blackboard:
     def __init__(self) -> None:
         self._values: dict[str, Any] = {}
         self._version = 0
+        self._lock = threading.RLock()
 
     def read(self, key: str) -> Any:
-        return self._values.get(key)
+        with self._lock:
+            return self._values.get(key)
 
     def write(self, key: str, value: Any) -> None:
-        self._values[key] = value
-        self._version += 1
+        with self._lock:
+            self._values[key] = value
+            self._version += 1
 
     def has(self, key: str) -> bool:
-        return key in self._values
+        with self._lock:
+            return key in self._values
 
     def snapshot(self) -> dict[str, Any]:
-        return dict(self._values)
+        with self._lock:
+            return dict(self._values)
 
     @property
     def version(self) -> int:
-        return self._version
+        with self._lock:
+            return self._version
+
+    def write_batch(self, items: dict[str, Any]) -> None:
+        """Atomically write multiple keys under a single lock acquisition."""
+        if not items:
+            return
+        with self._lock:
+            self._values.update(items)
+            self._version += 1
 
     def clear(self) -> None:
-        self._values.clear()
-        self._version += 1
+        with self._lock:
+            self._values.clear()
+            self._version += 1
 
 
 @dataclass(slots=True)
@@ -134,8 +150,7 @@ class BlackboardView:
         self._staged[key] = value
 
     def commit(self) -> None:
-        for key, value in self._staged.items():
-            self.blackboard.write(key, value)
+        self.blackboard.write_batch(self._staged)
         self._staged.clear()
 
     def discard(self) -> None:

@@ -408,6 +408,21 @@ class HealthResponse(_Contract):
     lastTickAt: float = 0.0
 
 
+class PlaybackJumpRequest(_Contract):
+    seconds: float
+
+
+class PlaybackSpeedRequest(_Contract):
+    speed: float
+
+
+class PlaybackStatus(_Contract):
+    paused: bool
+    speed: float
+    matchClock: str
+    matchSeconds: float
+
+
 __all__ = [
     "AgentRole",
     "AgentStatus",
@@ -432,6 +447,9 @@ __all__ = [
     "PitchControlCell",
     "PitchControlSplit",
     "PitchPosition",
+    "PlaybackJumpRequest",
+    "PlaybackSpeedRequest",
+    "PlaybackStatus",
     "PlayerMatchStats",
     "PlayerRole",
     "PlayerTelemetry",

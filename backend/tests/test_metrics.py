@@ -108,8 +108,7 @@ def test_the_four_scenarios_produce_four_different_chaos_readings(simulated_matc
 def test_the_four_scenarios_produce_four_different_game_rhythms(simulated_matches):
     """Each Synthetic Match Scenario has its own Game Rhythm."""
     rhythms = {
-        scenario: engine.build_frame().metrics.gameRhythm
-        for scenario, engine in simulated_matches.items()
+        scenario: engine.build_frame().metrics.gameRhythm for scenario, engine in simulated_matches.items()
     }
     assert len(set(rhythms.values())) == 4, rhythms
     assert rhythms[SyntheticScenarioType.LOW_BLOCK_SIEGE] is GameRhythm.STRUCTURED

@@ -204,7 +204,8 @@ def test_lane_pdr_uses_every_context_component():
         + 0.24 * lane.receiverCoverage
         + 0.16 * (min(1.0, 15.0 / 40.0))
         + 0.20 * lane.defenderVelocityAlignment
-        + 0.16 * min(
+        + 0.16
+        * min(
             1.0,
             0.6 * min(1.0, lane.interceptorCount / 3.0) + 0.4 * max(0.0, 1.0 - lane.corridorWidthM / 12.0),
         )
@@ -238,7 +239,9 @@ def test_aggregate_pdr_is_the_weighted_mean_of_the_lanes():
         evaluate_lane(passer, receiver, [make_player("d1", 63.0, 37.0)]),
     ]
     weights = [lane_weight(lane) for lane in lanes]
-    expected = sum(lane.passDifficultyRating * w for lane, w in zip(lanes, weights, strict=True)) / sum(weights)
+    expected = sum(lane.passDifficultyRating * w for lane, w in zip(lanes, weights, strict=True)) / sum(
+        weights
+    )
     assert aggregate_pass_difficulty(lanes) == pytest.approx(round(expected, 2))
 
 

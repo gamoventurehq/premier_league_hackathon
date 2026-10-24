@@ -163,9 +163,7 @@ class FanPersonalizationAgent:
             f"Game Rhythm {rhythm} | principal actor {lead}"
         )
 
-        casual = (
-            f"{clock} - {arc}. {self._casual_sentence(frame, phase_label, lead)}"
-        )
+        casual = f"{clock} - {arc}. {self._casual_sentence(frame, phase_label, lead)}"
 
         home_frame = (
             f"{lead} is running the {phase_label} phase; City hold {home_control:.1f}% of the "

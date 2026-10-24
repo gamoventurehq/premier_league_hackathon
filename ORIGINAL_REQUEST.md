@@ -79,3 +79,45 @@ Push the merged `main` branch to GitHub (`origin/main`) and finalize PR #1 (mark
 - [ ] Standard merge commit recorded on `main` incorporating PR #1.
 - [ ] `main` branch pushed to `origin/main` on GitHub.
 - [ ] PR #1 state is marked merged/closed on GitHub.
+
+## Follow-up — 2026-10-24T09:47:36Z
+
+Deepen the Premier League Studio backend service and full-stack integration for synthetic match insights, adhering strictly to AGENTS.md constraints and CONTEXT.md domain terminology.
+
+Working directory: /home/gaurav/gamoventure/organisation/microsoft_hackathon
+Integrity mode: development
+Reference spec: docs/spec-backend-ai-agents.md
+
+## Requirements
+
+### R1. Backend Playback & Timeline Scrubbing Engine
+Enhance the backend simulation engine (MatchEngine) and runtime (MatchRuntime) to support interactive bidirectional playback control: jumping to arbitrary match seconds (jump_to_seconds), pausing, resuming, and adjusting playback speed multipliers. Expose these controls over both WebSocket client messages (jump_time, pause, resume, set_speed) and dedicated REST endpoints (/api/playback/*).
+
+### R2. Four-Agent Swarm with Tiered Fast-Path Resilience
+Maintain and verify the 4-agent collaborative swarm (Telemetry Ingestion, Tactical Reasoning, Broadcast Narrative, Fan Personalization) coordinating over the shared tactical state blackboard. Enforce strict sub-400ms per-agent execution deadlines backed by deterministic rule-based fallbacks to guarantee zero broadcast stutter.
+
+### R3. Deterministic Spatial Analytics & MCP Expansion
+Validate Pitch Control (357-cell probability surface) and Pass Difficulty Rating (PDR). Expand the Azure Model Context Protocol (MCP) tool surface to expose player spotlight lookups (get_player_spotlight) and simulation timeline jumps (jump_match_time), alongside existing spatial and match overview tools.
+
+### R4. Comprehensive Full-Stack Verification & Zero Regressions
+Verify the entire system through both pytest unit/integration tests in backend/tests/ and the complete 4-tier E2E suite (./run_e2e.sh). Ensure 100% test pass rates, clean TypeScript type checks in frontend/, and zero schema drift across WebSocket and REST interfaces.
+
+## Acceptance Criteria
+
+### Playback & Timeline Synchronization
+- [ ] Backend accepts jump_time messages over WebSocket and jumps the match simulation forward or backward smoothly without crashing or disconnecting.
+- [ ] REST endpoints POST /api/playback/jump, POST /api/playback/pause, POST /api/playback/resume, and POST /api/playback/speed function correctly and return updated playback states.
+
+### Multi-Agent Swarm & Fast-Path
+- [ ] Each agent in the 4-agent swarm terminates or falls back within its sub-400ms budget under simulated network latency.
+- [ ] Telemetry stream maintains consistent 5 Hz frame delivery without stalling.
+
+### Azure & MCP Tool Surface
+- [ ] MCP tool invocations (/api/mcp/invoke) successfully execute get_player_spotlight and jump_match_time with validated JSON schemas.
+- [ ] Service starts cleanly and /health accurately reflects simulation liveness and worker state.
+
+### Test Rigor
+- [ ] Pytest suite in backend/tests/ executes with 100% pass rate.
+- [ ] All 34 tests in ./run_e2e.sh pass with zero failures.
+- [ ] Frontend npm run typecheck passes with zero errors.
+
