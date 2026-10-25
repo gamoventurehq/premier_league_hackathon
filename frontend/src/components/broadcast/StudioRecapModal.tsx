@@ -578,6 +578,7 @@ export const StudioRecapModal: React.FC<StudioRecapModalProps> = ({ isOpen, onCl
   const score = useBaseMemory((s) => s.score);
   const matchClock = useBaseMemory((s) => s.matchClock);
   const selectedLanguage = useBaseMemory((s) => s.selectedLanguage);
+  const matchEvents = useBaseMemory((s) => s.matchEvents);
 
   const [activeTab, setActiveTab] = useState<"teleprompter" | "chapters" | "article">("teleprompter");
   const [isPrompterScrolling, setIsPrompterScrolling] = useState(false);
@@ -621,7 +622,6 @@ export const StudioRecapModal: React.FC<StudioRecapModalProps> = ({ isOpen, onCl
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  const matchEvents = useBaseMemory((s) => s.matchEvents);
   const synthesizedChapters = synthesizeChaptersFromEvents(matchEvents);
   const fallbackChapters = CHAPTER_MARKERS_BY_LANG[selectedLanguage] || CHAPTER_MARKERS_BY_LANG.en;
   const chapters = synthesizedChapters.length >= 2 ? synthesizedChapters : fallbackChapters;

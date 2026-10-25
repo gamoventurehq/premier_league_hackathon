@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   baseMemory,
-  normalizeFrame,
   normalizeBlackboard,
   sanitizeText,
   SupportedLanguage,

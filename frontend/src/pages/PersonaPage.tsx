@@ -7,7 +7,6 @@ import {
   IonToolbar,
   IonCard,
   IonCardHeader,
-  IonCardSubtitle,
   IonCardTitle,
   IonCardContent,
   IonBadge,
@@ -106,7 +105,6 @@ const PersonaPage: React.FC = () => {
   const overviews = useBaseMemory((s) => s.blackboard.persona_overviews);
   const rhythm = useBaseMemory((s) => s.blackboard.current_game_rhythm);
   const control = useBaseMemory((s) => s.blackboard.control_index);
-  const chaos = useBaseMemory((s) => s.blackboard.chaos_index);
   const pdr = useBaseMemory((s) => s.blackboard.latest_pdr);
   const score = useBaseMemory((s) => s.score);
   const matchClock = useBaseMemory((s) => s.matchClock);

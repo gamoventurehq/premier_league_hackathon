@@ -191,7 +191,7 @@ class TelemetryService {
       id: `synth_evt_${cycleIndex}`,
       type: tpl.type,
       matchClock: formattedClock,
-      timestampMs: Date.now() - (clockSec * 100),
+      timestampMs: Math.round(clockSec * 1000),
       team: tpl.team,
       actorId: tpl.actorId,
       targetId: tpl.secondaryActorId ?? null,
