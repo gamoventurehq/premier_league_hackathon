@@ -171,7 +171,7 @@ const StudioControlPage: React.FC = () => {
                   flexShrink: 0,
                 }}
               />
-              5Hz Live
+              10Hz / 5Hz Live
             </div>
 
             <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
@@ -469,7 +469,7 @@ const StudioControlPage: React.FC = () => {
                 </IonBadge>
               </div>
               <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
-                FastAPI WebSocket Stream (5Hz)
+                FastAPI WebSocket Stream (10Hz Engine • 5Hz Stream)
               </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
@@ -521,7 +521,7 @@ const StudioControlPage: React.FC = () => {
                       #{frameId}
                     </div>
                     <div style={{ fontSize: "10px", color: "#10b981" }}>
-                      Streaming at 5Hz
+                      10Hz Engine • 5Hz Stream
                     </div>
                   </div>
                 </div>
@@ -548,9 +548,9 @@ const StudioControlPage: React.FC = () => {
                 <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                   <div>
                     <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Telemetry Ingestion Agent</div>
-                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>Spatial coordinate parsing &amp; 5Hz drift physics</div>
+                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>Spatial coordinate parsing &amp; 10Hz kinematic physics</div>
                   </div>
-                  <IonBadge color="success">[Online • 5Hz]</IonBadge>
+                  <IonBadge color="success">[Online • 10Hz/5Hz]</IonBadge>
                 </div>
 
                 <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>

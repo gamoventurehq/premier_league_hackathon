@@ -66,7 +66,7 @@ export const DashboardPage: React.FC = () => {
               Recap
             </IonButton>
             <IonBadge color={serverStatus.isConnected ? "success" : "warning"} style={{ marginRight: "10px", fontSize: "10px" }}>
-              {serverStatus.isConnected ? "5Hz" : "Sync"}
+              {serverStatus.isConnected ? "10Hz / 5Hz" : "Sync"}
             </IonBadge>
           </IonButtons>
         </IonToolbar>
@@ -150,7 +150,7 @@ export const DashboardPage: React.FC = () => {
               }}
             >
               <IonIcon icon={radioOutline} style={{ animation: "pulse 1.5s infinite" }} />
-              <span>{serverStatus.isConnected ? "Live 5Hz Stream" : "Synthetic Fallback"}</span>
+              <span>{serverStatus.isConnected ? "Live 10Hz Engine • 5Hz Stream" : "Synthetic Fallback"}</span>
             </div>
           </div>
         </header>
