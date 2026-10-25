@@ -43,7 +43,7 @@ class EventHubsPublisher:
                 self._warned = True
             return None
         try:
-            from azure.eventhub import EventHubProducerClient  # type: ignore[import-not-found]
+            from azure.eventhub import EventData, EventHubProducerClient  # type: ignore[import-not-found]
         except ImportError:
             logger.warning(
                 "The azure-eventhub package is not installed - Event Hubs publishing is disabled. "
@@ -68,9 +68,9 @@ class EventHubsPublisher:
         if producer is None:
             return False
         try:
+            from azure.eventhub import EventData
             body = json.dumps(payload, separators=(",", ":"))
-            with producer:
-                producer.send_event(body, partition_key=partition_key)
+            producer.send_event(EventData(body), partition_key=partition_key)
             return True
         except Exception as exc:  # noqa: BLE001 - never break the stream
             logger.warning("Event Hubs publish failed: %s", exc)

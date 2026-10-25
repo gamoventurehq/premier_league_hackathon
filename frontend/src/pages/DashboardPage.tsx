@@ -17,8 +17,6 @@ import {
   videocamOutline,
   mapOutline,
   layersOutline,
-  sunnyOutline,
-  moonOutline,
 } from "ionicons/icons";
 import { MediaTimelinePanel } from "../components/dashboard/MediaTimelinePanel";
 import { MatchScoreCard } from "../components/dashboard/MatchScoreCard";
@@ -26,11 +24,10 @@ import { FormationPitchCard } from "../components/dashboard/FormationPitchCard";
 import { PlayerSpotlightCard } from "../components/dashboard/PlayerSpotlightCard";
 import { ShootMapCard } from "../components/dashboard/ShootMapCard";
 import { AttackingShapeCard } from "../components/dashboard/AttackingShapeCard";
-import { useBaseMemory, baseMemory } from "../store/baseMemory";
+import { useBaseMemory } from "../store/baseMemory";
 import { StudioRecapModal } from "../components/broadcast/StudioRecapModal";
 
 export const DashboardPage: React.FC = () => {
-  const theme = useBaseMemory((s) => s.theme);
   const serverStatus = useBaseMemory((s) => s.serverStatus);
   const [isRecapModalOpen, setIsRecapModalOpen] = useState(false);
   const [mobileSection, setMobileSection] = useState<"match" | "video" | "spotlight" | "all">("match");
@@ -114,31 +111,8 @@ export const DashboardPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Right Controls: Theme, Teleprompter & Server Live Badge */}
+          {/* Right Controls: Teleprompter & Server Live Badge */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-            <button
-              onClick={() => baseMemory.toggleTheme()}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                backgroundColor: "var(--studio-inner-bg)",
-                border: "1px solid var(--studio-panel-border)",
-                borderRadius: "8px",
-                padding: "6px 12px",
-                fontSize: "11px",
-                fontWeight: 700,
-                color: "var(--ion-text-color)",
-                cursor: "pointer",
-              }}
-              title={`Theme: ${theme === "dark" ? "Dark" : "Light"}`}
-            >
-              <IonIcon
-                icon={theme === "dark" ? sunnyOutline : moonOutline}
-                style={{ fontSize: "14px", color: theme === "dark" ? "#f59e0b" : "#475569" }}
-              />
-              <span>{theme === "dark" ? "Dark" : "Light"}</span>
-            </button>
             <button
               onClick={() => setIsRecapModalOpen(true)}
               style={{

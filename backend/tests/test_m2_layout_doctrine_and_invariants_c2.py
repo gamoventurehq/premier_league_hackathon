@@ -181,23 +181,23 @@ def test_formation_pitch_card_invariants():
 
 
 def test_sidebar_nav_and_docked_rail_invariants():
-    """Verify 64px docked rail and theme toggle icons in SidebarNav.tsx."""
+    """Verify 64px docked rail and broadcaster profile icon in SidebarNav.tsx."""
     p = COMPONENTS_DIR / "SidebarNav.tsx"
     assert p.exists(), "SidebarNav.tsx missing"
     content = p.read_text(encoding="utf-8")
 
     assert "64px" in content, "64px rail width invariant missing from SidebarNav.tsx"
-    assert "sunnyOutline" in content, "sunnyOutline icon missing from SidebarNav.tsx"
-    assert "moonOutline" in content, "moonOutline icon missing from SidebarNav.tsx"
+    assert "personCircleOutline" in content, "personCircleOutline icon missing from SidebarNav.tsx"
 
 
 def test_dashboard_theme_toggle_invariants():
-    """Verify Light and Dark theme toggle options in DashboardPage.tsx."""
+    """Verify broadcast studio styling and panels in DashboardPage.tsx."""
     p = PAGES_DIR / "DashboardPage.tsx"
     assert p.exists(), "DashboardPage.tsx missing"
     content = p.read_text(encoding="utf-8")
 
-    assert "Light" in content and "Dark" in content, "Theme toggle options 'Light'/'Dark' missing from DashboardPage.tsx"
+    assert "studio-header-bar" in content, "DashboardPage.tsx missing studio-header-bar"
+    assert "var(--studio-panel-bg)" in content, "DashboardPage.tsx missing studio panel theme variables"
 
 
 def test_match_score_card_invariants():

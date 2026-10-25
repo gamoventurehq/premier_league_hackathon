@@ -26,7 +26,6 @@ dev = [
 ]
 azure = [
     "azure-eventhub>=5.11",
-    "azure-eventhub-checkpointstore>=4.3",
     "azure-cosmos>=4.5",
     "azure-identity>=1.16",
     "openai>=1.30",

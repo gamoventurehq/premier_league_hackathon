@@ -235,14 +235,17 @@ def test_rollover_across_all_four_scenarios(app_client) -> None:
         jump_res = client.post("/api/playback/jump", json={"seconds": 5400.0})
         assert jump_res.status_code == 200
 
-        # Wait for rollover
-        time.sleep(2.0)
-
-        with runtime._lock:
-            clock = runtime.engine.match_seconds
-            post_epoch = runtime.scrub_epoch
-            narrative = runtime.latest_narrative()
-            sim_alive = runtime.simulation_alive
+        # Wait for rollover and narrative tick
+        narrative = None
+        for _ in range(15):
+            time.sleep(0.2)
+            with runtime._lock:
+                clock = runtime.engine.match_seconds
+                post_epoch = runtime.scrub_epoch
+                narrative = runtime.latest_narrative()
+                sim_alive = runtime.simulation_alive
+            if narrative is not None and post_epoch > pre_epoch:
+                break
 
         assert sim_alive is True, f"Worker died during rollover for scenario {scenario_type.value}"
         assert abs(clock - expected_anchor) < 10.0, (

@@ -6,7 +6,9 @@ class TelemetryService {
   private fallbackInterval: number | null = null;
   private isStarted = false;
   private retryTimeout: number | null = null;
-  private wsUrl = "ws://localhost:8000/ws/telemetry";
+  private wsUrl = typeof window !== "undefined" && !window.location.host.includes("localhost") && !window.location.host.includes("127.0.0.1")
+    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/telemetry`
+    : "ws://localhost:8000/ws/telemetry";
 
   start(customUrl?: string) {
     baseMemory.setScenarioCommandHandler((cmd) => this.sendCommand(cmd));

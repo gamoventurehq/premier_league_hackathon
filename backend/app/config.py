@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     cosmos_db_account: str | None = None
     cosmos_db_database: str = "plstudio"
     cosmos_db_container: str = "overlays"
+    cosmos_db_key: str | None = None
     azure_mcp_server_url: str | None = None
 
     # --- Unified LLM Provider Settings (OpenAI / GitHub / Ollama / Azure) --

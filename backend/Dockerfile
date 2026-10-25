@@ -18,7 +18,7 @@ COPY app ./app
 
 RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install .
+    && /opt/venv/bin/pip install ".[azure]"
 
 ENV PATH="/opt/venv/bin:$PATH"
 

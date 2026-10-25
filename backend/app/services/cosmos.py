@@ -51,9 +51,10 @@ class OverlayStore:
             self._warned = True
             return None
         try:
+            credential = self._settings.cosmos_db_key or self._settings.azure_openai_api_key or None
             self._client = CosmosClient(
                 self._settings.cosmos_db_account,
-                credential=self._settings.azure_openai_api_key or None,
+                credential=credential,
             )
             database = self._client.create_database_if_not_exists(id=self._settings.cosmos_db_database)
             self._container = database.create_container_if_not_exists(
@@ -72,7 +73,10 @@ class OverlayStore:
         if container is None:
             return False
         try:
-            container.upsert_item(overlay.model_dump(mode="json"))
+            doc = overlay.model_dump(mode="json")
+            if "id" not in doc:
+                doc["id"] = overlay.overlayId
+            container.upsert_item(doc)
             return True
         except Exception as exc:  # noqa: BLE001 - never break the stream
             logger.warning("Cosmos DB upsert failed: %s", exc)
