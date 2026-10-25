@@ -77,7 +77,7 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
     return null;
   }
 
-  // Construct machine-readable time-indexed JSON payload (CHALLENGE.md Stage 4: Render requirement)
+  // Construct machine-readable time-indexed JSON payload (Broadcast graphics requirement)
   const jsonPayload = {
     producer: "Gamoventure Premier League Studio Graphics",
     timestamp_iso: new Date().toISOString(),
@@ -450,7 +450,7 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
             </div>
 
             <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>
-              Produced by <strong>Gamoventure Premier League Studio Engine</strong> under CHALLENGE.md Stage 4: Render.
+              Produced by <strong>Gamoventure Premier League Studio Engine</strong> for live broadcast graphics.
               Ready for real-time live television lower-third graphics engines and teleprompter synchronizers.
             </p>
 

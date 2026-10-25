@@ -7,7 +7,6 @@ import {
   IonToolbar,
   IonCard,
   IonCardHeader,
-  IonCardSubtitle,
   IonCardTitle,
   IonCardContent,
   IonBadge,
@@ -216,15 +215,15 @@ const StudioControlPage: React.FC = () => {
         </div>
 
         {/* ======================================================== */}
-        {/* INTERACTIVE SYNTHETIC SCENARIO INJECTOR (CHALLENGE §4.D) */}
+        {/* INTERACTIVE SYNTHETIC SCENARIO INJECTOR                  */}
         {/* ======================================================== */}
         <IonCard mode="ios" style={{ background: "#0f172a", marginBottom: "16px", border: "1px solid #1e293b" }}>
           <IonCardHeader style={{ paddingBottom: "10px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <div>
-                <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700, letterSpacing: "0.5px" }}>
-                  SYNTHETIC MATCH SCENARIO INJECTOR (CHALLENGE.MD §4.D)
-                </IonCardSubtitle>
+                <div style={{ color: "#38bdf8", fontWeight: 700, letterSpacing: "0.5px", fontSize: "11px", textTransform: "uppercase" }}>
+                  SYNTHETIC MATCH SCENARIO INJECTOR
+                </div>
                 <IonCardTitle style={{ fontSize: "18px", color: "#f8fafc", marginTop: "2px" }}>
                   Edge-Case Tactical State Simulator
                 </IonCardTitle>
@@ -460,10 +459,10 @@ const StudioControlPage: React.FC = () => {
           <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
             <IonCardHeader style={{ paddingBottom: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700 }}>
+                <div style={{ color: "#38bdf8", fontWeight: 700, fontSize: "11px", letterSpacing: "0.5px", textTransform: "uppercase" }}>
                   <IonIcon icon={serverOutline} style={{ marginRight: "4px", verticalAlign: "middle" }} />
                   LOCAL TELEMETRY TRANSPORT
-                </IonCardSubtitle>
+                </div>
                 <IonBadge color={serverStatus.isConnected ? "success" : "warning"} style={{ flexShrink: 0 }}>
                   {serverStatus.isConnected ? "Connected" : "Simulated Fallback"}
                 </IonBadge>
@@ -533,10 +532,10 @@ const StudioControlPage: React.FC = () => {
           <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
             <IonCardHeader style={{ paddingBottom: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 700 }}>
+                <div style={{ color: "#a855f7", fontWeight: 700, fontSize: "11px", letterSpacing: "0.5px", textTransform: "uppercase" }}>
                   <IonIcon icon={gitNetworkOutline} style={{ marginRight: "4px", verticalAlign: "middle" }} />
                   GAMOVENTURE AI AGENT SWARM
-                </IonCardSubtitle>
+                </div>
                 <IonBadge color="primary" style={{ flexShrink: 0 }}>4 Agents Active</IonBadge>
               </div>
               <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>

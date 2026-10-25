@@ -558,9 +558,6 @@ export const FormationPitchCard: React.FC = () => {
               <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--ion-text-color)" }}>
                 Tactical Inflection Engine • Live Narrative
               </div>
-              <div style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
-                Synthesized across Telemetry, Tactical, and Narrative Agent Swarm
-              </div>
             </div>
           </div>
 
@@ -647,7 +644,7 @@ export const FormationPitchCard: React.FC = () => {
           }}
         >
           <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--studio-subtext)", textTransform: "uppercase" }}>
-            Click Player to Spotlight in Right Column
+            Match Squad Roster
           </div>
 
           {[...homeLineup, ...awayLineup].map((p) => {

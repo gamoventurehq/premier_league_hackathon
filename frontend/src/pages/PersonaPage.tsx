@@ -10,7 +10,6 @@ import {
   IonLabel,
   IonCard,
   IonCardHeader,
-  IonCardSubtitle,
   IonCardTitle,
   IonCardContent,
   IonBadge,
@@ -315,11 +314,11 @@ const PersonaPage: React.FC = () => {
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
               <IonCardHeader style={{ paddingBottom: "10px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                  <IonCardSubtitle style={{ color: "#00e5ff", fontWeight: 700, letterSpacing: "0.5px", margin: 0 }}>
+                  <div style={{ color: "#00e5ff", fontWeight: 700, letterSpacing: "0.5px", margin: 0, fontSize: "11px", textTransform: "uppercase" }}>
                     PROBABILISTIC METRICS & SPATIAL CORRIDORS
-                  </IonCardSubtitle>
+                  </div>
                   <IonBadge color="tertiary" style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}>
-                    [Stage 2 & 5 Engine]
+                    Spatial Engine
                   </IonBadge>
                 </div>
                 <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
@@ -345,7 +344,7 @@ const PersonaPage: React.FC = () => {
                       {(pdr * 100).toFixed(1)}%
                     </div>
                     <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>
-                      Threshold: High Friction
+                      High Friction
                     </div>
                   </div>
                 </div>
@@ -381,9 +380,9 @@ const PersonaPage: React.FC = () => {
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
               <IonCardHeader style={{ paddingBottom: "10px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                  <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 700, letterSpacing: "0.5px", margin: 0 }}>
+                  <div style={{ color: "#a855f7", fontWeight: 700, letterSpacing: "0.5px", margin: 0, fontSize: "11px", textTransform: "uppercase" }}>
                     TACTICAL PHASE & STRUCTURAL REASONING
-                  </IonCardSubtitle>
+                  </div>
                   <IonBadge color="primary" style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}>
                     {rhythm.replace(/_/g, " ")}
                   </IonBadge>
@@ -457,9 +456,9 @@ const PersonaPage: React.FC = () => {
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
               <IonCardHeader style={{ paddingBottom: "10px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                  <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700, letterSpacing: "0.5px", margin: 0 }}>
+                  <div style={{ color: "#38bdf8", fontWeight: 700, letterSpacing: "0.5px", margin: 0, fontSize: "11px", textTransform: "uppercase" }}>
                     MATCH STORYLINE & MOMENTUM
-                  </IonCardSubtitle>
+                  </div>
                   <IonBadge color="success" style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}>
                     [Live Momentum]
                   </IonBadge>
@@ -557,9 +556,9 @@ const PersonaPage: React.FC = () => {
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
               <IonCardHeader style={{ paddingBottom: "10px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <IonCardSubtitle style={{ color: "#f59e0b", fontWeight: 700, letterSpacing: "0.5px" }}>
-                    ACCESSIBLE TACTICAL EXPLAINER
-                  </IonCardSubtitle>
+                  <div style={{ color: "#f59e0b", fontWeight: 700, letterSpacing: "0.5px", fontSize: "11px", textTransform: "uppercase" }}>
+                    Casual Fan Overview
+                  </div>
                   <IonBadge color="warning" style={{ fontSize: "10px" }}>
                     [Plain Language]
                   </IonBadge>
@@ -572,7 +571,7 @@ const PersonaPage: React.FC = () => {
                 {/* Plain-English Breakdown */}
                 <div style={{ background: "#020617", padding: "12px", borderRadius: "8px", border: "1px solid #1e293b", marginBottom: "14px" }}>
                   <div style={{ fontSize: "13px", color: "#cbd5e1", lineHeight: 1.6 }}>
-                    <strong style={{ color: "#38bdf8" }}>In Simple Terms:</strong> Manchester City are holding onto the ball right outside Arsenal&apos;s 18-yard box, passing back and forth to force a mistake. Arsenal have formed two compact defensive walls to block every shooting lane and are waiting to sprint forward on a counter-attack the second they win the ball.
+                    Manchester City are holding onto the ball right outside Arsenal&apos;s 18-yard box, passing back and forth to force a mistake. Arsenal have formed two compact defensive walls to block every shooting lane and are waiting to sprint forward on a counter-attack the second they win the ball.
                   </div>
                 </div>
 
@@ -658,9 +657,9 @@ const PersonaPage: React.FC = () => {
               <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
                 <IonCardHeader style={{ paddingBottom: "10px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                    <IonCardSubtitle style={{ color: selectedPlayer.team === "home" ? "#00e5ff" : "#f43f5e", fontWeight: 700, margin: 0 }}>
+                    <div style={{ color: selectedPlayer.team === "home" ? "#00e5ff" : "#f43f5e", fontWeight: 700, margin: 0, fontSize: "11px", letterSpacing: "0.5px", textTransform: "uppercase" }}>
                       PLAYER CAM SPOTLIGHT • {selectedPlayer.team === "home" ? "MAN CITY" : "ARSENAL"}
-                    </IonCardSubtitle>
+                    </div>
                     <IonBadge color="primary" style={{ fontSize: "10px", flexShrink: 0 }}>
                       Rating {selectedPlayer.rating.toFixed(1)}
                     </IonBadge>
@@ -743,9 +742,9 @@ const PersonaPage: React.FC = () => {
               <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
                 <IonCardHeader style={{ paddingBottom: "10px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                    <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 700, margin: 0 }}>
+                    <div style={{ color: "#a855f7", fontWeight: 700, margin: 0, fontSize: "11px", letterSpacing: "0.5px", textTransform: "uppercase" }}>
                       INDIVIDUAL TACTICAL PROFILE
-                    </IonCardSubtitle>
+                    </div>
                     <IonBadge color={isHighSpeedBurst ? "danger" : "success"} style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}>
                       {isHighSpeedBurst
                         ? "[High-Speed Sprint Burst]"
@@ -873,9 +872,9 @@ const PersonaPage: React.FC = () => {
               <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
                 <IonCardHeader style={{ paddingBottom: "10px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                    <IonCardSubtitle style={{ color: clubAllegiance === "MCI" ? "#00e5ff" : "#f43f5e", fontWeight: 700, margin: 0 }}>
+                    <div style={{ color: clubAllegiance === "MCI" ? "#00e5ff" : "#f43f5e", fontWeight: 700, margin: 0, fontSize: "11px", letterSpacing: "0.5px", textTransform: "uppercase" }}>
                       {clubAllegiance === "MCI" ? "MANCHESTER CITY EXECUTION" : "ARSENAL TACTICAL DISCIPLINE"}
-                    </IonCardSubtitle>
+                    </div>
                     <IonBadge
                       color={clubAllegiance === "MCI" ? "secondary" : "danger"}
                       style={{ padding: "4px 10px", fontSize: "11px", fontWeight: 700, borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}
@@ -971,9 +970,9 @@ const PersonaPage: React.FC = () => {
               <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
                 <IonCardHeader style={{ paddingBottom: "10px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                    <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700, margin: 0 }}>
+                    <div style={{ color: "#38bdf8", fontWeight: 700, margin: 0, fontSize: "11px", letterSpacing: "0.5px", textTransform: "uppercase" }}>
                       SUPPORTER PULSE & TACTICAL OUTLOOK
-                    </IonCardSubtitle>
+                    </div>
                     <IonBadge
                       color="primary"
                       style={{ padding: "4px 10px", fontSize: "11px", fontWeight: 700, borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}
@@ -1023,9 +1022,9 @@ const PersonaPage: React.FC = () => {
           <IonCardHeader style={{ paddingBottom: "10px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <div>
-                <IonCardSubtitle style={{ color: "#00e5ff", fontWeight: 700, letterSpacing: "0.5px" }}>
+                <div style={{ color: "#00e5ff", fontWeight: 700, letterSpacing: "0.5px", fontSize: "11px", textTransform: "uppercase" }}>
                   MULTILINGUAL BROADCAST STREAM
-                </IonCardSubtitle>
+                </div>
                 <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", marginTop: "2px" }}>
                   Synchronous Localized Commentary Stream
                 </IonCardTitle>

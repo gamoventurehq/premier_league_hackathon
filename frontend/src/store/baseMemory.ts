@@ -35,6 +35,7 @@ export interface BaseMemoryState {
   swarmCommentary: SwarmCommentaryItem[];
   currentFrame: FrameTelemetry | null;
   blackboard: TacticalBlackboard;
+  theme: "dark" | "light";
   selectedPersona: PersonaMode;
   selectedLanguage: SupportedLanguage;
   selectedPlayerId: string;
@@ -159,7 +160,61 @@ const initialBlackboard: TacticalBlackboard = {
   },
 };
 
+export function sanitizeText(val: unknown, fallback = "", activeLang: SupportedLanguage = "en"): string {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === "object") {
+    const rec = val as Record<string, unknown>;
+    const langVal = rec[activeLang] ?? rec.en;
+    if (typeof langVal === "string") return sanitizeText(langVal, fallback, activeLang);
+    return fallback;
+  }
+  const s = String(val).trim();
+  if (s.includes("NarrativeDraft(") || s.includes("[object Object]")) {
+    return fallback;
+  }
+  return s;
+}
+
+export const SCENARIO_MULTILINGUAL: Record<string, Record<SupportedLanguage, string>> = {
+  high_possession: {
+    en: "Sustained High Possession",
+    es: "Posesión Alta Sostenida",
+    fr: "Possession Élevée Soutenue",
+    ja: "ポゼッション維持",
+    ar: "استحواذ مستمر",
+  },
+  counter_attack_transition: {
+    en: "Counter-Attack Transition",
+    es: "Transición de Contraataque",
+    fr: "Transition de Contre-Attaque",
+    ja: "カウンターアタック移行",
+    ar: "تحول الهجوم المضاد",
+  },
+  low_block_siege: {
+    en: "Low-Block Defensive Wall",
+    es: "Muro Defensivo de Bloque Bajo",
+    fr: "Mur Défensif Bloc Bas",
+    ja: "ローブロック守備網",
+    ar: "جدار دفاعي منخفض",
+  },
+  box_scramble: {
+    en: "Penalty Box Scramble",
+    es: "Revuelo en el Área",
+    fr: "Mêlée dans la Surface",
+    ja: "ペナルティエリアの混戦",
+    ar: "فوضى منطقة الجزاء",
+  },
+  red_card_crisis: {
+    en: "Red Card Crisis",
+    es: "Crisis de Tarjeta Roja",
+    fr: "Crise de Carton Rouge",
+    ja: "レッドカード危機",
+    ar: "أزمة البطاقة الحمراء",
+  },
+};
+
 const initialState: BaseMemoryState = {
+  theme: "dark",
   matchClock: 1458, // 24:18 min
   isPlaying: true,
   clockOffset: 0,
@@ -700,6 +755,26 @@ class BaseMemoryStore {
       ...this.state,
       selectedLanguage: language,
     };
+    this.notify();
+  };
+
+  get language(): SupportedLanguage {
+    return this.state.selectedLanguage;
+  }
+
+  toggleTheme = () => {
+    const nextTheme = this.state.theme === "dark" ? "light" : "dark";
+    this.setTheme(nextTheme);
+  };
+
+  setTheme = (theme: "dark" | "light") => {
+    this.state = {
+      ...this.state,
+      theme,
+    };
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
     this.notify();
   };
 

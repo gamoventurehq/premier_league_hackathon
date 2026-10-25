@@ -275,9 +275,22 @@ async def copilot_query(request: Request, payload: CopilotQueryRequest) -> Copil
                 "temperature": 0.2
             }
 
-            headers = {"Content-Type": "application/json"}
-            if settings.effective_llm_api_key:
-                headers["Authorization"] = f"Bearer {settings.effective_llm_api_key}"
+            provider = settings.active_llm_provider
+            model = settings.effective_llm_model
+            if provider == "azure":
+                endpoint = (settings.azure_ai_foundry_endpoint or "").rstrip("/")
+                deployment = settings.azure_ai_foundry_deployment or model
+                url = f"{endpoint}/openai/deployments/{deployment}/chat/completions?api-version={settings.azure_openai_api_version}"
+                headers = {
+                    "Content-Type": "application/json",
+                    "api-key": settings.azure_openai_api_key or "",
+                }
+            else:
+                base_url = settings.effective_llm_base_url.rstrip("/")
+                url = f"{base_url}/chat/completions"
+                headers = {"Content-Type": "application/json"}
+                if settings.effective_llm_api_key:
+                    headers["Authorization"] = f"Bearer {settings.effective_llm_api_key}"
 
             req = urllib.request.Request(url, data=json.dumps(req_payload).encode(), headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=12.0) as resp:
@@ -285,7 +298,7 @@ async def copilot_query(request: Request, payload: CopilotQueryRequest) -> Copil
                 ans = data["choices"][0]["message"]["content"].strip()
                 return CopilotQueryResponse(
                     answer=ans,
-                    source=f"local_llm ({settings.active_llm_provider})",
+                    source=f"azure_ai_foundry ({deployment})" if provider == "azure" else f"local_llm ({provider})",
                     model=model,
                     matchClock=match_clock,
                     toolUsed="llm_tactical_copilot",

@@ -7,7 +7,6 @@ import {
   IonToolbar,
   IonCard,
   IonCardHeader,
-  IonCardSubtitle,
   IonCardTitle,
   IonCardContent,
   IonProgressBar,
@@ -215,10 +214,10 @@ const TacticalPage: React.FC = () => {
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                  <IonCardSubtitle style={{ color: "#00e5ff", fontWeight: 800, margin: 0 }}>
+                  <div style={{ color: "#00e5ff", fontWeight: 800, margin: 0, fontSize: "12px", display: "flex", alignItems: "center" }}>
                     <IonIcon icon={trendingUpOutline} style={{ marginRight: "4px" }} />
                     Control vs. Chaos Index
-                  </IonCardSubtitle>
+                  </div>
                   <span style={{ fontFamily: "monospace", fontWeight: 800, color: "#f8fafc", fontSize: "14px", flexShrink: 0 }}>
                     {Math.round(control)}% / {Math.round(chaos)}%
                   </span>
@@ -301,10 +300,10 @@ const TacticalPage: React.FC = () => {
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                  <IonCardSubtitle style={{ color: "#f59e0b", fontWeight: 800, margin: 0 }}>
+                  <div style={{ color: "#f59e0b", fontWeight: 800, margin: 0, fontSize: "12px", display: "flex", alignItems: "center" }}>
                     <IonIcon icon={flameOutline} style={{ marginRight: "4px" }} />
                     Pass Difficulty Rating (PDR)
-                  </IonCardSubtitle>
+                  </div>
                   <span style={{ fontFamily: "monospace", fontWeight: 900, color: "#f59e0b", fontSize: "16px", flexShrink: 0 }}>
                     {pdr.toFixed(2)}
                   </span>
@@ -332,8 +331,8 @@ const TacticalPage: React.FC = () => {
                     marginBottom: "14px",
                   }}
                 >
-                  <span>Clean Passing Corridor</span>
-                  <span>Extreme Defensive Pressure</span>
+                  <span>Low (0%)</span>
+                  <span>High (100%)</span>
                 </div>
 
                 {/* Sub-factor Breakdown Meters */}
@@ -365,13 +364,13 @@ const TacticalPage: React.FC = () => {
               </IonCardContent>
             </IonCard>
 
-            {/* 3. Positional Phase Distribution (CHALLENGE.md Stage 2) */}
+            {/* 3. Positional Phase Distribution */}
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader>
-                <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 800 }}>
+                <div style={{ color: "#a855f7", fontWeight: 800, fontSize: "12px", display: "flex", alignItems: "center" }}>
                   <IonIcon icon={analyticsOutline} style={{ marginRight: "4px" }} />
                   Phase of Play Breakdown
-                </IonCardSubtitle>
+                </div>
                 <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", marginTop: "2px" }}>
                   Territorial Progression Distribution
                 </IonCardTitle>
@@ -407,10 +406,10 @@ const TacticalPage: React.FC = () => {
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                  <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 800, margin: 0 }}>
+                  <div style={{ color: "#a855f7", fontWeight: 800, margin: 0, fontSize: "12px", display: "flex", alignItems: "center" }}>
                     <IonIcon icon={pulseOutline} style={{ marginRight: "4px" }} />
                     Tactical Arc & Tempo
-                  </IonCardSubtitle>
+                  </div>
                   {activeInflection && (
                     <IonBadge color="danger" style={{ fontWeight: 800, flexShrink: 0 }}>
                       Inflection Active
@@ -431,10 +430,10 @@ const TacticalPage: React.FC = () => {
             {/* 5. Tactical Inflection Points Timeline (CONTEXT.md Stage 3: Explain) */}
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader>
-                <IonCardSubtitle style={{ color: "#10b981", fontWeight: 800 }}>
+                <div style={{ color: "#10b981", fontWeight: 800, fontSize: "12px", display: "flex", alignItems: "center" }}>
                   <IonIcon icon={flashOutline} style={{ marginRight: "4px" }} />
                   Tactical Inflection Points
-                </IonCardSubtitle>
+                </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px" }}>
                   <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", marginTop: "2px" }}>
                     Structural Mutations & Win-Probability Shifts
@@ -500,10 +499,10 @@ const TacticalPage: React.FC = () => {
             {/* 6. Multi-Agent Swarm Tactical Insights Feed (ADR 0002 & ADR 0006) */}
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader>
-                <IonCardSubtitle style={{ color: "#00e5ff", fontWeight: 800 }}>
+                <div style={{ color: "#00e5ff", fontWeight: 800, fontSize: "12px", display: "flex", alignItems: "center" }}>
                   <IonIcon icon={gitNetworkOutline} style={{ marginRight: "4px" }} />
                   Swarm Intelligence Blackboard
-                </IonCardSubtitle>
+                </div>
                 <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", marginTop: "2px" }}>
                   Autonomous Agent Swarm Commentary
                 </IonCardTitle>

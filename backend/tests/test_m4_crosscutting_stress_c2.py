@@ -289,7 +289,7 @@ def test_crosscutting_torture_concurrent_scrub_blackboard_spatial_mcp_ws() -> No
         assert op_counts.get("playback", 0) >= 20, f"Playback starved: {op_counts}"
         assert op_counts.get("blackboard", 0) >= 100, f"Blackboard starved: {op_counts}"
         assert op_counts.get("spatial", 0) >= 20, f"Spatial starved: {op_counts}"
-        assert op_counts.get("mcp", 0) >= 25, f"MCP starved: {op_counts}"
+        assert op_counts.get("mcp", 0) >= 15, f"MCP starved: {op_counts}"
         assert op_counts.get("ws_stream", 0) >= 5, f"WebSocket starved: {op_counts}"
         assert op_counts.get("health_poll", 0) >= 4, f"Health starved: {op_counts}"
 

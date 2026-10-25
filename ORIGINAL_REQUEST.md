@@ -294,3 +294,44 @@ Synchronize all frontend event streams and components:
 - [ ] Z-axis ball trajectories (vz, z) authentically elevate on shots, crosses, and clearances (z > 0m) and return to ground on passes (z = 0m).
 - [ ] Frontend builds cleanly with zero TypeScript errors (npm run typecheck).
 - [ ] Backend pytest suite (backend/.venv/bin/pytest) and E2E suite (./run_e2e.sh) pass 100% with no contract regressions.
+
+## 2026-10-25T19:01:00Z
+
+Safely verify, merge, and stabilize PR #4 (`feature/studio-fullstack-delivery`) from Urvashi Mallah into `main`. Ensure all backend and frontend test suites pass with zero regressions, resolve layout doctrine test invariants, and verify end-to-end studio functionality.
+
+Working directory: /home/gaurav/gamoventure/organisation/microsoft_hackathon
+Integrity mode: development
+
+## Requirements
+
+### R1. PR #4 Review & Clean Merge
+- Thoroughly review PR #4 (`feature/studio-fullstack-delivery`), which delivers the simulation clock auto-rollover loop, 10Hz physics / 5Hz telemetry stream badges, and the 5-page studio UI.
+- Preserve any unstaged local updates (such as Azure AI Foundry copilot integrations in `backend/app/api/routes.py`).
+- Merge PR #4 cleanly into `main` using GitHub CLI / git merge.
+
+### R2. Test Suite & Layout Doctrine Green Bar
+- Run frontend type check and verify 0 errors: `npm --prefix frontend run typecheck`.
+- Run frontend unit tests and verify all pass: `npm --prefix frontend test`.
+- Run frontend production build: `npm --prefix frontend run build`.
+- Resolve the 9 failing layout doctrine & invariant checks in `backend/tests/test_m2_layout_doctrine_and_invariants_c2.py` (e.g. double-headings in IonCardHeader, Player Spotlight invariants, Sidebar 64px/icons, theme toggle options) so that `pytest backend/tests` passes 100% (312/312 tests).
+
+### R3. End-to-End System Verification
+- Verify the FastAPI backend starts and responds to `/api/health` with `status: ok` and `simulationAlive: true`.
+- Verify the simulation loop (`sim_loop_on_full_time`) resets to anchor time cleanly upon reaching full-time (5400s).
+- Verify the Vite/Ionic frontend serves without console errors and connects via WebSocket to the live telemetry stream.
+
+## Acceptance Criteria
+
+### Pull Request & Merge Status
+- [ ] PR #4 is merged into `main` and pushed to remote `origin/main`.
+- [ ] Local unstaged work in `backend/app/api/routes.py` is intact or cleanly integrated.
+
+### Automated Test Verification
+- [ ] `npm --prefix frontend run typecheck` exits with code 0 (0 errors, 0 warnings).
+- [ ] `npm --prefix frontend test` passes all tests.
+- [ ] `npm --prefix frontend run build` succeeds and produces production bundle in `frontend/dist/`.
+- [ ] `pytest backend/tests` passes 100% of test cases (including `test_m2_layout_doctrine_and_invariants_c2.py`).
+
+### Runtime Operational Verification
+- [ ] Backend runs on port 8000 and `/api/health` returns HTTP 200 with `simulationAlive: true`.
+- [ ] Frontend connects to `ws://localhost:8000/api/stream` at 5Hz telemetry downsample with 10Hz engine physics.

@@ -233,6 +233,9 @@ class MatchRuntime:
                         if self.settings.sim_loop_on_full_time and self.engine.match_seconds >= MATCH_LENGTH_SECONDS:
                             anchor = self.scenario_anchor(self._scenario)
                             self.engine.jump_to_seconds(anchor)
+                            self._scrub_epoch += 1
+                            self._active_ai_narrative = None
+                            self._narrative = None
                         self.engine.step(dt * self._speed)
                         tick += 1
                         if tick % publish_every == 0:

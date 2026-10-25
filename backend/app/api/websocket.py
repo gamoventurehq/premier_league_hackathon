@@ -19,6 +19,7 @@ PUBLISH_INTERVAL_SECONDS = 0.2
 
 
 @router.websocket("/ws/telemetry")
+@router.websocket("/api/stream")
 async def telemetry_stream(websocket: WebSocket) -> None:
     """Stream the TelemetryFrame to a studio client.
 
