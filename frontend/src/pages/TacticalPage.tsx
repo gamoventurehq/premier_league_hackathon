@@ -72,7 +72,7 @@ const TacticalPage: React.FC = () => {
           <IonTitle>Tactical Intelligence</IonTitle>
           <IonButtons slot="end">
             <IonBadge color={serverStatus.isConnected ? "success" : "warning"}>
-              {serverStatus.isConnected ? "Live 5Hz" : "Synthetic"}
+              {serverStatus.isConnected ? "10Hz / 5Hz" : "Synthetic"}
             </IonBadge>
           </IonButtons>
         </IonToolbar>
@@ -116,7 +116,7 @@ const TacticalPage: React.FC = () => {
                 style={{ animation: "pulse 1.5s infinite", fontSize: "13px" }}
               />
               <span style={{ fontSize: "11px", fontWeight: 700, color: "#f43f5e", letterSpacing: "0.5px" }}>
-                LIVE 5Hz
+                LIVE 10Hz / 5Hz
               </span>
             </div>
             <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>

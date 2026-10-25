@@ -222,7 +222,7 @@ const PersonaPage: React.FC = () => {
                   flexShrink: 0,
                 }}
               />
-              5Hz Live
+              10Hz / 5Hz Live
             </div>
 
             <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>

@@ -362,7 +362,10 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
       ctx.restore();
 
       // Top-Left: FPS & Sensor Stream Rate Badge
-      const fpsW = 84 * dpr;
+      const badgeText = `${fpsRef.current.fps} FPS • 10Hz Engine • 5Hz Stream`;
+      ctx.font = `bold ${Math.round(9 * dpr)}px monospace`;
+      const textMetrics = ctx.measureText(badgeText);
+      const fpsW = Math.max(90 * dpr, textMetrics.width + 16 * dpr);
       const fpsH = 20 * dpr;
       const fpsX = padX + 6 * dpr;
       const fpsY = padY + 6 * dpr;
@@ -376,10 +379,9 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
       ctx.stroke();
 
       ctx.fillStyle = "#10b981";
-      ctx.font = `bold ${Math.round(9 * dpr)}px monospace`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(`${fpsRef.current.fps} FPS • 5Hz`, fpsX + fpsW / 2, fpsY + fpsH / 2);
+      ctx.fillText(badgeText, fpsX + fpsW / 2, fpsY + fpsH / 2);
 
       // Lower-Left: Pitch Control Dominance Badge
       const ctrl =

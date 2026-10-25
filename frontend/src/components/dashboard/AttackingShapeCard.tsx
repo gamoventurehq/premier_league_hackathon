@@ -98,7 +98,7 @@ export const AttackingShapeCard: React.FC = () => {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, flexWrap: "wrap" }}>
           <span style={{ fontSize: "10px", color: "var(--studio-subtext)", fontFamily: "monospace" }}>
-            LIVE 5Hz
+            LIVE 10Hz / 5Hz
           </span>
           <span style={{ fontSize: "11px", color: activeMeta.color, fontWeight: 700, whiteSpace: "nowrap" }}>
             {activeMeta.name}
