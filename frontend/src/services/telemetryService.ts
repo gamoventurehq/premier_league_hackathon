@@ -1,14 +1,16 @@
-import { baseMemory, normalizeFrame, normalizeBlackboard } from "../store/baseMemory";
-import { FrameTelemetry, PlayerKinematics, MatchEvent, MatchEventType, ShotRecord } from "../types/telemetry";
+import { baseMemory } from "../store/baseMemory";
+import { FrameTelemetry, PlayerTelemetry, PlayerKinematics } from "../types/telemetry";
 
 class TelemetryService {
   private ws: WebSocket | null = null;
   private fallbackInterval: number | null = null;
   private isStarted = false;
+  private retryTimeout: number | null = null;
   private wsUrl = "ws://localhost:8000/ws/telemetry";
 
   start(customUrl?: string) {
-    if (this.isStarted) return;
+    baseMemory.setScenarioCommandHandler((cmd) => this.sendCommand(cmd));
+    if (this.isStarted && this.ws && this.ws.readyState === WebSocket.OPEN) return;
     this.isStarted = true;
     if (customUrl) this.wsUrl = customUrl;
 
@@ -16,6 +18,7 @@ class TelemetryService {
   }
 
   private connectWebSocket() {
+    if (!this.isStarted) return;
     try {
       this.ws = new WebSocket(this.wsUrl);
 
@@ -33,17 +36,19 @@ class TelemetryService {
 
       this.ws.onmessage = (event) => {
         try {
-          const payload = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+          const payload = JSON.parse(event.data);
           if (payload.frame) {
-            const normalizedFrame = normalizeFrame(payload.frame);
-            baseMemory.updateFrame(normalizedFrame);
+            baseMemory.updateFrame(payload.frame);
           }
           if (payload.blackboard) {
-            const normalizedBb = normalizeBlackboard(payload.blackboard, baseMemory.getState().blackboard);
-            baseMemory.updateBlackboard(normalizedBb);
+            baseMemory.updateBlackboard(payload.blackboard);
           }
+          const latency = typeof payload.sentAtMs === "number"
+            ? Math.max(1, Math.min(250, Date.now() - payload.sentAtMs))
+            : 0;
           baseMemory.setServerStatus({
             isConnected: true,
+            latencyMs: latency,
             lastSyncTime: Date.now(),
           });
         } catch (err) {
@@ -60,12 +65,15 @@ class TelemetryService {
         baseMemory.setServerStatus({ isConnected: false });
         this.ensureFallback();
 
-        // Retry connection after 3 seconds
-        setTimeout(() => {
-          if (this.isStarted) {
-            this.connectWebSocket();
-          }
-        }, 3000);
+        // Retry connection after 3 seconds if still running
+        if (this.isStarted && !this.retryTimeout) {
+          this.retryTimeout = window.setTimeout(() => {
+            this.retryTimeout = null;
+            if (this.isStarted) {
+              this.connectWebSocket();
+            }
+          }, 3000);
+        }
       };
     } catch {
       baseMemory.setServerStatus({ isConnected: false });
@@ -76,10 +84,11 @@ class TelemetryService {
   private ensureFallback() {
     if (this.fallbackInterval) return;
 
-    let simClock = baseMemory.getState().matchClock;
-
     this.fallbackInterval = window.setInterval(() => {
-      simClock += 0.2;
+      const state = baseMemory.getState();
+      if (!state.isPlaying) return;
+
+      const simClock = state.matchClock + 0.2;
       const mock = this.generateSyntheticFrame(simClock);
       baseMemory.updateFrame(mock);
       baseMemory.updateBlackboard({
@@ -88,141 +97,188 @@ class TelemetryService {
     }, 200);
   }
 
+  sendCommand(cmd: Record<string, unknown>) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        let payload: Record<string, unknown> = { ...cmd };
+        if (cmd.command === "seek") {
+          payload = { type: "jump", seconds: cmd.seconds ?? cmd.time };
+        } else if (cmd.command === "play") {
+          payload = { type: "resume" };
+        } else if (cmd.command === "pause") {
+          payload = { type: "pause" };
+        } else if (cmd.command === "inject_scenario") {
+          payload = { type: "set_scenario", scenario: cmd.scenario };
+        } else if (cmd.command === "reset_scenario") {
+          payload = { type: "set_scenario", scenario: "high_possession" };
+        }
+        this.ws.send(JSON.stringify(payload));
+      } catch (err) {
+        console.error("Failed to send telemetry command", err);
+      }
+    }
+  }
+
   private generateSyntheticFrame(tickSec: number): FrameTelemetry {
     const t = tickSec;
-    const bx = 52.5 + 24.0 * Math.sin(t * 0.3);
-    const by = 34.0 + 16.0 * Math.cos(t * 0.4);
-    const bSpeed = Math.abs(Math.cos(t * 0.3)) * 8.0;
+    const state = baseMemory.getState();
+    const scenario = state.activeScenario;
+
+    let bx = 77.0 + 11.0 * Math.sin(t * 0.3);
+    let by = 34.0 + 15.0 * Math.cos(t * 0.4);
+    let bSpeed = Math.abs(Math.cos(t * 0.3)) * 8.5;
+
+    if (scenario === "box_scramble") {
+      bx = 98.2 + 1.2 * Math.sin(t * 1.5);
+      by = 34.0 + 2.5 * Math.cos(t * 1.8);
+      bSpeed = 3.5 + 4.0 * Math.abs(Math.sin(t * 1.2));
+    } else if (scenario === "counter_attack") {
+      const prog = 0.5 + 0.5 * Math.sin(t * 0.7);
+      bx = 35.0 + 35.0 * prog;
+      by = 48.0 + 6.0 * Math.cos(t * 0.9);
+      bSpeed = 8.5;
+    } else if (scenario === "low_block") {
+      bx = 79.0 + 7.0 * Math.sin(t * 0.4);
+      by = 34.0 + 14.0 * Math.cos(t * 0.3);
+      bSpeed = Math.abs(Math.cos(t * 0.3)) * 6.5;
+    }
+
+    const HOME_ANCHORS: Record<string, [number, number]> = {
+      home_1: [12.0, 34.0],
+      home_2: [60.0, 14.0],
+      home_3: [52.0, 26.0],
+      home_4: [52.0, 42.0],
+      home_5: [60.0, 54.0],
+      home_6: [66.0, 34.0],
+      home_7: [78.0, 22.0],
+      home_8: [78.0, 46.0],
+      home_9: [84.0, 15.0],
+      home_10: [87.0, 34.0],
+      home_11: [84.0, 53.0],
+    };
+
+    const AWAY_ANCHORS: Record<string, [number, number]> = {
+      away_1: [100.0, 34.0],
+      away_2: [88.0, 52.0],
+      away_3: [91.0, 39.0],
+      away_4: [91.0, 27.0],
+      away_5: [88.0, 16.0],
+      away_6: [79.0, 41.0],
+      away_7: [79.0, 27.0],
+      away_8: [68.0, 52.0],
+      away_9: [73.0, 34.0],
+      away_10: [68.0, 16.0],
+      away_11: [62.0, 34.0],
+    };
 
     const players: PlayerKinematics[] = [];
 
-    // Home Team (11)
-    for (let i = 0; i < 11; i++) {
-      const baseX = 12.0 + (i % 4) * 22.0;
-      const baseY = 10.0 + Math.floor(i / 4) * 20.0;
-      const px = baseX + 3.0 * Math.sin(t * 0.5 + i);
-      const py = baseY + 2.5 * Math.cos(t * 0.4 + i);
-      const spd = 2.5 + 1.8 * Math.sin(t * 0.6 + i);
+    // Home Team Outfield & GK
+    state.homeLineup.forEach((p, i) => {
+      const [baseX, baseY] = HOME_ANCHORS[p.id] || [50.0, 34.0];
+      let px = baseX;
+      let py = baseY;
+      let spd = 2.4 + 1.4 * Math.abs(Math.sin(t * 0.6 + i));
+
+      if (scenario === "box_scramble" && (p.id === "home_10" || p.id === "home_7" || p.id === "home_9")) {
+        const offset = p.id === "home_10" ? 1.8 : 3.2;
+        px = 96.5 + offset * Math.cos(t * 0.8 + i);
+        py = 34.0 + offset * Math.sin(t * 0.8 + i);
+        spd = 4.2;
+      } else if (scenario === "counter_attack" && (p.id === "home_2" || p.id === "home_6")) {
+        px = baseX - 12.0 + 3.0 * Math.sin(t * 0.6);
+        spd = 7.5;
+      } else {
+        px = baseX + 2.2 * Math.sin(t * 0.5 + i);
+        py = baseY + 1.8 * Math.cos(t * 0.4 + i);
+      }
+
+      const dist = Math.hypot(px - bx, py - by);
+      const isCarrier = dist < 4.5 && (p.id === "home_7" || p.id === "home_10" || p.id === "home_9");
 
       players.push({
-        player_id: `home_${i + 1}`,
-        name: `Home Player ${i + 1}`,
+        player_id: p.id,
+        name: p.name,
         team: "home",
-        shirt_number: i + 1,
-        position: i === 0 ? "GK" : i < 5 ? "DEF" : i < 9 ? "MID" : "FWD",
-        x: Math.max(1, Math.min(104, px)),
-        y: Math.max(1, Math.min(67, py)),
+        shirt_number: p.number,
+        position: p.pos,
+        x: Math.max(2, Math.min(102, px)),
+        y: Math.max(2, Math.min(66, py)),
         velocity_mps: Math.max(0.1, spd),
         speed_kmh: Math.max(0.3, spd * 3.6),
         heading_deg: (t * 20 + i * 30) % 360,
-        is_ball_carrier: i === 6,
+        is_ball_carrier: isCarrier,
       });
-    }
+    });
 
-    // Away Team (11)
-    for (let i = 0; i < 11; i++) {
-      const baseX = 93.0 - (i % 4) * 22.0;
-      const baseY = 10.0 + Math.floor(i / 4) * 20.0;
-      const px = baseX - 3.0 * Math.sin(t * 0.5 + i);
-      const py = baseY + 2.5 * Math.sin(t * 0.4 + i);
-      const spd = 2.4 + 1.5 * Math.cos(t * 0.6 + i);
+    // Away Team Outfield & GK
+    state.awayLineup.forEach((p, i) => {
+      const [baseX, baseY] = AWAY_ANCHORS[p.id] || [85.0, 34.0];
+      let px = baseX;
+      let py = baseY;
+      let spd = 2.2 + 1.2 * Math.abs(Math.cos(t * 0.6 + i));
+
+      if (scenario === "red_card_crisis" && p.id === "away_6") {
+        px = 106.0;
+        py = -4.0;
+        spd = 0.0;
+      } else if (scenario === "counter_attack" && p.id === "away_8") {
+        const prog = 0.5 + 0.5 * Math.sin(t * 0.7);
+        px = 36.0 + 34.0 * prog;
+        py = 48.0 + 5.0 * Math.cos(t * 0.9);
+        spd = 8.8;
+      } else if (scenario === "box_scramble" && (p.id === "away_1" || p.id === "away_3" || p.id === "away_4")) {
+        px = 98.0 + 1.5 * Math.sin(t * 0.9 + i);
+        py = 34.0 + 2.2 * Math.cos(t * 0.9 + i);
+        spd = 3.8;
+      } else if (scenario === "low_block") {
+        px = Math.min(96.0, baseX + 3.0) - 1.2 * Math.sin(t * 0.4 + i);
+        py = baseY + 1.2 * Math.sin(t * 0.3 + i);
+        spd = 1.8;
+      } else {
+        px = baseX - 2.0 * Math.sin(t * 0.5 + i);
+        py = baseY + 1.8 * Math.sin(t * 0.4 + i);
+      }
+
+      const dist = Math.hypot(px - bx, py - by);
+      const isCarrier = dist < 4.5 && (p.id === "away_8" || p.id === "away_11" || p.id === "away_9");
 
       players.push({
-        player_id: `away_${i + 1}`,
-        name: `Away Player ${i + 1}`,
+        player_id: p.id,
+        name: p.name,
         team: "away",
-        shirt_number: i + 1,
-        position: i === 0 ? "GK" : i < 5 ? "DEF" : i < 9 ? "MID" : "FWD",
-        x: Math.max(1, Math.min(104, px)),
-        y: Math.max(1, Math.min(67, py)),
+        shirt_number: p.number,
+        position: p.pos,
+        x: Math.max(2, Math.min(107, px)),
+        y: Math.max(-5, Math.min(66, py)),
         velocity_mps: Math.max(0.1, spd),
         speed_kmh: Math.max(0.3, spd * 3.6),
         heading_deg: (180 + t * 20 + i * 30) % 360,
-        is_ball_carrier: false,
+        is_ball_carrier: isCarrier,
       });
+    });
+
+    let chaos = Math.round(35.0 + 20.0 * Math.sin(t * 0.2));
+    let control = 100 - chaos;
+    let rhythm: any = chaos < 45 ? "structured_possession" : "counter_attacking_transition";
+
+    if (scenario === "box_scramble") {
+      chaos = 85;
+      control = 15;
+      rhythm = "penalty_box_chaos";
+    } else if (scenario === "counter_attack") {
+      chaos = 74;
+      control = 26;
+      rhythm = "rapid_transition";
+    } else if (scenario === "low_block") {
+      chaos = 22;
+      control = 78;
+      rhythm = "low_block_siege";
+    } else if (scenario === "red_card_crisis") {
+      chaos = 42;
+      control = 88;
+      rhythm = "numerical_asymmetry";
     }
-
-    const chaos = Math.round(34.0 + 22.0 * Math.sin(t * 0.2));
-    const control = 100 - chaos;
-
-    // Authentic airborne ball elevation for crosses, duels, and clearances
-    const isAirborne = (t % 12.0 < 3.2);
-    const ballZ = isAirborne ? Math.max(0, 2.4 * Math.sin(((t % 12.0) / 3.2) * Math.PI)) : 0;
-
-    // 26-Type Visual Taxonomy Event Stream Generation for Offline / Demo Mode
-    const synthTemplates: Array<{
-      type: MatchEventType;
-      actorId: string;
-      secondaryActorId?: string;
-      team: "home" | "away";
-      sector: string;
-      speedKmH: number;
-      xG?: number;
-      pdr?: number;
-      desc: string;
-    }> = [
-      { type: "key_pass", actorId: "home_7", secondaryActorId: "home_10", team: "home", sector: "Right Half-Space", speedKmH: 28.4, pdr: 84, desc: "K. De Bruyne Line-Breaking Key Pass" },
-      { type: "cross", actorId: "away_8", secondaryActorId: "away_9", team: "away", sector: "Right Flank", speedKmH: 29.5, pdr: 78, desc: "B. Saka Whipped Near-Post Cross" },
-      { type: "clearance", actorId: "home_3", team: "home", sector: "Penalty Box", speedKmH: 26.2, desc: "R. Dias Powerful Box Clearance" },
-      { type: "aerial_duel", actorId: "home_10", secondaryActorId: "away_2", team: "home", sector: "Central Corridor", speedKmH: 18.0, desc: "E. Haaland Aerial Contest Won" },
-      { type: "save", actorId: "away_1", team: "away", sector: "Goal Mouth", speedKmH: 94.0, xG: 0.82, desc: "D. Raya Diving Reflex Save" },
-      { type: "progressive_carry", actorId: "away_8", team: "away", sector: "Right Half-Space", speedKmH: 33.2, desc: "B. Saka Vertical Progression Burst" },
-      { type: "block", actorId: "away_6", team: "away", sector: "Deep Defensive Corridor", speedKmH: 21.0, xG: 0.45, desc: "Gabriel Sliding Shot Block" },
-      { type: "tackle", actorId: "away_7", team: "away", sector: "Midfield Pivot", speedKmH: 24.1, desc: "D. Rice Ground Challenge Won" },
-      { type: "punch", actorId: "home_1", team: "home", sector: "6-Yard Box", speedKmH: 32.0, desc: "Ederson High Box Punch" },
-      { type: "shot", actorId: "home_10", team: "home", sector: "Penalty Spot", speedKmH: 104.5, xG: 0.68, desc: "E. Haaland Fierce Shot on Target" },
-      { type: "goal", actorId: "home_10", secondaryActorId: "home_7", team: "home", sector: "Top Right Corner", speedKmH: 108.4, xG: 0.78, desc: "E. Haaland Goal! Assisted by De Bruyne" },
-      { type: "recovery", actorId: "home_4", team: "home", sector: "Rest-Defense Line", speedKmH: 22.0, desc: "Rodri Loose Ball Recovery" },
-      { type: "corner_kick", actorId: "home_7", team: "home", sector: "Corner Arc", speedKmH: 30.0, desc: "K. De Bruyne Inswinging Corner" },
-      { type: "interception", actorId: "home_2", team: "home", sector: "Central Channel", speedKmH: 25.0, desc: "K. Walker Passing Lane Cut" },
-      { type: "yellow_card", actorId: "away_7", team: "away", sector: "Defensive Third", speedKmH: 0, desc: "D. Rice Cautioned for Tactical Breakdown" },
-      { type: "claim", actorId: "home_1", team: "home", sector: "Penalty Area", speedKmH: 15.0, desc: "Ederson Dominant High Catch" },
-      { type: "free_kick", actorId: "away_10", team: "away", sector: "Danger Corridor", speedKmH: 31.0, desc: "M. Odegaard Direct Free Kick" },
-      { type: "offside", actorId: "away_9", team: "away", sector: "High Defensive Line", speedKmH: 27.0, desc: "K. Havertz Caught Offside" },
-    ];
-
-    const cycleIndex = Math.floor(tickSec / 5);
-    const tpl = synthTemplates[cycleIndex % synthTemplates.length];
-    const clockMin = Math.floor(tickSec / 60);
-    const clockSec = Math.floor(tickSec % 60);
-    const formattedClock = `${clockMin.toString().padStart(2, "0")}:${clockSec.toString().padStart(2, "0")}`;
-
-    const syntheticEvent: MatchEvent = {
-      id: `synth_evt_${cycleIndex}`,
-      type: tpl.type,
-      matchClock: formattedClock,
-      timestampMs: Math.round(clockSec * 1000),
-      team: tpl.team,
-      actorId: tpl.actorId,
-      targetId: tpl.secondaryActorId ?? null,
-      x: bx,
-      y: by,
-      xG: tpl.xG,
-      pdr: tpl.pdr,
-      completed: true,
-      score: { home: 1, away: 0 },
-      description: tpl.desc,
-      pitchSector: tpl.sector,
-      speedKmH: tpl.speedKmH,
-      secondaryActorId: tpl.secondaryActorId,
-    };
-
-    const syntheticShots: ShotRecord[] = (tpl.type === "shot" || tpl.type === "goal") ? [
-      {
-        id: `synth_shot_${cycleIndex}`,
-        team: tpl.team,
-        playerId: tpl.actorId,
-        playerName: tpl.desc,
-        matchClock: formattedClock,
-        timestampMs: Date.now(),
-        xG: tpl.xG ?? 0.68,
-        distanceToGoalM: 14.5,
-        outcome: tpl.type === "goal" ? "goal" : "saved",
-        onTarget: true,
-        x: bx,
-        y: by,
-      }
-    ] : [];
 
     return {
       frame_id: Math.floor(tickSec * 5),
@@ -231,63 +287,27 @@ class TelemetryService {
       ball: {
         x: Math.max(2, Math.min(103, bx)),
         y: Math.max(2, Math.min(66, by)),
-        z: ballZ,
+        z: 0,
         velocity_mps: bSpeed,
         speed_kmh: bSpeed * 3.6,
       },
       players,
       control_chaos: { control, chaos },
-      game_rhythm: chaos < 45 ? "structured_possession" : "counter_attacking_transition",
-      active_tactical_inflection: chaos > 50,
-      events: [syntheticEvent],
-      shots: syntheticShots,
+      game_rhythm: rhythm,
+      active_tactical_inflection: chaos > 50 || scenario !== null,
     };
-  }
-
-  jumpToSeconds(seconds: number) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "jump_time", seconds }));
-    } else {
-      fetch("/api/playback/jump", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seconds }),
-      }).catch(() => {});
-    }
-  }
-
-  pause() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "pause" }));
-    } else {
-      fetch("/api/playback/pause", { method: "POST" }).catch(() => {});
-    }
-  }
-
-  resume() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "resume" }));
-    } else {
-      fetch("/api/playback/resume", { method: "POST" }).catch(() => {});
-    }
-  }
-
-  setSpeed(speed: number) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "set_speed", speed }));
-    } else {
-      fetch("/api/playback/speed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ speed }),
-      }).catch(() => {});
-    }
   }
 
   stop() {
     this.isStarted = false;
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
+    }
     if (this.ws) {
-      this.ws.close();
+      if (this.ws.readyState === WebSocket.OPEN) {
+        this.ws.close();
+      }
       this.ws = null;
     }
     if (this.fallbackInterval) {

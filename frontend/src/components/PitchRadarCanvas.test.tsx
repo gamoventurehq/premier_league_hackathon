@@ -2,6 +2,7 @@ import React from "react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, fireEvent, act } from "@testing-library/react";
 import { PitchRadarCanvas } from "./PitchRadarCanvas";
+import { baseMemory } from "../store/baseMemory";
 
 describe("PitchRadarCanvas Component", () => {
   beforeEach(() => {
@@ -37,7 +38,7 @@ describe("PitchRadarCanvas Component", () => {
       fillText: vi.fn(),
       setLineDash: vi.fn(),
       roundRect: vi.fn(),
-    })) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+    })) as any;
   });
 
   afterEach(() => {

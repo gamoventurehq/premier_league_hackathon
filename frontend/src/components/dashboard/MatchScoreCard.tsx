@@ -1,27 +1,30 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { IonIcon } from "@ionic/react";
 import {
+  openOutline,
   footballOutline,
   calendarOutline,
   trophyOutline,
   locationOutline,
 } from "ionicons/icons";
-import { useBaseMemory, MATCH_GOALS } from "../../store/baseMemory";
+import { useBaseMemory } from "../../store/baseMemory";
 
 export const MatchScoreCard: React.FC = () => {
+  const navigate = useNavigate();
   const score = useBaseMemory((s) => s.score);
   const matchClock = useBaseMemory((s) => s.matchClock);
   const serverStatus = useBaseMemory((s) => s.serverStatus);
 
-  const elapsedGoals = MATCH_GOALS.filter((g) => g.timeSec <= matchClock);
-  const homeGoals = elapsedGoals.filter((g) => g.team === "home");
-  const awayGoals = elapsedGoals.filter((g) => g.team === "away");
-
   const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
+    const clamped = Math.min(5400, Math.max(0, Math.floor(secs || 0)));
+    const m = Math.floor(clamped / 60);
+    const s = Math.floor(clamped % 60);
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
+
+  const homeGoals = score.goalscorers.filter((g) => g.team === "home");
+  const awayGoals = score.goalscorers.filter((g) => g.team === "away");
 
   return (
     <div
@@ -29,7 +32,7 @@ export const MatchScoreCard: React.FC = () => {
         backgroundColor: "var(--studio-panel-bg)",
         border: "1px solid var(--studio-panel-border)",
         borderRadius: "16px",
-        padding: "16px",
+        padding: "16px 14px",
         display: "flex",
         flexDirection: "column",
         gap: "12px",
@@ -41,39 +44,49 @@ export const MatchScoreCard: React.FC = () => {
     >
       {/* Top Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+        <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--ion-text-color)" }}>
           Match Score
         </span>
+        <IonIcon
+          icon={openOutline}
+          onClick={() => navigate("/pitch")}
+          title="Open Full Pitch Radar"
+          style={{ fontSize: "16px", color: "var(--studio-subtext)", cursor: "pointer" }}
+        />
       </div>
 
       {/* Main Scoreboard Section */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
+          gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
           alignItems: "center",
-          gap: "12px",
+          gap: "8px",
           textAlign: "center",
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
         }}
       >
         {/* Home Club */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", minWidth: 0 }}>
           <div
             style={{
-              width: "48px",
-              height: "48px",
+              width: "44px",
+              height: "44px",
               borderRadius: "50%",
               backgroundColor: "rgba(0, 229, 255, 0.12)",
-              border: "2px solid #00e5ff",
+              border: `2px solid ${score.homeMeta.color}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontWeight: 900,
-              color: "#00e5ff",
-              fontSize: "14px",
+              color: score.homeMeta.color,
+              fontSize: "13px",
+              flexShrink: 0,
             }}
           >
-            {score.homeTeam}
+            {score.homeMeta.shortCode}
           </div>
           <span
             style={{
@@ -85,14 +98,17 @@ export const MatchScoreCard: React.FC = () => {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
-            title="Man City"
+            title={score.homeMeta.name}
           >
-            Man City
+            {score.homeMeta.name}
           </span>
         </div>
 
         {/* Center Score & Match Clock */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", minWidth: 0, flexShrink: 0 }}>
+          <span style={{ fontSize: "10px", color: "var(--studio-subtext)", fontFamily: "monospace", whiteSpace: "nowrap" }}>
+            {score.date} • {score.time}
+          </span>
           <div
             style={{
               fontSize: "28px",
@@ -125,20 +141,21 @@ export const MatchScoreCard: React.FC = () => {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", minWidth: 0 }}>
           <div
             style={{
-              width: "48px",
-              height: "48px",
+              width: "44px",
+              height: "44px",
               borderRadius: "50%",
               backgroundColor: "rgba(244, 63, 94, 0.12)",
-              border: "2px solid #f43f5e",
+              border: `2px solid ${score.awayMeta.color}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontWeight: 900,
-              color: "#f43f5e",
-              fontSize: "14px",
+              color: score.awayMeta.color,
+              fontSize: "13px",
+              flexShrink: 0,
             }}
           >
-            {score.awayTeam}
+            {score.awayMeta.shortCode}
           </div>
           <span
             style={{
@@ -150,9 +167,9 @@ export const MatchScoreCard: React.FC = () => {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
-            title="Arsenal"
+            title={score.awayMeta.name}
           >
-            Arsenal
+            {score.awayMeta.name}
           </span>
         </div>
       </div>
@@ -160,41 +177,35 @@ export const MatchScoreCard: React.FC = () => {
       {/* Goalscorers & Key Events */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "28px",
-          fontSize: "11px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "8px",
+          fontSize: "10px",
           color: "var(--studio-subtext)",
-          padding: "8px 0",
+          padding: "6px 0",
           borderTop: "1px solid var(--studio-panel-border)",
           borderBottom: "1px solid var(--studio-panel-border)",
+          minWidth: 0,
+          overflow: "hidden",
         }}
       >
-        {elapsedGoals.length === 0 ? (
-          <span style={{ fontSize: "10.5px", fontStyle: "italic", color: "var(--studio-subtext)" }}>
-            No goals scored yet ({formatTime(matchClock)})
-          </span>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", width: "100%" }}>
-            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: "4px" }}>
-              {homeGoals.map((g) => (
-                <div key={g.id} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
-                  <span style={{ fontWeight: 700, color: "var(--ion-text-color)" }}>{g.scorer} {g.matchClock}</span>
-                  <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "#00e5ff" }} />
-                </div>
-              ))}
+        <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: "4px", minWidth: 0, overflow: "hidden" }}>
+          {homeGoals.map((g, idx) => (
+            <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", minWidth: 0, overflow: "hidden" }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.player} {g.minute}</span>
+              <IonIcon icon={footballOutline} style={{ fontSize: "11px", color: score.homeMeta.color, flexShrink: 0 }} />
             </div>
-            <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: "4px" }}>
-              {awayGoals.map((g) => (
-                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "#f43f5e" }} />
-                  <span style={{ fontWeight: 700, color: "var(--ion-text-color)" }}>{g.scorer} {g.matchClock}</span>
-                </div>
-              ))}
+          ))}
+        </div>
+
+        <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: "4px", minWidth: 0, overflow: "hidden" }}>
+          {awayGoals.map((g, idx) => (
+            <div key={idx} style={{ display: "flex", alignItems: "center", gap: "4px", minWidth: 0, overflow: "hidden" }}>
+              <IonIcon icon={footballOutline} style={{ fontSize: "11px", color: score.awayMeta.color, flexShrink: 0 }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.player} {g.minute}</span>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       {/* Bottom Match Metadata */}
@@ -212,17 +223,15 @@ export const MatchScoreCard: React.FC = () => {
       >
         <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
           <IonIcon icon={calendarOutline} style={{ color: "#38bdf8" }} />
-          <span>25/01/2026 - 16:30</span>
+          <span>{score.date}</span>
         </div>
-        <span>•</span>
         <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
           <IonIcon icon={trophyOutline} style={{ color: "#ffd600" }} />
-          <span>Premier League</span>
+          <span>{score.competition}</span>
         </div>
-        <span>•</span>
         <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
           <IonIcon icon={locationOutline} style={{ color: "#10b981" }} />
-          <span>Etihad Stadium</span>
+          <span>{score.venue}</span>
         </div>
       </div>
     </div>

@@ -7,20 +7,28 @@ import {
   IonToolbar,
   IonCard,
   IonCardHeader,
+  IonCardSubtitle,
   IonCardTitle,
   IonCardContent,
   IonBadge,
   IonIcon,
+  IonButton,
+  IonProgressBar,
 } from "@ionic/react";
 import {
   serverOutline,
   timeOutline,
+  checkmarkCircleOutline,
   alertCircleOutline,
   flashOutline,
   shieldCheckmarkOutline,
   flameOutline,
   refreshOutline,
+  hardwareChipOutline,
+  radioOutline,
+  pulseOutline,
   gitNetworkOutline,
+  speedometerOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
 
@@ -36,6 +44,7 @@ const scenarioDefinitions = [
     rhythm: "Sustained Possession",
     icon: shieldCheckmarkOutline,
     desc: "Manchester City pin Arsenal into an 18m block depth. Central corridor squeezed to 21.2m with City holding 82% pitch control.",
+    impact: "Tests spatial compression & half-space overload models.",
   },
   {
     id: "rapid_counter",
@@ -48,6 +57,7 @@ const scenarioDefinitions = [
     rhythm: "Transition Frenzy",
     icon: flashOutline,
     desc: "Arsenal lightning breakaway! Saka breaks past rest-defense in 3 touches with sprint velocity clocked at 33.2 km/h.",
+    impact: "Tests line-breaking speed analytics & transition volatility.",
   },
   {
     id: "red_card_crisis",
@@ -60,6 +70,7 @@ const scenarioDefinitions = [
     rhythm: "Numerical Asymmetry",
     icon: alertCircleOutline,
     desc: "Away side down to 10 men. Arsenal forced into an emergency 5-3-1 bunker while City enjoy 2-man numerical flank overloads.",
+    impact: "Tests structural deformation & pitch control reallocation.",
   },
   {
     id: "box_scramble",
@@ -72,6 +83,7 @@ const scenarioDefinitions = [
     rhythm: "Penalty Box Chaos",
     icon: flameOutline,
     desc: "Total chaos! 6 players contesting rebound in 6-yard box with 0.82 xG goalmouth scramble and emergency sliding blocks.",
+    impact: "Tests maximum entropy modeling & rapid turnover detection.",
   },
 ];
 
@@ -79,11 +91,13 @@ const StudioControlPage: React.FC = () => {
   const serverStatus = useBaseMemory((s) => s.serverStatus);
   const matchClock = useBaseMemory((s) => s.matchClock);
   const frameId = useBaseMemory((s) => s.blackboard.latest_frame_id);
+  const persona = useBaseMemory((s) => s.selectedPersona);
+  const language = useBaseMemory((s) => s.selectedLanguage);
   const score = useBaseMemory((s) => s.score);
   const activeScenario = useBaseMemory((s) => s.activeScenario);
   const control = useBaseMemory((s) => s.blackboard.control_index);
   const chaos = useBaseMemory((s) => s.blackboard.chaos_index);
-  const agentTraces = useBaseMemory((s) => s.agentTraces);
+  const rhythm = useBaseMemory((s) => s.blackboard.current_game_rhythm);
 
   const formatTime = (secs: number) => {
     const clamped = Math.min(5400, Math.max(0, Math.floor(secs || 0)));
@@ -98,7 +112,7 @@ const StudioControlPage: React.FC = () => {
     <IonPage>
       <IonHeader mode="ios">
         <IonToolbar mode="ios">
-          <IonTitle>Studio Diagnostics &amp; Controls</IonTitle>
+          <IonTitle>Gamoventure Studio Diagnostics</IonTitle>
         </IonToolbar>
       </IonHeader>
 
@@ -106,26 +120,8 @@ const StudioControlPage: React.FC = () => {
         {/* Scorebug Synchronized Header Bar */}
         <div className="studio-scoreboard-header" style={{ marginBottom: "16px" }}>
           <div className="studio-ribbon-row-teams">
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontWeight: 800,
-                color: "#00e5ff",
-                fontSize: "14px",
-              }}
-            >
-              <span
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "50%",
-                  background: "#00e5ff",
-                  boxShadow: "0 0 8px #00e5ff",
-                  flexShrink: 0,
-                }}
-              />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#00e5ff", fontSize: "14px" }}>
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#00e5ff", boxShadow: "0 0 8px #00e5ff", flexShrink: 0 }} />
               {score.homeTeam}
             </span>
             <span
@@ -144,27 +140,9 @@ const StudioControlPage: React.FC = () => {
             >
               {score.homeScore} - {score.awayScore}
             </span>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontWeight: 800,
-                color: "#f43f5e",
-                fontSize: "14px",
-              }}
-            >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#f43f5e", fontSize: "14px" }}>
               {score.awayTeam}
-              <span
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "50%",
-                  background: "#f43f5e",
-                  boxShadow: "0 0 8px #f43f5e",
-                  flexShrink: 0,
-                }}
-              />
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f43f5e", boxShadow: "0 0 8px #f43f5e", flexShrink: 0 }} />
             </span>
           </div>
 
@@ -231,20 +209,8 @@ const StudioControlPage: React.FC = () => {
               {score.period}
             </span>
 
-            <IonBadge
-              color={activeScenario ? "danger" : "success"}
-              style={{
-                fontSize: "10px",
-                fontWeight: 700,
-                maxWidth: "160px",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {activeScenario && currentScenarioObj
-                ? currentScenarioObj.title.toUpperCase()
-                : "NORMAL FLOW"}
+            <IonBadge color={activeScenario ? "danger" : "success"} style={{ fontSize: "10px", fontWeight: 700, maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {activeScenario ? currentScenarioObj?.title.toUpperCase() : "NORMAL FLOW"}
             </IonBadge>
           </div>
         </div>
@@ -254,18 +220,13 @@ const StudioControlPage: React.FC = () => {
         {/* ======================================================== */}
         <IonCard mode="ios" style={{ background: "#0f172a", marginBottom: "16px", border: "1px solid #1e293b" }}>
           <IonCardHeader style={{ paddingBottom: "10px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "8px",
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <div>
-                <IonCardTitle style={{ fontSize: "18px", color: "#f8fafc", margin: 0 }}>
-                  Scenario Simulator
+                <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700, letterSpacing: "0.5px" }}>
+                  SYNTHETIC MATCH SCENARIO INJECTOR (CHALLENGE.MD §4.D)
+                </IonCardSubtitle>
+                <IonCardTitle style={{ fontSize: "18px", color: "#f8fafc", marginTop: "2px" }}>
+                  Edge-Case Tactical State Simulator
                 </IonCardTitle>
               </div>
 
@@ -320,6 +281,7 @@ const StudioControlPage: React.FC = () => {
                         borderRadius: "50%",
                         background: "#f43f5e",
                         boxShadow: "0 0 8px #f43f5e",
+                        animation: "pulse 1s infinite",
                       }}
                     />
                     <span style={{ fontSize: "13px", fontWeight: 800, color: "#f43f5e" }}>
@@ -333,12 +295,8 @@ const StudioControlPage: React.FC = () => {
 
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <div style={{ textAlign: "right", fontSize: "11px", color: "#94a3b8" }}>
-                    <div>
-                      Control Index: <strong style={{ color: "#00e5ff" }}>{control}%</strong>
-                    </div>
-                    <div>
-                      Chaos Index: <strong style={{ color: "#f43f5e" }}>{chaos}%</strong>
-                    </div>
+                    <div>Control Index: <strong style={{ color: "#00e5ff" }}>{control}%</strong></div>
+                    <div>Chaos Index: <strong style={{ color: "#f43f5e" }}>{chaos}%</strong></div>
                   </div>
                   <button
                     onClick={() => baseMemory.resetScenario()}
@@ -409,10 +367,7 @@ const StudioControlPage: React.FC = () => {
                             flex: "1 1 140px",
                           }}
                         >
-                          <IonIcon
-                            icon={sc.icon}
-                            style={{ color: "#38bdf8", fontSize: "18px", flexShrink: 0 }}
-                          />
+                          <IonIcon icon={sc.icon} style={{ color: "#38bdf8", fontSize: "18px", flexShrink: 0 }} />
                           <span
                             style={{
                               fontSize: "14px",
@@ -425,7 +380,7 @@ const StudioControlPage: React.FC = () => {
                           </span>
                         </div>
                         <IonBadge
-                          color={sc.badgeColor}
+                          color={sc.badgeColor as any}
                           style={{
                             fontSize: "10px",
                             fontWeight: 700,
@@ -447,43 +402,13 @@ const StudioControlPage: React.FC = () => {
                       </p>
 
                       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "12px" }}>
-                        <span
-                          style={{
-                            background: "#0f172a",
-                            border: "1px solid #334155",
-                            color: "#00e5ff",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            fontSize: "10px",
-                            fontWeight: 700,
-                          }}
-                        >
+                        <span style={{ background: "#0f172a", border: "1px solid #334155", color: "#00e5ff", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700 }}>
                           Control: {sc.controlIdx}%
                         </span>
-                        <span
-                          style={{
-                            background: "#0f172a",
-                            border: "1px solid #334155",
-                            color: "#f43f5e",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            fontSize: "10px",
-                            fontWeight: 700,
-                          }}
-                        >
+                        <span style={{ background: "#0f172a", border: "1px solid #334155", color: "#f43f5e", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700 }}>
                           Chaos: {sc.chaosIdx}%
                         </span>
-                        <span
-                          style={{
-                            background: "#0f172a",
-                            border: "1px solid #334155",
-                            color: "#f59e0b",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            fontSize: "10px",
-                            fontWeight: 700,
-                          }}
-                        >
+                        <span style={{ background: "#0f172a", border: "1px solid #334155", color: "#f59e0b", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700 }}>
                           PDR: {sc.pdr}
                         </span>
                       </div>
@@ -534,23 +459,18 @@ const StudioControlPage: React.FC = () => {
           {/* Local Server Connection Status */}
           <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
             <IonCardHeader style={{ paddingBottom: "10px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "6px",
-                }}
-              >
-                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
-                  <IonIcon icon={serverOutline} style={{ color: "#38bdf8" }} />
-                  Telemetry Transport
-                </IonCardTitle>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700 }}>
+                  <IonIcon icon={serverOutline} style={{ marginRight: "4px", verticalAlign: "middle" }} />
+                  LOCAL TELEMETRY TRANSPORT
+                </IonCardSubtitle>
                 <IonBadge color={serverStatus.isConnected ? "success" : "warning"} style={{ flexShrink: 0 }}>
                   {serverStatus.isConnected ? "Connected" : "Simulated Fallback"}
                 </IonBadge>
               </div>
+              <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
+                FastAPI WebSocket Stream (5Hz)
+              </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -612,107 +532,50 @@ const StudioControlPage: React.FC = () => {
           {/* Gamoventure Swarm Intelligence Agents Topology */}
           <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
             <IonCardHeader style={{ paddingBottom: "10px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "6px",
-                }}
-              >
-                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
-                  <IonIcon icon={gitNetworkOutline} style={{ color: "#a855f7" }} />
-                  Agent Swarm Blackboard Inspector
-                </IonCardTitle>
-                <IonBadge color="primary" style={{ flexShrink: 0 }}>4 Agents Concurrent</IonBadge>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 700 }}>
+                  <IonIcon icon={gitNetworkOutline} style={{ marginRight: "4px", verticalAlign: "middle" }} />
+                  GAMOVENTURE AI AGENT SWARM
+                </IonCardSubtitle>
+                <IonBadge color="primary" style={{ flexShrink: 0 }}>4 Agents Active</IonBadge>
               </div>
+              <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
+                Shared Blackboard State Engine
+              </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {(agentTraces || []).map((agent) => {
-                  const isComplete = agent.status === "complete";
-                  const isFallback = agent.status === "fallback";
-                  const badgeColor = isComplete ? "success" : isFallback ? "warning" : "medium";
-                  const statusLabel = isComplete ? "Complete" : isFallback ? "Fallback Tier" : agent.status;
-                  return (
-                    <div
-                      key={agent.role}
-                      style={{
-                        background: "#1e293b",
-                        padding: "10px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid rgba(255, 255, 255, 0.05)",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "6px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          flexWrap: "wrap",
-                          gap: "8px",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <span
-                            style={{
-                              width: "6px",
-                              height: "6px",
-                              borderRadius: "50%",
-                              background: isComplete ? "#22c55e" : "#f59e0b",
-                              boxShadow: `0 0 6px ${isComplete ? "#22c55e" : "#f59e0b"}`,
-                            }}
-                          />
-                          <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#f8fafc" }}>
-                            {agent.label}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <span
-                            style={{
-                              fontFamily: "monospace",
-                              fontSize: "11px",
-                              color: "#38bdf8",
-                              fontWeight: 700,
-                              background: "rgba(56, 189, 248, 0.1)",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            {agent.latencyMs.toFixed(1)}ms
-                          </span>
-                          <IonBadge color={badgeColor} style={{ fontSize: "10px", padding: "3px 6px" }}>
-                            {statusLabel}
-                          </IonBadge>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: "11px", color: "#94a3b8", lineHeight: 1.35 }}>
-                        {agent.summary}
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "12px",
-                          fontSize: "10px",
-                          color: "#64748b",
-                          fontFamily: "monospace",
-                          borderTop: "1px solid rgba(255, 255, 255, 0.04)",
-                          paddingTop: "4px",
-                        }}
-                      >
-                        <span>Reads: {agent.reads.length} keys</span>
-                        <span>•</span>
-                        <span>Writes: {agent.writes.length} keys</span>
-                        <span>•</span>
-                        <span style={{ color: "#10b981" }}>SLA &lt;400ms</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Telemetry Ingestion Agent</div>
+                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>Spatial coordinate parsing &amp; 5Hz drift physics</div>
+                  </div>
+                  <IonBadge color="success">[Online • 5Hz]</IonBadge>
+                </div>
+
+                <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Tactical Reasoning Agent</div>
+                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>Control vs. Chaos volatility &amp; PDR decomposition</div>
+                  </div>
+                  <IonBadge color="secondary">[Active • Blackboard]</IonBadge>
+                </div>
+
+                <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Broadcast Narrative Agent</div>
+                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>Tactical inflection explanation &amp; commentary feed</div>
+                  </div>
+                  <IonBadge color="tertiary">[Active • 42ms]</IonBadge>
+                </div>
+
+                <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Fan Personalization Agent</div>
+                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>4 Persona streams &amp; 5-language localization</div>
+                  </div>
+                  <IonBadge color="primary">[Active • 4 Modes]</IonBadge>
+                </div>
               </div>
             </IonCardContent>
           </IonCard>

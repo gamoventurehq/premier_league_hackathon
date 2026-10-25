@@ -6,29 +6,22 @@ import {
   analyticsOutline,
   peopleOutline,
   settingsOutline,
-  sunnyOutline,
-  moonOutline,
   personCircleOutline,
   shieldOutline,
-  sparklesOutline,
 } from "ionicons/icons";
-import { useBaseMemory, baseMemory } from "../store/baseMemory";
 
 interface SidebarNavProps {
   activeTab: string;
   onSelectTab: (tab: string) => void;
-  onOpenCopilot?: () => void;
 }
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({
   activeTab,
   onSelectTab,
-  onOpenCopilot,
 }) => {
-  const theme = useBaseMemory((s) => s.theme);
-
   return (
     <aside
+      className="studio-sidebar-nav"
       style={{
         width: "64px",
         minWidth: "64px",
@@ -49,7 +42,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       {/* Top Studio Brand Icon */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
         <div
-          title="Premier League Studio"
+          title="Gamoventure • Premier League Studio"
           style={{
             width: "38px",
             height: "38px",
@@ -148,56 +141,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           >
             <IonIcon icon={settingsOutline} style={{ fontSize: "20px", display: "block" }} />
           </button>
-
-          {onOpenCopilot && (
-            <button
-              onClick={onOpenCopilot}
-              title="Tactical Copilot (Azure MCP)"
-              style={{
-                background: "rgba(0, 229, 255, 0.12)",
-                border: "1px solid rgba(0, 229, 255, 0.3)",
-                borderRadius: "10px",
-                padding: "10px",
-                cursor: "pointer",
-                color: "#00e5ff",
-                boxShadow: "0 0 10px rgba(0, 229, 255, 0.2)",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <IonIcon icon={sparklesOutline} style={{ fontSize: "20px", display: "block" }} />
-            </button>
-          )}
         </nav>
       </div>
 
-      {/* Bottom Section: Theme Switcher & Profile */}
+      {/* Bottom Section: Profile */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-        {/* Light / Dark Mode Toggle (Rule 1 & Rule 6: Strictly Icons, No Emojis) */}
-        <button
-          onClick={() => baseMemory.toggleTheme()}
-          title={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
-          style={{
-            background: "var(--studio-inner-bg)",
-            border: "1px solid var(--studio-panel-border)",
-            borderRadius: "50%",
-            width: "36px",
-            height: "36px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: theme === "dark" ? "#f59e0b" : "#475569",
-            transition: "all 0.2s ease",
-          }}
-        >
-          <IonIcon
-            icon={theme === "dark" ? sunnyOutline : moonOutline}
-            style={{ fontSize: "18px" }}
-          />
-        </button>
-
-        {/* Profile Avatar */}
-        <div style={{ color: "var(--studio-subtext)", cursor: "pointer" }}>
+        <div style={{ color: "var(--studio-subtext)", cursor: "pointer" }} title="Broadcaster Profile">
           <IonIcon icon={personCircleOutline} style={{ fontSize: "28px" }} />
         </div>
       </div>

@@ -1,44 +1,48 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { IonIcon } from "@ionic/react";
-import { trophyOutline, personOutline } from "ionicons/icons";
+import { trophyOutline, openOutline, personOutline } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 import { StudioChipScroller } from "../StudioChipScroller";
 
-import {
-  KEY_PLAYER_PRESETS,
-  ROSTER_SPOTLIGHT,
-} from "../../types/playerRoster";
+const KEY_PLAYER_PRESETS = [
+  { id: "home_10", label: "Haaland #9", team: "home" },
+  { id: "home_7", label: "De Bruyne #17", team: "home" },
+  { id: "home_9", label: "Foden #47", team: "home" },
+  { id: "home_6", label: "Rodri #16", team: "home" },
+  { id: "away_8", label: "Saka #7", team: "away" },
+  { id: "away_9", label: "Odegaard #8", team: "away" },
+  { id: "away_7", label: "Rice #41", team: "away" },
+  { id: "away_3", label: "Saliba #2", team: "away" },
+];
 
 export const PlayerSpotlightCard: React.FC = () => {
+  const navigate = useNavigate();
   const selectedPlayerId = useBaseMemory((s) => s.selectedPlayerId);
-  const matchClock = useBaseMemory((s) => s.matchClock);
+  const homeLineup = useBaseMemory((s) => s.homeLineup);
+  const awayLineup = useBaseMemory((s) => s.awayLineup);
+  const score = useBaseMemory((s) => s.score);
+  const currentFrame = useBaseMemory((s) => s.currentFrame);
 
-  // Dynamic player lookup: match selected player or default to Kevin De Bruyne (home_7)
-  const player = (selectedPlayerId && ROSTER_SPOTLIGHT[selectedPlayerId])
-    ? ROSTER_SPOTLIGHT[selectedPlayerId]
-    : ROSTER_SPOTLIGHT.home_7;
+  // Dynamically resolve the selected player from Single Core Memory
+  const allPlayers = [...homeLineup, ...awayLineup];
+  const player = allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6]; // default to CM
+  const isHome = player.team === "home";
+  const teamMeta = isHome ? score.homeMeta : score.awayMeta;
 
-  // Chronological match milestones based on matchClock
-  const playerMilestone = (() => {
-    if (player.id === "home_10" && matchClock >= 2520) {
-      return { text: "Goal 42' ⚽", color: "#10b981", bg: "rgba(16, 185, 129, 0.2)" };
-    }
-    if (player.id === "away_8" && matchClock >= 5040) {
-      return { text: "Goal 84' ⚽", color: "#10b981", bg: "rgba(16, 185, 129, 0.2)" };
-    }
-    if (player.id === "home_7" && matchClock >= 2520) {
-      return { text: "Key Pass 42' 🎯", color: "#00e5ff", bg: "rgba(0, 229, 255, 0.2)" };
-    }
-    if (player.id === "away_7" && matchClock >= 5280) {
-      return { text: "Tackle Won 88' 🛡️", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.2)" };
-    }
-    return null;
-  })();
+  // Real-time spatial speed and ball carrier state from 5Hz tracking stream
+  const liveTelemetry = currentFrame?.players?.find(
+    (p) => p.player_id === selectedPlayerId || p.id === selectedPlayerId
+  );
+  const liveSpeed = liveTelemetry?.speed_kmh ?? (liveTelemetry as any)?.speedKmH ?? player.speed_kmh ?? 14.2;
+  const isCarrier = liveTelemetry?.is_ball_carrier ?? (liveTelemetry as any)?.onBall ?? player.is_ball_carrier ?? false;
 
-  const isHome = player.club === "Manchester City";
-  const accentColor = isHome ? "#00e5ff" : "#f43f5e";
-  const accentBg = isHome ? "rgba(0, 229, 255, 0.15)" : "rgba(244, 63, 94, 0.15)";
-  const ratingBadgeBg = player.rating >= 8.0 ? "#10b981" : player.rating >= 7.3 ? "#3b82f6" : "#f59e0b";
+  const { shoot, passing, dribbling, defending, shotAccuracyPct, avgRating } = player.attributes;
+
+  const handleOpenPlayerExperience = () => {
+    baseMemory.setPersona("player_cam");
+    navigate("/personas");
+  };
 
   return (
     <div
@@ -61,65 +65,57 @@ export const PlayerSpotlightCard: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <IonIcon icon={trophyOutline} style={{ color: "var(--ion-color-primary)", fontSize: "16px" }} />
           <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--ion-text-color)" }}>
-            {selectedPlayerId && selectedPlayerId !== "home_7" ? "Player Spotlight" : "Player of the Match"}
+            Player Spotlight
           </span>
         </div>
-        {playerMilestone && (
-          <span
-            style={{
-              fontSize: "10px",
-              fontWeight: 800,
-              color: playerMilestone.color,
-              backgroundColor: playerMilestone.bg,
-              padding: "2px 8px",
-              borderRadius: "12px",
-              border: `1px solid ${playerMilestone.color}55`,
-            }}
-          >
-            {playerMilestone.text}
-          </span>
-        )}
+        <IonIcon
+          icon={openOutline}
+          onClick={handleOpenPlayerExperience}
+          title="Open Player Cam Experience"
+          style={{ fontSize: "15px", color: "var(--studio-subtext)", cursor: "pointer" }}
+        />
       </div>
 
-      {/* Key Players Preset Horizontal Scroller */}
+      {/* Key Players Preset Horizontal Scroll Option */}
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-        <StudioChipScroller gap="6px">
-          {KEY_PLAYER_PRESETS.map((preset) => {
-            const isSelected = (selectedPlayerId || "home_7") === preset.id;
-            const teamColor = preset.team === "home" ? "#00e5ff" : "#f43f5e";
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--studio-subtext)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Spotlight Key Players
+          </span>
+          <span style={{ fontSize: "9px", color: "#64748b" }}>Scroll ⇄</span>
+        </div>
+        <StudioChipScroller gap="6px" marginTopTrack={6}>
+          {KEY_PLAYER_PRESETS.map((p) => {
+            const isSelected = selectedPlayerId === p.id;
+            const isHomeP = p.team === "home";
+            const teamColor = isHomeP ? score.homeMeta.color : score.awayMeta.color;
             return (
               <button
-                key={preset.id}
-                onClick={() => baseMemory.setSelectedPlayer(preset.id)}
+                key={p.id}
+                onClick={() => baseMemory.setSelectedPlayer(p.id)}
                 style={{
-                  background: isSelected
-                    ? `linear-gradient(135deg, ${teamColor}33, ${teamColor}11)`
-                    : "rgba(255, 255, 255, 0.04)",
-                  border: isSelected ? `1.5px solid ${teamColor}` : "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: "16px",
-                  padding: "4px 10px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  color: isSelected ? "#ffffff" : "var(--studio-subtext)",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "5px",
-                  boxShadow: isSelected ? `0 0 8px ${teamColor}44` : "none",
+                  padding: "4px 8px",
+                  borderRadius: "6px",
+                  border: isSelected ? `1.5px solid ${teamColor}` : "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: isSelected
+                    ? isHomeP
+                      ? "rgba(0, 229, 255, 0.2)"
+                      : "rgba(244, 63, 94, 0.2)"
+                    : "var(--studio-inner-bg)",
+                  color: isSelected ? teamColor : "var(--studio-subtext)",
+                  fontSize: "11px",
+                  fontWeight: isSelected ? 800 : 600,
+                  cursor: "pointer",
                   transition: "all 0.15s ease",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
                 }}
               >
-                <span
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    backgroundColor: teamColor,
-                  }}
-                />
-                {preset.label}
+                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: teamColor, flexShrink: 0 }} />
+                <span>{p.label}</span>
               </button>
             );
           })}
@@ -127,30 +123,30 @@ export const PlayerSpotlightCard: React.FC = () => {
       </div>
 
       {/* Player Profile & Rating */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
           <div
             style={{
-              width: "44px",
-              height: "44px",
+              width: "42px",
+              height: "42px",
               borderRadius: "50%",
-              backgroundColor: accentBg,
-              border: `2px solid ${accentColor}`,
+              backgroundColor: isHome ? "rgba(0, 229, 255, 0.15)" : "rgba(244, 63, 94, 0.15)",
+              border: `2px solid ${teamMeta.color}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: accentColor,
+              color: teamMeta.color,
               flexShrink: 0,
             }}
           >
-            <IonIcon icon={personOutline} style={{ fontSize: "22px" }} />
+            <IonIcon icon={personOutline} style={{ fontSize: "20px" }} />
           </div>
           <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
             <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--ion-text-color)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {player.name}
             </div>
             <div style={{ fontSize: "11px", color: "var(--studio-subtext)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {player.club} • #{player.number}
+              {teamMeta.name} • #{player.number} • {player.pos}
             </div>
           </div>
         </div>
@@ -158,32 +154,80 @@ export const PlayerSpotlightCard: React.FC = () => {
         {/* Rating Badge */}
         <div
           style={{
-            backgroundColor: ratingBadgeBg,
+            backgroundColor: player.rating >= 8.0 ? "#10b981" : player.rating >= 7.2 ? "#3b82f6" : "#f59e0b",
             color: "#ffffff",
             fontWeight: 900,
             fontSize: "13px",
             padding: "4px 8px",
             borderRadius: "6px",
-            boxShadow: `0 2px 6px ${ratingBadgeBg}66`,
             flexShrink: 0,
+            boxShadow: player.rating >= 8.0 ? "0 0 10px rgba(16, 185, 129, 0.45)" : "0 2px 6px rgba(0,0,0,0.3)",
           }}
         >
           {player.rating.toFixed(1)}
         </div>
       </div>
 
+      {/* Live In-Match Telemetry Metrics */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "6px",
+          backgroundColor: "var(--studio-inner-bg)",
+          borderRadius: "8px",
+          padding: "6px 10px",
+          border: "1px solid var(--studio-panel-border)",
+          fontSize: "11px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ color: "var(--studio-subtext)" }}>Live Speed:</span>
+          <span style={{ fontWeight: 800, color: "#10b981", fontFamily: "monospace" }}>
+            {`${liveSpeed.toFixed(1)} km/h`}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ color: "var(--studio-subtext)" }}>Status:</span>
+          <span
+            style={{
+              fontWeight: 800,
+              color: isCarrier ? "#ffd600" : "#38bdf8",
+              backgroundColor: isCarrier ? "rgba(255, 214, 0, 0.15)" : "rgba(56, 189, 248, 0.12)",
+              padding: "2px 6px",
+              borderRadius: "4px",
+              fontSize: "10px",
+            }}
+          >
+            {isCarrier ? "Ball Carrier" : "Off-Ball Track"}
+          </span>
+        </div>
+      </div>
+
       {/* Metrics Row: 4 Attribute Bars + Circular Accuracy Target */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: "16px", alignItems: "center" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto",
+          gap: "12px",
+          alignItems: "center",
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}
+      >
         {/* Attribute Bars */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0, flex: 1 }}>
           {[
-            { label: "Shoot", val: player.attributes.shoot, color: "#10b981" },
-            { label: "Passing", val: player.attributes.passing, color: "#00e5ff" },
-            { label: "Dribbling", val: player.attributes.dribbling, color: "#3b82f6" },
-            { label: "Defending", val: player.attributes.defending, color: "#f59e0b" },
+            { label: "Shoot", val: shoot, color: "#10b981" },
+            { label: "Passing", val: passing, color: "#00e5ff" },
+            { label: "Dribbling", val: dribbling, color: "#3b82f6" },
+            { label: "Defending", val: defending, color: "#f59e0b" },
           ].map((attr) => (
-            <div key={attr.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "10px", color: "var(--studio-subtext)", width: "50px" }}>
+            <div key={attr.label} style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+              <span style={{ fontSize: "10px", color: "var(--studio-subtext)", width: "48px", flexShrink: 0 }}>
                 {attr.label}
               </span>
               <div
@@ -193,6 +237,7 @@ export const PlayerSpotlightCard: React.FC = () => {
                   borderRadius: "3px",
                   backgroundColor: "var(--studio-inner-bg)",
                   overflow: "hidden",
+                  minWidth: 0,
                 }}
               >
                 <div
@@ -201,6 +246,7 @@ export const PlayerSpotlightCard: React.FC = () => {
                     height: "100%",
                     backgroundColor: attr.color,
                     borderRadius: "3px",
+                    transition: "width 0.3s ease",
                   }}
                 />
               </div>
@@ -220,6 +266,9 @@ export const PlayerSpotlightCard: React.FC = () => {
             borderRadius: "10px",
             border: "1px solid var(--studio-panel-border)",
             textAlign: "center",
+            width: "92px",
+            flexShrink: 0,
+            boxSizing: "border-box",
           }}
         >
           <div
@@ -237,23 +286,24 @@ export const PlayerSpotlightCard: React.FC = () => {
             {/* Center target crosshair */}
             <div style={{ width: "100%", height: "1px", backgroundColor: "rgba(255,255,255,0.2)", position: "absolute" }} />
             <div style={{ height: "100%", width: "1px", backgroundColor: "rgba(255,255,255,0.2)", position: "absolute" }} />
-            {/* Ball hit spot */}
+            {/* Ball hit spot position derived from accuracy */}
             <div
               style={{
                 width: "8px",
                 height: "8px",
                 borderRadius: "50%",
-                backgroundColor: "#ffd600",
+                backgroundColor: teamMeta.color,
                 position: "absolute",
-                top: player.hitSpot?.top || "14px",
-                right: player.hitSpot?.right || "12px",
-                boxShadow: "0 0 6px #ffd600",
+                top: `${30 - Math.round(shotAccuracyPct * 0.15)}px`,
+                right: `${24 - Math.round(shotAccuracyPct * 0.12)}px`,
+                boxShadow: `0 0 6px ${teamMeta.color}`,
+                transition: "all 0.3s ease",
               }}
             />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", width: "100%", marginTop: "6px", fontSize: "9px" }}>
-            <span style={{ color: "var(--studio-subtext)" }}>Acc: <strong>{player.acc}%</strong></span>
-            <span style={{ color: "var(--studio-subtext)" }}>Avg: <strong>{player.avg}</strong></span>
+            <span style={{ color: "var(--studio-subtext)" }}>Acc: <strong>{shotAccuracyPct}%</strong></span>
+            <span style={{ color: "var(--studio-subtext)" }}>Avg: <strong>{avgRating}</strong></span>
           </div>
         </div>
       </div>

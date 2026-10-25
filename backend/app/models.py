@@ -513,3 +513,4 @@ class CopilotQueryResponse(_Contract):
     model: str | None = None
     matchClock: str
     toolUsed: str | None = None
+

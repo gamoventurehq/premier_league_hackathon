@@ -425,3 +425,108 @@ export type PersonaMode = ExperiencePersona;
 export type SupportedLanguage = BroadcastLanguage;
 export type StudioPlayerTelemetry = PlayerKinematics;
 export type StudioBallTelemetry = BallKinematics;
+
+export interface PlayerAttributes {
+  shoot: number;
+  passing: number;
+  dribbling: number;
+  defending: number;
+  shotAccuracyPct: number;
+  avgRating: number;
+}
+
+export interface PlayerProfile {
+  id: string;
+  name: string;
+  team: 'home' | 'away';
+  number: number;
+  pos: string;
+  rating: number;
+  x: number;
+  y: number;
+  speed_kmh?: number;
+  is_ball_carrier?: boolean;
+  attributes: PlayerAttributes;
+}
+
+export interface TeamMetadata {
+  name: string;
+  shortCode: string;
+  color: string;
+  manager: string;
+  formation: string;
+}
+
+export interface GoalscorerItem {
+  player: string;
+  minute: string;
+  team: 'home' | 'away';
+}
+
+export interface MatchScore {
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  period: string;
+  homeMeta: TeamMetadata;
+  awayMeta: TeamMetadata;
+  date: string;
+  time: string;
+  competition: string;
+  venue: string;
+  goalscorers: GoalscorerItem[];
+}
+
+export interface HeadToHeadStat {
+  label: string;
+  home: string;
+  away: string;
+  homePct: number;
+}
+
+export interface MatchEventItem {
+  id: string;
+  time: string;
+  timeSec: number;
+  type: 'goal' | 'sub' | 'card' | 'inflection';
+  player: string;
+  playerId: string;
+  team: 'home' | 'away';
+  detail?: string;
+  score?: string;
+  subOut?: string;
+}
+
+export interface ShotMapItem {
+  id: string;
+  x: string;
+  y: string;
+  size: number;
+  isGoal: boolean;
+  label: string;
+  playerId: string;
+  playerName: string;
+  minute: string;
+  xG: number;
+  xGOT: number;
+  foot: 'Left' | 'Right' | 'Header';
+  team: 'home' | 'away';
+}
+
+export interface TacticalInflectionItem {
+  time: string;
+  timeSec: number;
+  title: string;
+  detail: string;
+  impact: string;
+}
+
+export interface SwarmCommentaryItem {
+  time: string;
+  timeSec: number;
+  agent: string;
+  role: string;
+  text: string;
+}
+

@@ -33,28 +33,6 @@ const safeRoundRect = (
   }
 };
 
-const safeDrawShadow = (
-  c: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  radiusX: number,
-  radiusY: number,
-  alpha: number
-) => {
-  c.beginPath();
-  if (typeof c.ellipse === "function") {
-    try {
-      c.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2);
-    } catch {
-      c.arc(x, y, radiusX, 0, Math.PI * 2);
-    }
-  } else {
-    c.arc(x, y, radiusX, 0, Math.PI * 2);
-  }
-  c.fillStyle = `rgba(0, 0, 0, ${alpha})`;
-  c.fill();
-};
-
 export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
   showVelocityVectors = true,
   showPassingLanes = true,
@@ -194,60 +172,91 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
 
       if (frame) {
         // Dynamic Zonal Pitch Control (Stage 2: Positional State & Pitch Control Zones)
-        if (showPitchControl && frame.players && frame.players.length > 0) {
-          const homePlayers = frame.players.filter((p) => p.team === "home");
-          const awayPlayers = frame.players.filter((p) => p.team === "away");
-          const cols = 14;
-          const rows = 9;
-          const cellW = pitchDrawW / cols;
-          const cellH = pitchDrawH / rows;
+        if (showPitchControl) {
+          if (frame.pitchControlCells && frame.pitchControlCells.length > 0) {
+            const cellW = pitchDrawW / 21;
+            const cellH = pitchDrawH / 17;
+            for (const cell of frame.pitchControlCells) {
+              const cx = scaleX(cell.x) - cellW / 2;
+              const cy = scaleY(cell.y) - cellH / 2;
+              const score = cell.controlScore; // -1 to +1
+              const strength = Math.min(0.28, Math.max(0.04, Math.abs(score) * 0.28));
+              ctx.fillStyle = score > 0 ? `rgba(0, 229, 255, ${strength})` : `rgba(244, 63, 94, ${strength})`;
+              ctx.fillRect(cx, cy, cellW + 0.5, cellH + 0.5);
+            }
+          } else if (frame.players && frame.players.length > 0) {
+            const homePlayers = frame.players.filter((p) => p.team === "home");
+            const awayPlayers = frame.players.filter((p) => p.team === "away");
+            const cols = 14;
+            const rows = 9;
+            const cellW = pitchDrawW / cols;
+            const cellH = pitchDrawH / rows;
 
-          for (let c = 0; c < cols; c++) {
-            const mx = (c + 0.5) * (PITCH_LENGTH_METERS / cols);
-            for (let r = 0; r < rows; r++) {
-              const my = (r + 0.5) * (PITCH_WIDTH_METERS / rows);
+            for (let c = 0; c < cols; c++) {
+              const mx = (c + 0.5) * (PITCH_LENGTH_METERS / cols);
+              for (let r = 0; r < rows; r++) {
+                const my = (r + 0.5) * (PITCH_WIDTH_METERS / rows);
 
-              let minHome = 999;
-              for (const hp of homePlayers) {
-                const d = Math.hypot(hp.x - mx, hp.y - my);
-                if (d < minHome) minHome = d;
+                let minHome = 999;
+                for (const hp of homePlayers) {
+                  const d = Math.hypot(hp.x - mx, hp.y - my);
+                  if (d < minHome) minHome = d;
+                }
+
+                let minAway = 999;
+                for (const ap of awayPlayers) {
+                  const d = Math.hypot(ap.x - mx, ap.y - my);
+                  if (d < minAway) minAway = d;
+                }
+
+                const diff = minAway - minHome;
+                const strength = Math.min(0.24, Math.max(0.04, Math.abs(diff) / 30));
+
+                ctx.fillStyle = diff > 0 ? `rgba(0, 229, 255, ${strength})` : `rgba(244, 63, 94, ${strength})`;
+                ctx.fillRect(padX + c * cellW, padY + r * cellH, cellW, cellH);
               }
-
-              let minAway = 999;
-              for (const ap of awayPlayers) {
-                const d = Math.hypot(ap.x - mx, ap.y - my);
-                if (d < minAway) minAway = d;
-              }
-
-              const diff = minAway - minHome;
-              const strength = Math.min(0.24, Math.max(0.04, Math.abs(diff) / 30));
-
-              ctx.fillStyle = diff > 0 ? `rgba(0, 229, 255, ${strength})` : `rgba(244, 63, 94, ${strength})`;
-              ctx.fillRect(padX + c * cellW, padY + r * cellH, cellW, cellH);
             }
           }
         }
 
         let carrier: { x: number; y: number } | null = null;
         for (const p of frame.players) {
-          if (p.is_ball_carrier) {
+          const isCarrier = p.is_ball_carrier || (p as any).onBall;
+          if (isCarrier) {
             carrier = { x: scaleX(p.x), y: scaleY(p.y) };
             break;
           }
         }
 
-        // Passing lanes
-        if (showPassingLanes && carrier) {
-          ctx.lineWidth = 1 * dpr;
-          for (const p of frame.players) {
-            if (p.team === "home" && !p.is_ball_carrier) {
-              ctx.strokeStyle = "rgba(0, 229, 255, 0.25)";
-              ctx.setLineDash([3 * dpr, 3 * dpr]);
+        // Passing lanes (Stage 3 & 5: Pass Difficulty Rating 5-Factor Corridor Model)
+        if (showPassingLanes) {
+          if (frame.passingLanes && frame.passingLanes.length > 0) {
+            ctx.lineWidth = 1.2 * dpr;
+            for (const lane of frame.passingLanes) {
+              const alpha = Math.max(0.2, Math.min(0.85, 1 - (lane.interceptionRisk ?? 0.5)));
+              ctx.strokeStyle = lane.isClear
+                ? `rgba(0, 229, 255, ${alpha})`
+                : `rgba(244, 63, 94, ${alpha * 0.7})`;
+              ctx.setLineDash(lane.isClear ? [] : [3 * dpr, 3 * dpr]);
               ctx.beginPath();
-              ctx.moveTo(carrier.x, carrier.y);
-              ctx.lineTo(scaleX(p.x), scaleY(p.y));
+              ctx.moveTo(scaleX(lane.passerPos.x), scaleY(lane.passerPos.y));
+              ctx.lineTo(scaleX(lane.receiverPos.x), scaleY(lane.receiverPos.y));
               ctx.stroke();
               ctx.setLineDash([]);
+            }
+          } else if (carrier) {
+            ctx.lineWidth = 1 * dpr;
+            for (const p of frame.players) {
+              const isCarrier = p.is_ball_carrier || (p as any).onBall;
+              if (p.team === "home" && !isCarrier) {
+                ctx.strokeStyle = "rgba(0, 229, 255, 0.25)";
+                ctx.setLineDash([3 * dpr, 3 * dpr]);
+                ctx.beginPath();
+                ctx.moveTo(carrier.x, carrier.y);
+                ctx.lineTo(scaleX(p.x), scaleY(p.y));
+                ctx.stroke();
+                ctx.setLineDash([]);
+              }
             }
           }
         }
@@ -258,9 +267,14 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
           const py = scaleY(p.y);
           if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
 
+          const pid = p.player_id || p.id || "";
           const isHome = p.team === "home";
-          const isSelected = selectedPlayerId === p.player_id;
+          const isSelected = selectedPlayerId === pid || selectedPlayerId === p.id || selectedPlayerId === p.player_id;
           const radius = Math.max(1, (isSelected ? 8.5 : 6.5) * dpr);
+          const shirtNum = p.shirt_number ?? (p as any).number ?? 0;
+          const speed = p.speed_kmh ?? (p as any).speedKmH ?? ((p as any).velocity_mps ? (p as any).velocity_mps * 3.6 : 14.2);
+          const vel = p.velocity_mps ?? (speed ? speed / 3.6 : 0);
+          const heading = p.heading_deg ?? 0;
 
           if (isSelected) {
             ctx.beginPath();
@@ -270,7 +284,7 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
             ctx.stroke();
 
             // Floating player name & live speed callout
-            const nameTag = `${p.name} (#${p.shirt_number}) • ${p.speed_kmh ? p.speed_kmh.toFixed(1) : "14.2"} km/h`;
+            const nameTag = `${p.name} (#${shirtNum}) • ${speed.toFixed(1)} km/h`;
             ctx.font = `bold ${Math.round(8 * dpr)}px sans-serif`;
             const textMetrics = ctx.measureText(nameTag);
             const tagW = textMetrics.width + 12 * dpr;
@@ -309,12 +323,12 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
           ctx.font = `bold ${Math.round(6.5 * dpr)}px sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(`${p.shirt_number}`, px, py);
+          ctx.fillText(`${shirtNum}`, px, py);
 
           // Velocity vector
-          if (showVelocityVectors && p.velocity_mps > 0.5) {
-            const rad = (p.heading_deg * Math.PI) / 180;
-            const vecLen = Math.min(18, p.velocity_mps * 2.8) * dpr;
+          if (showVelocityVectors && vel > 0.5) {
+            const rad = (heading * Math.PI) / 180;
+            const vecLen = Math.min(18, vel * 2.8) * dpr;
             ctx.beginPath();
             ctx.moveTo(px, py);
             ctx.lineTo(px + Math.cos(rad) * vecLen, py + Math.sin(rad) * vecLen);
@@ -324,55 +338,23 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
           }
         }
 
-        // Ball with 3D Elevation & Ground Shadow Visuals
+        // Ball
         if (frame.ball) {
           const bx = scaleX(frame.ball.x);
           const by = scaleY(frame.ball.y);
-          const ballZ = typeof frame.ball.z === "number" ? frame.ball.z : 0;
-          const baseR = Math.max(1, 4.5 * dpr);
-
           if (Number.isFinite(bx) && Number.isFinite(by)) {
-            if (ballZ > 0.05) {
-              // 1. Calculate ground shadow at (ball.x, ball.y) projected to canvas
-              const shadowR = baseR * (1 + 0.25 * ballZ);
-              const shadowAlpha = Math.max(0.12, 0.40 - 0.03 * ballZ);
+            ctx.beginPath();
+            ctx.arc(bx, by, Math.max(1, 7 * dpr), 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 214, 0, 0.3)";
+            ctx.fill();
 
-              safeDrawShadow(ctx, bx, by, shadowR, shadowR * 0.55, shadowAlpha);
-
-              // 2. Vertical perspective offset and scaled radius for elevated ball
-              const scaleFactor = 3.8 * dpr;
-              const elevatedY = by - ballZ * scaleFactor;
-              const elevatedR = baseR * (1 + 0.12 * Math.min(ballZ, 6.0));
-
-              // Elevated ball glow
-              ctx.beginPath();
-              ctx.arc(bx, elevatedY, elevatedR * 1.5, 0, Math.PI * 2);
-              ctx.fillStyle = "rgba(255, 214, 0, 0.35)";
-              ctx.fill();
-
-              // Elevated ball body
-              ctx.beginPath();
-              ctx.arc(bx, elevatedY, elevatedR, 0, Math.PI * 2);
-              ctx.fillStyle = "#ffd600";
-              ctx.fill();
-              ctx.strokeStyle = "#ffffff";
-              ctx.lineWidth = 1.2 * dpr;
-              ctx.stroke();
-            } else {
-              // Standard crisp 2D ball at exact position with no elevation offset
-              ctx.beginPath();
-              ctx.arc(bx, by, Math.max(1, 7 * dpr), 0, Math.PI * 2);
-              ctx.fillStyle = "rgba(255, 214, 0, 0.3)";
-              ctx.fill();
-
-              ctx.beginPath();
-              ctx.arc(bx, by, baseR, 0, Math.PI * 2);
-              ctx.fillStyle = "#ffd600";
-              ctx.fill();
-              ctx.strokeStyle = "#ffffff";
-              ctx.lineWidth = 1.2 * dpr;
-              ctx.stroke();
-            }
+            ctx.beginPath();
+            ctx.arc(bx, by, Math.max(1, 4.5 * dpr), 0, Math.PI * 2);
+            ctx.fillStyle = "#ffd600";
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 1.2 * dpr;
+            ctx.stroke();
           }
         }
       }
@@ -400,8 +382,11 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
       ctx.fillText(`${fpsRef.current.fps} FPS • 5Hz`, fpsX + fpsW / 2, fpsY + fpsH / 2);
 
       // Lower-Left: Pitch Control Dominance Badge
-      if (frame && frame.control_chaos) {
-        const ctrl = frame.control_chaos.control;
+      const ctrl =
+        frame?.control_chaos?.control ??
+        (frame as any)?.metrics?.controlVsChaosIndex ??
+        memory.blackboard.control_index;
+      if (ctrl !== undefined) {
         const pcText = `Pitch Control: MCI ${Math.round(ctrl)}% • ARS ${Math.round(100 - ctrl)}%`;
         ctx.font = `bold ${Math.round(9 * dpr)}px monospace`;
         const pcTextWidth = ctx.measureText(pcText).width;
@@ -535,11 +520,12 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
     for (const p of frame.players) {
       const d = Math.hypot(p.x - pitchX, p.y - pitchY);
       if (d < 4.0 && (!closest || d < closest.dist)) {
-        closest = { id: p.player_id, dist: d };
+        const id = p.player_id || p.id || "";
+        closest = { id, dist: d };
       }
     }
 
-    if (closest) {
+    if (closest && closest.id) {
       baseMemory.setSelectedPlayer(closest.id);
     }
   };
@@ -550,7 +536,7 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
         ref={canvasRef}
         onClick={handleCanvasClick}
         style={{ width: "100%", height: "100%", display: "block", cursor: "pointer", touchAction: "pan-y" }}
-        title="Premier League Pitch Radar (105m × 68m)"
+        title="Click on any player to spotlight across studio"
       />
     </div>
   );

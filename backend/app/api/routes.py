@@ -331,3 +331,4 @@ async def copilot_query(request: Request, payload: CopilotQueryRequest) -> Copil
         matchClock=match_clock,
         toolUsed=tool,
     )
+

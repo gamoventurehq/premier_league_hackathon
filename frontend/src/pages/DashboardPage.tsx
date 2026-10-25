@@ -1,8 +1,16 @@
 import React, { useState } from "react";
-import { IonPage, IonContent, IonIcon } from "@ionic/react";
 import {
-  sunnyOutline,
-  moonOutline,
+  IonPage,
+  IonContent,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonButtons,
+  IonButton,
+  IonBadge,
+  IonIcon,
+} from "@ionic/react";
+import {
   radioOutline,
   micOutline,
   footballOutline,
@@ -16,37 +24,74 @@ import { FormationPitchCard } from "../components/dashboard/FormationPitchCard";
 import { PlayerSpotlightCard } from "../components/dashboard/PlayerSpotlightCard";
 import { ShootMapCard } from "../components/dashboard/ShootMapCard";
 import { AttackingShapeCard } from "../components/dashboard/AttackingShapeCard";
+import { useBaseMemory } from "../store/baseMemory";
 import { StudioRecapModal } from "../components/broadcast/StudioRecapModal";
-import { useBaseMemory, baseMemory } from "../store/baseMemory";
 
 export const DashboardPage: React.FC = () => {
-  const theme = useBaseMemory((s) => s.theme);
   const serverStatus = useBaseMemory((s) => s.serverStatus);
   const [isRecapModalOpen, setIsRecapModalOpen] = useState(false);
-  const [mobileSection, setMobileSection] = useState<"all" | "match" | "video" | "spotlight">("all");
+  const [mobileSection, setMobileSection] = useState<"match" | "video" | "spotlight" | "all">("match");
 
   return (
     <IonPage>
+      {/* Mobile-Only iOS Unified Header */}
+      <IonHeader mode="ios" className="ion-hide-md-up">
+        <IonToolbar mode="ios">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "10px" }}>
+            <span
+              style={{
+                backgroundColor: "#7c3aed",
+                color: "#ffffff",
+                padding: "2px 6px",
+                borderRadius: "4px",
+                fontSize: "9px",
+                fontWeight: 900,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+              }}
+            >
+              Gamoventure
+            </span>
+            <span style={{ fontSize: "14px", fontWeight: 800, color: "#f8fafc" }}>PL Studio</span>
+          </div>
+          <IonButtons slot="end">
+            <IonButton
+              fill="clear"
+              size="small"
+              onClick={() => setIsRecapModalOpen(true)}
+              style={{ color: "#c084fc", fontSize: "11px", fontWeight: 700 }}
+              title="Open Half-Time Teleprompter"
+            >
+              <IonIcon slot="start" icon={micOutline} style={{ fontSize: "14px" }} />
+              Recap
+            </IonButton>
+            <IonBadge color={serverStatus.isConnected ? "success" : "warning"} style={{ marginRight: "10px", fontSize: "10px" }}>
+              {serverStatus.isConnected ? "5Hz" : "Sync"}
+            </IonBadge>
+          </IonButtons>
+        </IonToolbar>
+      </IonHeader>
+
       <IonContent fullscreen className="ion-padding" style={{ backgroundColor: "var(--ion-background-color)" }}>
-        {/* Top Studio Bar with Prominent Theme Switcher & Studio Recap Launcher */}
+        {/* Desktop-Only Top Studio Bar */}
         <header
-          className="studio-header-bar"
+          className="studio-header-bar ion-hide-md-down"
           style={{
             maxWidth: "1600px",
             margin: "0 auto 16px auto",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "10px",
             padding: "12px 18px",
             backgroundColor: "var(--studio-panel-bg)",
             border: "1px solid var(--studio-panel-border)",
             borderRadius: "14px",
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
-          {/* Brand Info */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+          {/* Brand Info with Gamoventure Attribution */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
             <span
               style={{
                 backgroundColor: "#7c3aed",
@@ -57,27 +102,17 @@ export const DashboardPage: React.FC = () => {
                 fontWeight: 900,
                 letterSpacing: "0.5px",
                 textTransform: "uppercase",
-                flexShrink: 0,
               }}
             >
-              Premier League
+              Gamoventure
             </span>
-            <span
-              style={{
-                fontSize: "14px",
-                fontWeight: 800,
-                color: "var(--ion-text-color)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Studio
+            <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--ion-text-color)" }}>
+              Premier League Studio: Synthetic Match Insights
             </span>
           </div>
 
-          {/* Right Controls: Studio Teleprompter + Server Live Badge + Theme Toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* Right Controls: Teleprompter & Server Live Badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
             <button
               onClick={() => setIsRecapModalOpen(true)}
               style={{
@@ -94,10 +129,10 @@ export const DashboardPage: React.FC = () => {
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
-              title="Teleprompter"
+              title="Open Automated Half-Time Studio Teleprompter & Video Chapters"
             >
               <IonIcon icon={micOutline} style={{ fontSize: "14px" }} />
-              <span>Teleprompter</span>
+              <span>HT Studio Teleprompter</span>
             </button>
 
             <div
@@ -117,31 +152,6 @@ export const DashboardPage: React.FC = () => {
               <IonIcon icon={radioOutline} style={{ animation: "pulse 1.5s infinite" }} />
               <span>{serverStatus.isConnected ? "Live 5Hz Stream" : "Synthetic Fallback"}</span>
             </div>
-
-            {/* Prominent Light / Dark Theme Button */}
-            <button
-              onClick={() => baseMemory.toggleTheme()}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "6px 14px",
-                borderRadius: "10px",
-                backgroundColor: "var(--studio-inner-bg)",
-                border: "1px solid var(--studio-panel-border)",
-                color: "var(--ion-text-color)",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <IonIcon
-                icon={theme === "dark" ? sunnyOutline : moonOutline}
-                style={{ fontSize: "16px", color: theme === "dark" ? "#f59e0b" : "#475569" }}
-              />
-              <span>{theme === "dark" ? "Light" : "Dark"}</span>
-            </button>
           </div>
         </header>
 
@@ -166,7 +176,7 @@ export const DashboardPage: React.FC = () => {
             ].map((sec) => (
               <button
                 key={sec.id}
-                onClick={() => setMobileSection(sec.id as "all" | "match" | "video" | "spotlight")}
+                onClick={() => setMobileSection(sec.id as any)}
                 style={{
                   flex: 1,
                   display: "flex",

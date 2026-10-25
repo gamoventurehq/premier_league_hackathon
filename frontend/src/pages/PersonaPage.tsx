@@ -5,39 +5,53 @@ import {
   IonPage,
   IonTitle,
   IonToolbar,
+  IonSegment,
+  IonSegmentButton,
+  IonLabel,
   IonCard,
   IonCardHeader,
+  IonCardSubtitle,
   IonCardTitle,
   IonCardContent,
   IonBadge,
   IonProgressBar,
   IonIcon,
+  IonButton,
 } from "@ionic/react";
 import {
   analyticsOutline,
   peopleOutline,
   videocamOutline,
   shieldCheckmarkOutline,
+  globeOutline,
+  pulseOutline,
   flashOutline,
+  speedometerOutline,
+  flameOutline,
   radioOutline,
+  trendingUpOutline,
   timeOutline,
+  gitNetworkOutline,
+  shieldOutline,
+  footballOutline,
   sparklesOutline,
-  gitCompareOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
-import { PersonaMode, SupportedLanguage } from "../types/telemetry";
+import { PersonaMode, SupportedLanguage, PlayerProfile } from "../types/telemetry";
 import { StudioChipScroller } from "../components/StudioChipScroller";
-import {
-  ROSTER_SPOTLIGHT,
-  KEY_PLAYER_PRESETS,
-  PlayerSpotlightProfile,
-} from "../types/playerRoster";
 
 const personaTitles: Record<PersonaMode, string> = {
   analyst: "Analyst Experience",
   casual: "Casual Experience",
   player_cam: "Player Cam Focus",
   club_centric: "Club-Centric Experience",
+};
+
+const personaSubtitles: Record<PersonaMode, string> = {
+  analyst: "Probabilistic pitch control models, spatial corridors, and tactical phase metrics.",
+  casual: "Storyline-driven commentary, pivotal momentum shifts, and accessible tactical highlights.",
+  player_cam: "Dedicated real-time tracking of individual off-ball runs, physical exertion, and sprint bursts.",
+  club_centric: "Dynamic tactical execution framing and supporter commentary focused on chosen club.",
 };
 
 interface MultilingualEntry {
@@ -106,15 +120,16 @@ const PersonaPage: React.FC = () => {
   const overviews = useBaseMemory((s) => s.blackboard.persona_overviews);
   const rhythm = useBaseMemory((s) => s.blackboard.current_game_rhythm);
   const control = useBaseMemory((s) => s.blackboard.control_index);
+  const chaos = useBaseMemory((s) => s.blackboard.chaos_index);
   const pdr = useBaseMemory((s) => s.blackboard.latest_pdr);
   const score = useBaseMemory((s) => s.score);
   const matchClock = useBaseMemory((s) => s.matchClock);
   const selectedPlayerId = useBaseMemory((s) => s.selectedPlayerId);
-  const currentFrame = useBaseMemory((s) => s.currentFrame);
+  const homeLineup = useBaseMemory((s) => s.homeLineup);
+  const awayLineup = useBaseMemory((s) => s.awayLineup);
 
   // Local state for Club-Centric toggle (City vs Arsenal)
   const [clubAllegiance, setClubAllegiance] = useState<"MCI" | "ARS">("MCI");
-  const [isSplitView, setIsSplitView] = useState(false);
 
   const formatTime = (secs: number) => {
     const clamped = Math.min(5400, Math.max(0, Math.floor(secs || 0)));
@@ -124,20 +139,23 @@ const PersonaPage: React.FC = () => {
   };
 
   // Resolve currently spotlighted player profile from Single Core Memory
-  const profile: PlayerSpotlightProfile =
-    (selectedPlayerId && ROSTER_SPOTLIGHT[selectedPlayerId]) ||
-    ROSTER_SPOTLIGHT.home_7;
+  const allPlayers = [...homeLineup, ...awayLineup];
+  const selectedPlayer: PlayerProfile =
+    allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6];
 
-  // Key quick-pick player presets
-  const spotlightOptions = KEY_PLAYER_PRESETS;
+  // Quick player spotlight list
+  const spotlightOptions = [
+    { id: "home_10", label: "E. Haaland", number: 9, team: "home" },
+    { id: "home_7", label: "K. De Bruyne", number: 17, team: "home" },
+    { id: "home_9", label: "P. Foden", number: 47, team: "home" },
+    { id: "away_8", label: "B. Saka", number: 7, team: "away" },
+    { id: "away_11", label: "K. Havertz", number: 29, team: "away" },
+    { id: "away_9", label: "M. Ødegaard", number: 8, team: "away" },
+  ];
 
   // Derive dynamic metrics from live telemetry
-  const liveTelemetry = currentFrame?.players?.find((p) => p.player_id === profile.id);
-  const playerSpeed = liveTelemetry?.speed_kmh ?? 23.4;
+  const playerSpeed = selectedPlayer.speed_kmh ?? 23.4;
   const isHighSpeedBurst = playerSpeed > 22.0;
-  const liveX = liveTelemetry ? liveTelemetry.x : 52.5;
-  const liveY = liveTelemetry ? liveTelemetry.y : 34.0;
-  const isCarrier = liveTelemetry?.is_ball_carrier ?? false;
   const activeStream = multilingualStreams[language] || multilingualStreams.en;
 
   return (
@@ -150,28 +168,11 @@ const PersonaPage: React.FC = () => {
 
       <IonContent fullscreen className="ion-padding" style={{ ["--background" as string]: "#020617" }}>
         {/* Scorebug Synchronized Header Bar */}
+        {/* Scorebug Synchronized Header Bar */}
         <div className="studio-scoreboard-header" style={{ marginBottom: "16px" }}>
           <div className="studio-ribbon-row-teams">
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontWeight: 800,
-                color: "#00e5ff",
-                fontSize: "14px",
-              }}
-            >
-              <span
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "50%",
-                  background: "#00e5ff",
-                  boxShadow: "0 0 8px #00e5ff",
-                  flexShrink: 0,
-                }}
-              />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#00e5ff", fontSize: "14px" }}>
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#00e5ff", boxShadow: "0 0 8px #00e5ff", flexShrink: 0 }} />
               {score.homeTeam}
             </span>
             <span
@@ -190,27 +191,9 @@ const PersonaPage: React.FC = () => {
             >
               {score.homeScore} - {score.awayScore}
             </span>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontWeight: 800,
-                color: "#f43f5e",
-                fontSize: "14px",
-              }}
-            >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#f43f5e", fontSize: "14px" }}>
               {score.awayTeam}
-              <span
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "50%",
-                  background: "#f43f5e",
-                  boxShadow: "0 0 8px #f43f5e",
-                  flexShrink: 0,
-                }}
-              />
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f43f5e", boxShadow: "0 0 8px #f43f5e", flexShrink: 0 }} />
             </span>
           </div>
 
@@ -292,14 +275,11 @@ const PersonaPage: React.FC = () => {
               { id: "player_cam", label: "Player Cam", icon: videocamOutline },
               { id: "club_centric", label: "Club-Centric", icon: shieldCheckmarkOutline },
             ].map((p) => {
-              const isSelected = !isSplitView && persona === p.id;
+              const isSelected = persona === p.id;
               return (
                 <button
                   key={p.id}
-                  onClick={() => {
-                    setIsSplitView(false);
-                    baseMemory.setPersona(p.id as PersonaMode);
-                  }}
+                  onClick={() => baseMemory.setPersona(p.id as PersonaMode)}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -318,186 +298,37 @@ const PersonaPage: React.FC = () => {
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <IonIcon
-                    icon={p.icon}
-                    style={{ fontSize: "14px", color: isSelected ? "#c084fc" : "#64748b" }}
-                  />
+                  <IonIcon icon={p.icon} style={{ fontSize: "14px", color: isSelected ? "#c084fc" : "#64748b" }} />
                   <span>{p.label}</span>
                 </button>
               );
             })}
-
-            {/* Stage 5: Synchronized Dual-Persona Split View Button */}
-            <button
-              onClick={() => setIsSplitView(!isSplitView)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 14px",
-                borderRadius: "10px",
-                border: isSplitView ? "1.5px solid #00e5ff" : "1px solid rgba(255, 255, 255, 0.08)",
-                backgroundColor: isSplitView ? "rgba(0, 229, 255, 0.25)" : "#0f172a",
-                color: isSplitView ? "#00e5ff" : "#94a3b8",
-                fontSize: "12.5px",
-                fontWeight: isSplitView ? 800 : 600,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-                boxShadow: isSplitView ? "0 0 14px rgba(0, 229, 255, 0.4)" : "none",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <IonIcon
-                icon={gitCompareOutline}
-                style={{ fontSize: "15px", color: isSplitView ? "#00e5ff" : "#64748b" }}
-              />
-              <span>Dual Split Stream</span>
-            </button>
           </StudioChipScroller>
         </div>
 
         {/* ======================================================== */}
-        {/* DUAL-PERSONA SYNCHRONIZED SPLIT STREAM (STAGE 5)         */}
-        {/* ======================================================== */}
-        {isSplitView && (
-          <div style={{ marginBottom: "16px" }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                gap: "14px",
-              }}
-            >
-              {/* Left Column: Analyst Experience */}
-              <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #38bdf8" }}>
-                <IonCardHeader style={{ paddingBottom: "8px", borderBottom: "1px solid rgba(56, 189, 248, 0.2)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <IonIcon icon={analyticsOutline} style={{ color: "#38bdf8", fontSize: "16px" }} />
-                      <IonCardTitle style={{ fontSize: "15px", color: "#f8fafc", margin: 0 }}>
-                        Analyst Experience
-                      </IonCardTitle>
-                    </div>
-                    <IonBadge color="primary" style={{ fontSize: "10px" }}>Metrics &amp; Geometry</IonBadge>
-                  </div>
-                </IonCardHeader>
-                <IonCardContent style={{ paddingTop: "12px" }}>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "8px",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    <div style={{ background: "#1e293b", padding: "8px", borderRadius: "6px" }}>
-                      <div style={{ fontSize: "10px", color: "#94a3b8" }}>Pitch Control Split</div>
-                      <div style={{ fontSize: "15px", fontWeight: 800, color: "#00e5ff", marginTop: "2px" }}>
-                        61% <span style={{ fontSize: "11px", color: "#64748b" }}>vs</span>{" "}
-                        <span style={{ color: "#f43f5e" }}>39%</span>
-                      </div>
-                    </div>
-                    <div style={{ background: "#1e293b", padding: "8px", borderRadius: "6px" }}>
-                      <div style={{ fontSize: "10px", color: "#94a3b8" }}>Pass Difficulty (PDR)</div>
-                      <div style={{ fontSize: "15px", fontWeight: 800, color: "#e2e8f0", marginTop: "2px" }}>
-                        {(pdr ?? 0.42).toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      background: "rgba(15, 23, 42, 0.8)",
-                      borderLeft: "3px solid #38bdf8",
-                      padding: "10px 12px",
-                      borderRadius: "0 6px 6px 0",
-                      fontSize: "12px",
-                      color: "#cbd5e1",
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {overviews.analyst}
-                  </div>
-                </IonCardContent>
-              </IonCard>
-
-              {/* Right Column: Casual Experience */}
-              <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #c084fc" }}>
-                <IonCardHeader style={{ paddingBottom: "8px", borderBottom: "1px solid rgba(192, 132, 252, 0.2)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <IonIcon icon={peopleOutline} style={{ color: "#c084fc", fontSize: "16px" }} />
-                      <IonCardTitle style={{ fontSize: "15px", color: "#f8fafc", margin: 0 }}>
-                        Casual Experience
-                      </IonCardTitle>
-                    </div>
-                    <IonBadge color="tertiary" style={{ fontSize: "10px" }}>Storytelling &amp; Drama</IonBadge>
-                  </div>
-                </IonCardHeader>
-                <IonCardContent style={{ paddingTop: "12px" }}>
-                  <div style={{ marginBottom: "12px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#cbd5e1", marginBottom: "4px" }}>
-                      <span style={{ color: "#00e5ff", fontWeight: 700 }}>City Pressure ({control}%)</span>
-                      <span style={{ color: "#f43f5e", fontWeight: 700 }}>Arsenal Counter ({100 - control}%)</span>
-                    </div>
-                    <IonProgressBar
-                      value={control / 100}
-                      style={{
-                        ["--progress-background" as string]: "#00e5ff",
-                        ["--buffer-background" as string]: "#f43f5e",
-                        height: "8px",
-                        borderRadius: "4px",
-                      }}
-                    />
-                  </div>
-                  <div
-                    style={{
-                      background: "rgba(192, 132, 252, 0.1)",
-                      borderLeft: "3px solid #c084fc",
-                      padding: "10px 12px",
-                      borderRadius: "0 6px 6px 0",
-                      fontSize: "12px",
-                      color: "#e2e8f0",
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {overviews.casual}
-                  </div>
-                </IonCardContent>
-              </IonCard>
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
         {/* VIEW 1: ANALYST EXPERIENCE (Data-Dense Tactical Models)  */}
         {/* ======================================================== */}
-        {!isSplitView && persona === "analyst" && (
+        {persona === "analyst" && (
           <div className="studio-two-col-grid" style={{ marginBottom: "16px" }}>
             {/* Probabilistic Surface & Passing Corridors */}
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
               <IonCardHeader style={{ paddingBottom: "10px" }}>
-                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0 }}>
-                  Defensive Compression &amp; Expected Value
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                  <IonCardSubtitle style={{ color: "#00e5ff", fontWeight: 700, letterSpacing: "0.5px", margin: 0 }}>
+                    PROBABILISTIC METRICS & SPATIAL CORRIDORS
+                  </IonCardSubtitle>
+                  <IonBadge color="tertiary" style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    [Stage 2 & 5 Engine]
+                  </IonBadge>
+                </div>
+                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
+                  Defensive Compression & Expected Value
                 </IonCardTitle>
               </IonCardHeader>
               <IonCardContent>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "10px",
-                    marginBottom: "14px",
-                  }}
-                >
-                  <div
-                    style={{
-                      background: "#1e293b",
-                      padding: "10px",
-                      borderRadius: "8px",
-                      border: "1px solid #334155",
-                    }}
-                  >
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "14px" }}>
+                  <div style={{ background: "#1e293b", padding: "10px", borderRadius: "8px", border: "1px solid #334155" }}>
                     <div style={{ fontSize: "11px", color: "#94a3b8" }}>Cumulative Expected Goals</div>
                     <div style={{ fontSize: "18px", fontWeight: 800, color: "#00e5ff", marginTop: "2px" }}>
                       2.45 <span style={{ fontSize: "12px", color: "#64748b" }}>vs</span>{" "}
@@ -508,31 +339,19 @@ const PersonaPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      background: "#1e293b",
-                      padding: "10px",
-                      borderRadius: "8px",
-                      border: "1px solid #334155",
-                    }}
-                  >
+                  <div style={{ background: "#1e293b", padding: "10px", borderRadius: "8px", border: "1px solid #334155" }}>
                     <div style={{ fontSize: "11px", color: "#94a3b8" }}>Pass Difficulty Rating (PDR)</div>
                     <div style={{ fontSize: "18px", fontWeight: 800, color: "#f59e0b", marginTop: "2px" }}>
                       {(pdr * 100).toFixed(1)}%
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>
+                      Threshold: High Friction
                     </div>
                   </div>
                 </div>
 
                 {/* Spatial Corridors & Block Density */}
-                <div
-                  style={{
-                    background: "#020617",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    border: "1px solid #1e293b",
-                    marginBottom: "12px",
-                  }}
-                >
+                <div style={{ background: "#020617", padding: "12px", borderRadius: "8px", border: "1px solid #1e293b", marginBottom: "12px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "6px" }}>
                     <span style={{ color: "#94a3b8" }}>Central Corridor Width</span>
                     <span style={{ color: "#38bdf8", fontWeight: 700 }}>26.4m (Squeezed)</span>
@@ -553,15 +372,7 @@ const PersonaPage: React.FC = () => {
                     <span>Pitch Control: MCI 61%</span>
                     <span>ARS 39%</span>
                   </div>
-                  <IonProgressBar
-                    value={0.61}
-                    style={{
-                      ["--progress-background" as string]: "#00e5ff",
-                      ["--buffer-background" as string]: "#f43f5e",
-                      height: "8px",
-                      borderRadius: "4px",
-                    }}
-                  />
+                  <IonProgressBar value={0.61} style={{ ["--progress-background" as string]: "#00e5ff", ["--buffer-background" as string]: "#f43f5e", height: "8px", borderRadius: "4px" }} />
                 </div>
               </IonCardContent>
             </IonCard>
@@ -569,31 +380,17 @@ const PersonaPage: React.FC = () => {
             {/* Tactical Phase & Deep Analyst Reasoning */}
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
               <IonCardHeader style={{ paddingBottom: "10px" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "6px",
-                  }}
-                >
-                  <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0 }}>
-                    Swarm Intelligence Reasoning Core
-                  </IonCardTitle>
-                  <IonBadge
-                    color="primary"
-                    style={{
-                      fontSize: "10px",
-                      padding: "4px 8px",
-                      borderRadius: "12px",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                  <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 700, letterSpacing: "0.5px", margin: 0 }}>
+                    TACTICAL PHASE & STRUCTURAL REASONING
+                  </IonCardSubtitle>
+                  <IonBadge color="primary" style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}>
                     {rhythm.replace(/_/g, " ")}
                   </IonBadge>
                 </div>
+                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
+                  Swarm Intelligence Reasoning Core
+                </IonCardTitle>
               </IonCardHeader>
               <IonCardContent>
                 {/* Active Blackboard Reasoning */}
@@ -613,7 +410,11 @@ const PersonaPage: React.FC = () => {
                 </div>
 
                 {/* Territorial Progression Distribution */}
-                <div>
+                <div style={{ marginBottom: "14px" }}>
+                  <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600, marginBottom: "8px" }}>
+                    TERRITORIAL PROGRESSION DISTRIBUTION
+                  </div>
+
                   <div style={{ marginBottom: "6px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#cbd5e1", marginBottom: "2px" }}>
                       <span>Build-Up Phase (First Third)</span>
@@ -638,6 +439,10 @@ const PersonaPage: React.FC = () => {
                     <IonProgressBar value={0.26} color="secondary" style={{ height: "6px", borderRadius: "3px" }} />
                   </div>
                 </div>
+
+                <div style={{ background: "#020617", padding: "10px", borderRadius: "8px", border: "1px solid #1e293b", fontSize: "11px", color: "#94a3b8" }}>
+                  <span style={{ color: "#38bdf8", fontWeight: 700 }}>Rest-Defense Setup:</span> City maintaining a 3-2 rest defense structure with Rodri and Akanji securing the counter-press pivot.
+                </div>
               </IonCardContent>
             </IonCard>
           </div>
@@ -646,26 +451,26 @@ const PersonaPage: React.FC = () => {
         {/* ======================================================== */}
         {/* VIEW 2: CASUAL EXPERIENCE (Storyline, Duels & Milestones) */}
         {/* ======================================================== */}
-        {!isSplitView && persona === "casual" && (
+        {persona === "casual" && (
           <div className="studio-two-col-grid" style={{ marginBottom: "16px" }}>
             {/* Storyline & Emotional Momentum Pendulum */}
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
               <IonCardHeader style={{ paddingBottom: "10px" }}>
-                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0 }}>
-                  Match Momentum
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                  <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700, letterSpacing: "0.5px", margin: 0 }}>
+                    MATCH STORYLINE & MOMENTUM
+                  </IonCardSubtitle>
+                  <IonBadge color="success" style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    [Live Momentum]
+                  </IonBadge>
+                </div>
+                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
+                  The Flow of the Match
                 </IonCardTitle>
               </IonCardHeader>
               <IonCardContent>
                 {/* Dynamic Momentum Pendulum */}
-                <div
-                  style={{
-                    background: "#020617",
-                    padding: "14px",
-                    borderRadius: "8px",
-                    border: "1px solid #1e293b",
-                    marginBottom: "14px",
-                  }}
-                >
+                <div style={{ background: "#020617", padding: "14px", borderRadius: "8px", border: "1px solid #1e293b", marginBottom: "14px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#cbd5e1", marginBottom: "6px" }}>
                     <span style={{ color: "#00e5ff", fontWeight: 700 }}>Manchester City Pressure</span>
                     <span style={{ color: "#f43f5e", fontWeight: 700 }}>Arsenal Counter Threat</span>
@@ -679,6 +484,10 @@ const PersonaPage: React.FC = () => {
                       borderRadius: "5px",
                     }}
                   />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#64748b", marginTop: "4px" }}>
+                    <span>City Attack Share: {Math.round(control)}%</span>
+                    <span>Arsenal Transition: {Math.round(chaos)}%</span>
+                  </div>
                 </div>
 
                 {/* Casual Storyline Narrative */}
@@ -699,44 +508,36 @@ const PersonaPage: React.FC = () => {
 
                 {/* Key In-Match Duels */}
                 <div>
+                  <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600, marginBottom: "8px" }}>
+                    KEY IN-MATCH DUELS
+                  </div>
+
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <div
-                      style={{
-                        background: "#1e293b",
-                        padding: "8px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid #334155",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: "6px",
-                      }}
-                    >
+                    <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "8px", border: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
                       <div style={{ minWidth: 0, flex: "1 1 140px" }}>
                         <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           E. Haaland vs W. Saliba
                         </div>
                         <div style={{ fontSize: "11px", color: "#94a3b8" }}>
-                          Physical aerial duel and box positioning
+                          Physical aerial & box positioning battle
                         </div>
                       </div>
-                      <IonBadge color="success" style={{ flexShrink: 0 }}>City Advantage</IonBadge>
+                      <IonBadge color="primary" style={{ flexShrink: 0 }}>Haaland Lead</IonBadge>
                     </div>
 
-                    <div
-                      style={{
-                        background: "#1e293b",
-                        padding: "8px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid #334155",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: "6px",
-                      }}
-                    >
+                    <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "8px", border: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                      <div style={{ minWidth: 0, flex: "1 1 140px" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          B. Saka vs J. Gvardiol
+                        </div>
+                        <div style={{ fontSize: "11px", color: "#94a3b8" }}>
+                          1v1 flank sprint duel down the right
+                        </div>
+                      </div>
+                      <IonBadge color="danger" style={{ flexShrink: 0 }}>Saka Ahead</IonBadge>
+                    </div>
+
+                    <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "8px", border: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
                       <div style={{ minWidth: 0, flex: "1 1 140px" }}>
                         <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           Rodri vs D. Rice
@@ -755,37 +556,34 @@ const PersonaPage: React.FC = () => {
             {/* Plain-Language Explainers & Milestones */}
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
               <IonCardHeader style={{ paddingBottom: "10px" }}>
-                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0 }}>
-                  Tactical Context
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <IonCardSubtitle style={{ color: "#f59e0b", fontWeight: 700, letterSpacing: "0.5px" }}>
+                    ACCESSIBLE TACTICAL EXPLAINER
+                  </IonCardSubtitle>
+                  <IonBadge color="warning" style={{ fontSize: "10px" }}>
+                    [Plain Language]
+                  </IonBadge>
+                </div>
+                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
+                  What Is Happening Right Now?
                 </IonCardTitle>
               </IonCardHeader>
               <IonCardContent>
                 {/* Plain-English Breakdown */}
-                <div
-                  style={{
-                    background: "#020617",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    border: "1px solid #1e293b",
-                    marginBottom: "14px",
-                  }}
-                >
+                <div style={{ background: "#020617", padding: "12px", borderRadius: "8px", border: "1px solid #1e293b", marginBottom: "14px" }}>
                   <div style={{ fontSize: "13px", color: "#cbd5e1", lineHeight: 1.6 }}>
-                    Manchester City are holding onto the ball right outside Arsenal&apos;s 18-yard box, passing back and forth to force a mistake. Arsenal have formed two compact defensive walls to block every shooting lane and are waiting to sprint forward on a counter-attack the second they win the ball.
+                    <strong style={{ color: "#38bdf8" }}>In Simple Terms:</strong> Manchester City are holding onto the ball right outside Arsenal&apos;s 18-yard box, passing back and forth to force a mistake. Arsenal have formed two compact defensive walls to block every shooting lane and are waiting to sprint forward on a counter-attack the second they win the ball.
                   </div>
                 </div>
 
                 {/* Player Milestones Alert */}
                 <div style={{ marginBottom: "14px" }}>
+                  <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600, marginBottom: "8px" }}>
+                    IN-MATCH PLAYER MILESTONES
+                  </div>
+
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <div
-                      style={{
-                        background: "#1e293b",
-                        padding: "10px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid #334155",
-                      }}
-                    >
+                    <div style={{ background: "#1e293b", padding: "10px 12px", borderRadius: "8px", border: "1px solid #334155" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, color: "#00e5ff" }}>
                         <IonIcon icon={sparklesOutline} />
                         Erling Haaland Goal Milestone
@@ -795,14 +593,7 @@ const PersonaPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div
-                      style={{
-                        background: "#1e293b",
-                        padding: "10px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid #334155",
-                      }}
-                    >
+                    <div style={{ background: "#1e293b", padding: "10px 12px", borderRadius: "8px", border: "1px solid #334155" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, color: "#f43f5e" }}>
                         <IonIcon icon={flashOutline} />
                         Bukayo Saka Equalizer Impact
@@ -814,17 +605,8 @@ const PersonaPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    background: "rgba(245, 158, 11, 0.1)",
-                    border: "1px solid #f59e0b",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    fontSize: "11px",
-                    color: "#fbbf24",
-                  }}
-                >
-                  Kevin De Bruyne curling deliveries from the right half-space test Arsenal&apos;s near-post coverage.
+                <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid #f59e0b", padding: "10px", borderRadius: "8px", fontSize: "11px", color: "#fbbf24" }}>
+                  <strong style={{ color: "#fef08a" }}>Fan Tip:</strong> Watch for Kevin De Bruyne's low curling crosses whenever he drifts towards the right corner of the penalty box!
                 </div>
               </IonCardContent>
             </IonCard>
@@ -834,13 +616,13 @@ const PersonaPage: React.FC = () => {
         {/* ======================================================== */}
         {/* VIEW 3: PLAYER CAM FOCUS (Dedicated Individual Telemetry) */}
         {/* ======================================================== */}
-        {!isSplitView && persona === "player_cam" && (
+        {persona === "player_cam" && (
           <div>
             {/* Quick-Pick Key Player Pills Bar with Permanent Scroll Line */}
             <div style={{ marginBottom: "14px" }}>
               <StudioChipScroller marginTopTrack={8} gap="8px">
                 {spotlightOptions.map((opt) => {
-                  const isSelected = profile.id === opt.id;
+                  const isSelected = selectedPlayer.id === opt.id;
                   const isHome = opt.team === "home";
                   return (
                     <button
@@ -863,6 +645,7 @@ const PersonaPage: React.FC = () => {
                         transition: "all 0.2s ease",
                       }}
                     >
+                      <span>#{opt.number}</span>
                       <span>{opt.label}</span>
                     </button>
                   );
@@ -874,50 +657,36 @@ const PersonaPage: React.FC = () => {
               {/* Player Identity & Live Exertion Telemetry */}
               <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
                 <IonCardHeader style={{ paddingBottom: "10px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "6px",
-                    }}
-                  >
-                    <IonCardTitle
-                      style={{
-                        fontSize: "18px",
-                        color: "#f8fafc",
-                        display: "flex",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: "8px",
-                        margin: 0,
-                      }}
-                    >
-                      <span>#{profile.number} {profile.name}</span>
-                      <span
-                        style={{
-                          background: "#1e293b",
-                          border: "1px solid #334155",
-                          color: "#38bdf8",
-                          fontSize: "11px",
-                          fontWeight: 800,
-                          padding: "2px 8px",
-                          borderRadius: "6px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        {profile.pos}
-                      </span>
-                    </IonCardTitle>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                    <IonCardSubtitle style={{ color: selectedPlayer.team === "home" ? "#00e5ff" : "#f43f5e", fontWeight: 700, margin: 0 }}>
+                      PLAYER CAM SPOTLIGHT • {selectedPlayer.team === "home" ? "MAN CITY" : "ARSENAL"}
+                    </IonCardSubtitle>
                     <IonBadge color="primary" style={{ fontSize: "10px", flexShrink: 0 }}>
-                      Rating {profile.rating.toFixed(1)}
+                      Rating {selectedPlayer.rating.toFixed(1)}
                     </IonBadge>
                   </div>
+                  <IonCardTitle style={{ fontSize: "18px", color: "#f8fafc", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
+                    <span>#{selectedPlayer.number} {selectedPlayer.name}</span>
+                    <span
+                      style={{
+                        background: "#1e293b",
+                        border: "1px solid #334155",
+                        color: "#38bdf8",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {selectedPlayer.pos}
+                    </span>
+                  </IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
-                  {/* Live Speed Bar */}
+                  {/* Live Speed Meter at 5Hz */}
                   <div style={{ background: "#020617", padding: "12px", borderRadius: "8px", border: "1px solid #1e293b", marginBottom: "14px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                       <span style={{ fontSize: "12px", color: "#94a3b8" }}>Live Sprint Velocity</span>
@@ -930,6 +699,11 @@ const PersonaPage: React.FC = () => {
                       color={isHighSpeedBurst ? "danger" : "secondary"}
                       style={{ height: "8px", borderRadius: "4px" }}
                     />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "2px 6px", fontSize: "10px", color: "#64748b", marginTop: "4px" }}>
+                      <span>Jog: 12 km/h</span>
+                      <span>High-Speed: 22 km/h</span>
+                      <span>Sprint Max: 34 km/h</span>
+                    </div>
                   </div>
 
                   {/* Physical Exertion Grid */}
@@ -956,22 +730,10 @@ const PersonaPage: React.FC = () => {
                   </div>
 
                   {/* Pitch Metric Position */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "4px",
-                      background: "#020617",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      fontSize: "11px",
-                    }}
-                  >
-                    <span style={{ color: "#94a3b8" }}>Pitch Position:</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px", background: "#020617", padding: "8px 12px", borderRadius: "6px", fontSize: "11px" }}>
+                    <span style={{ color: "#94a3b8" }}>Metric Coordinates (105m x 68m):</span>
                     <span style={{ color: "#00e5ff", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                      X: {liveX.toFixed(1)}m, Y: {liveY.toFixed(1)}m
+                      X: {((selectedPlayer.x / 100) * 105).toFixed(1)}m, Y: {((selectedPlayer.y / 100) * 68).toFixed(1)}m
                     </span>
                   </div>
                 </IonCardContent>
@@ -980,35 +742,21 @@ const PersonaPage: React.FC = () => {
               {/* Player Cam Tactical Narrative & Decisive Actions */}
               <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
                 <IonCardHeader style={{ paddingBottom: "10px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "6px",
-                    }}
-                  >
-                    <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0 }}>
-                      Spotlight Feed
-                    </IonCardTitle>
-                    <IonBadge
-                      color={isHighSpeedBurst ? "danger" : "success"}
-                      style={{
-                        fontSize: "10px",
-                        padding: "4px 8px",
-                        borderRadius: "12px",
-                        whiteSpace: "nowrap",
-                        flexShrink: 0,
-                      }}
-                    >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                    <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 700, margin: 0 }}>
+                      INDIVIDUAL TACTICAL PROFILE
+                    </IonCardSubtitle>
+                    <IonBadge color={isHighSpeedBurst ? "danger" : "success"} style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}>
                       {isHighSpeedBurst
                         ? "[High-Speed Sprint Burst]"
-                        : isCarrier
+                        : selectedPlayer.is_ball_carrier
                         ? "[Active Ball Carrier]"
                         : "[Off-Ball Tactical Run]"}
                     </IonBadge>
                   </div>
+                  <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
+                    Continuous Spotlight Feed
+                  </IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
                   {/* Real-time Narrative from Blackboard */}
@@ -1030,59 +778,42 @@ const PersonaPage: React.FC = () => {
                   {/* Decisive Actions & Skill Radar Breakdown */}
                   <div style={{ marginBottom: "14px" }}>
                     <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600, marginBottom: "8px" }}>
-                      Attributes
+                      DECISIVE ATTRIBUTES (PERFORMANCE ENGINE)
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                       <div style={{ background: "#1e293b", padding: "8px 10px", borderRadius: "6px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
                           <span style={{ color: "#94a3b8" }}>Passing Index</span>
-                          <span style={{ color: "#38bdf8", fontWeight: 700 }}>
-                            {profile.attributes.passing}/100
-                          </span>
+                          <span style={{ color: "#38bdf8", fontWeight: 700 }}>{selectedPlayer.attributes.passing}/100</span>
                         </div>
                       </div>
 
                       <div style={{ background: "#1e293b", padding: "8px 10px", borderRadius: "6px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
                           <span style={{ color: "#94a3b8" }}>Shooting Power</span>
-                          <span style={{ color: "#f43f5e", fontWeight: 700 }}>
-                            {profile.attributes.shoot}/100
-                          </span>
+                          <span style={{ color: "#f43f5e", fontWeight: 700 }}>{selectedPlayer.attributes.shoot}/100</span>
                         </div>
                       </div>
 
                       <div style={{ background: "#1e293b", padding: "8px 10px", borderRadius: "6px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
                           <span style={{ color: "#94a3b8" }}>Dribble Agility</span>
-                          <span style={{ color: "#a855f7", fontWeight: 700 }}>
-                            {profile.attributes.dribbling}/100
-                          </span>
+                          <span style={{ color: "#a855f7", fontWeight: 700 }}>{selectedPlayer.attributes.dribbling}/100</span>
                         </div>
                       </div>
 
                       <div style={{ background: "#1e293b", padding: "8px 10px", borderRadius: "6px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
                           <span style={{ color: "#94a3b8" }}>Defensive Press</span>
-                          <span style={{ color: "#10b981", fontWeight: 700 }}>
-                            {profile.attributes.defending}/100
-                          </span>
+                          <span style={{ color: "#10b981", fontWeight: 700 }}>{selectedPlayer.attributes.defending}/100</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      background: "#020617",
-                      padding: "10px",
-                      borderRadius: "8px",
-                      border: "1px solid #1e293b",
-                      fontSize: "11px",
-                      color: "#94a3b8",
-                    }}
-                  >
-                    Maintaining width and creating decoy channels to disorganize Arsenal&apos;s defensive double-pivot.
+                  <div style={{ background: "#020617", padding: "10px", borderRadius: "8px", border: "1px solid #1e293b", fontSize: "11px", color: "#94a3b8" }}>
+                    <span style={{ color: "#38bdf8", fontWeight: 700 }}>Tactical Duty:</span> Maintaining width and creating decoy channels to disorganize Arsenal&apos;s defensive double-pivot.
                   </div>
                 </IonCardContent>
               </IonCard>
@@ -1093,7 +824,7 @@ const PersonaPage: React.FC = () => {
         {/* ======================================================== */}
         {/* VIEW 4: CLUB-CENTRIC EXPERIENCE (Framed Club Execution)  */}
         {/* ======================================================== */}
-        {!isSplitView && persona === "club_centric" && (
+        {persona === "club_centric" && (
           <div>
             {/* Club Allegiance Selector */}
             <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
@@ -1141,32 +872,20 @@ const PersonaPage: React.FC = () => {
               {/* Club Tactical Execution Hub */}
               <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
                 <IonCardHeader style={{ paddingBottom: "10px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "8px",
-                    }}
-                  >
-                    <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0 }}>
-                      Tactical Execution
-                    </IonCardTitle>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                    <IonCardSubtitle style={{ color: clubAllegiance === "MCI" ? "#00e5ff" : "#f43f5e", fontWeight: 700, margin: 0 }}>
+                      {clubAllegiance === "MCI" ? "MANCHESTER CITY EXECUTION" : "ARSENAL TACTICAL DISCIPLINE"}
+                    </IonCardSubtitle>
                     <IonBadge
                       color={clubAllegiance === "MCI" ? "secondary" : "danger"}
-                      style={{
-                        padding: "4px 10px",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        borderRadius: "12px",
-                        whiteSpace: "nowrap",
-                        flexShrink: 0,
-                      }}
+                      style={{ padding: "4px 10px", fontSize: "11px", fontWeight: 700, borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}
                     >
                       Execution Grade: {clubAllegiance === "MCI" ? "A (8.4/10)" : "A- (8.1/10)"}
                     </IonBadge>
                   </div>
+                  <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
+                    {clubAllegiance === "MCI" ? "Attacking Blueprint & Control Hub" : "Low-Block & Breakaway Counter Hub"}
+                  </IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
                   {/* Framing Narrative */}
@@ -1182,86 +901,109 @@ const PersonaPage: React.FC = () => {
                       marginBottom: "14px",
                     }}
                   >
-                    {overviews.club_centric}
-                  </div>
-
-                  {/* Club Tactical KPIs */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "14px" }}>
-                    <div style={{ background: "#1e293b", padding: "10px", borderRadius: "8px", border: "1px solid #334155" }}>
-                      <div style={{ fontSize: "11px", color: "#94a3b8" }}>Territorial Dominance</div>
-                      <div
-                        style={{
-                          fontSize: "18px",
-                          fontWeight: 800,
-                          color: clubAllegiance === "MCI" ? "#00e5ff" : "#f43f5e",
-                          marginTop: "2px",
-                        }}
-                      >
-                        {clubAllegiance === "MCI" ? "68%" : "32%"}
-                      </div>
-                      <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px" }}>
-                        Attacking third occupancy
-                      </div>
-                    </div>
-
-                    <div style={{ background: "#1e293b", padding: "10px", borderRadius: "8px", border: "1px solid #334155" }}>
-                      <div style={{ fontSize: "11px", color: "#94a3b8" }}>Plan Adherence</div>
-                      <div style={{ fontSize: "18px", fontWeight: 800, color: "#10b981", marginTop: "2px" }}>
-                        {clubAllegiance === "MCI" ? "92%" : "88%"}
-                      </div>
-                      <div style={{ fontSize: "10px", color: "#10b981", marginTop: "2px" }}>
-                        Structural discipline
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      background: "#020617",
-                      padding: "10px",
-                      borderRadius: "8px",
-                      border: "1px solid #1e293b",
-                      fontSize: "11px",
-                      color: "#94a3b8",
-                    }}
-                  >
-                    <span style={{ color: clubAllegiance === "MCI" ? "#00e5ff" : "#f43f5e", fontWeight: 700 }}>
-                      Coach Instruction:
-                    </span>{" "}
                     {clubAllegiance === "MCI"
-                      ? "Guardiola demanding 5-man attacking wave into half-spaces to break Arsenal's second block."
-                      : "Arteta demanding Saka stay pinned high on the right touchline ready for the first outlet release."}
+                      ? "City asserting complete dominance with 68% territorial control in the final third. Constant overloading of the half-spaces via De Bruyne and Foden to isolate Haaland against Saliba."
+                      : "Arsenal exceptionally structured in a resilient 4-2-3-1 low block. Rapid transition triggers primed to exploit City's advanced rest-defense via Saka's blistering counter sprints."}
+                  </div>
+
+                  {/* Key Contributors for Club */}
+                  <div>
+                    <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600, marginBottom: "8px" }}>
+                      PRIMARY CLUB CONTRIBUTORS
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {clubAllegiance === "MCI" ? (
+                        <>
+                          <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px 8px" }}>
+                            <div style={{ minWidth: 0, flex: "1 1 150px" }}>
+                              <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc" }}>Kevin De Bruyne</div>
+                              <div style={{ fontSize: "11px", color: "#94a3b8" }}>Playmaking Mastermind • 96 Pass Rating</div>
+                            </div>
+                            <span style={{ color: "#00e5ff", fontWeight: 700, flexShrink: 0 }}>8.8 Rating</span>
+                          </div>
+                          <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px 8px" }}>
+                            <div style={{ minWidth: 0, flex: "1 1 150px" }}>
+                              <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc" }}>Erling Haaland</div>
+                              <div style={{ fontSize: "11px", color: "#94a3b8" }}>Finishing Focal Point • 1 Goal, 94 Shoot</div>
+                            </div>
+                            <span style={{ color: "#00e5ff", fontWeight: 700, flexShrink: 0 }}>8.5 Rating</span>
+                          </div>
+                          <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px 8px" }}>
+                            <div style={{ minWidth: 0, flex: "1 1 150px" }}>
+                              <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc" }}>Rodri</div>
+                              <div style={{ fontSize: "11px", color: "#94a3b8" }}>Rest-Defense Anchor • 93 Pass, 88 Defend</div>
+                            </div>
+                            <span style={{ color: "#00e5ff", fontWeight: 700, flexShrink: 0 }}>8.3 Rating</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px 8px" }}>
+                            <div style={{ minWidth: 0, flex: "1 1 150px" }}>
+                              <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc" }}>Bukayo Saka</div>
+                              <div style={{ fontSize: "11px", color: "#94a3b8" }}>Breakaway Weapon • 1 Goal, 4-Touch Counter</div>
+                            </div>
+                            <span style={{ color: "#f43f5e", fontWeight: 700, flexShrink: 0 }}>8.0 Rating</span>
+                          </div>
+                          <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px 8px" }}>
+                            <div style={{ minWidth: 0, flex: "1 1 150px" }}>
+                              <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc" }}>William Saliba</div>
+                              <div style={{ fontSize: "11px", color: "#94a3b8" }}>Defensive Wall • 88 Defend, 4 Tackles Won</div>
+                            </div>
+                            <span style={{ color: "#f43f5e", fontWeight: 700, flexShrink: 0 }}>7.3 Rating</span>
+                          </div>
+                          <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px 8px" }}>
+                            <div style={{ minWidth: 0, flex: "1 1 150px" }}>
+                              <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc" }}>Declan Rice</div>
+                              <div style={{ fontSize: "11px", color: "#94a3b8" }}>Transition Disruptor • 87 Defend, 6 Interceptions</div>
+                            </div>
+                            <span style={{ color: "#f43f5e", fontWeight: 700, flexShrink: 0 }}>7.6 Rating</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </IonCardContent>
               </IonCard>
 
-              {/* Supporter Analysis & Critical Window */}
+              {/* Supporter Pulse & Match Outlook */}
               <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
                 <IonCardHeader style={{ paddingBottom: "10px" }}>
-                  <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0 }}>
-                    Tactical Windows
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                    <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700, margin: 0 }}>
+                      SUPPORTER PULSE & TACTICAL OUTLOOK
+                    </IonCardSubtitle>
+                    <IonBadge
+                      color="primary"
+                      style={{ padding: "4px 10px", fontSize: "11px", fontWeight: 700, borderRadius: "12px", whiteSpace: "nowrap", flexShrink: 0 }}
+                    >
+                      Etihad Atmosphere
+                    </IonBadge>
+                  </div>
+                  <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
+                    Fan Commentary Feed
                   </IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
                   <div style={{ background: "#020617", padding: "12px", borderRadius: "8px", border: "1px solid #1e293b", marginBottom: "14px" }}>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc", marginBottom: "4px" }}>
-                      {clubAllegiance === "MCI" ? "Guardiola's Tactical Key:" : "Arteta's Tactical Key:"}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: 1.5 }}>
-                      {clubAllegiance === "MCI"
-                        ? "Utilize De Bruyne and Bernardo Silva as dual free-eights to overload the space behind Rice, dragging Gabriel forward."
-                        : "Maintain vertical compactness between Saliba and Rice. Do not let Haaland isolate 1v1 against the fullback."}
+                    <div style={{ fontSize: "13px", color: "#e2e8f0", lineHeight: 1.5 }}>
+                      {clubAllegiance === "MCI" ? (
+                        <>
+                          <strong style={{ color: "#00e5ff" }}>City Fan Pulse:</strong> "The pressure is immense! Arsenal cannot survive this siege for 90 minutes if De Bruyne keeps sliding those balls into the corridor. Haaland is hungry for the brace!"
+                        </>
+                      ) : (
+                        <>
+                          <strong style={{ color: "#f43f5e" }}>Gunners Fan Pulse:</strong> "Saka's goal was sheer perfection on the break! Hold the line, stay discipline in the double pivot, and the second counter will win this game for us!"
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      background: "#1e293b",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #334155",
-                    }}
-                  >
+                  <div style={{ background: "#1e293b", padding: "12px", borderRadius: "8px", border: "1px solid #334155" }}>
+                    <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600, marginBottom: "4px" }}>
+                      NEXT CRITICAL TACTICAL WINDOW
+                    </div>
                     <div style={{ fontSize: "12px", color: "#cbd5e1" }}>
                       {clubAllegiance === "MCI"
                         ? "Minutes 60-75: Expect Guardiola to introduce Doku on the left to force 1v1 overloads against White."
@@ -1279,18 +1021,13 @@ const PersonaPage: React.FC = () => {
         {/* ======================================================== */}
         <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
           <IonCardHeader style={{ paddingBottom: "10px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "8px",
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <div>
-                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0 }}>
-                  Multilingual Commentary
+                <IonCardSubtitle style={{ color: "#00e5ff", fontWeight: 700, letterSpacing: "0.5px" }}>
+                  MULTILINGUAL BROADCAST STREAM
+                </IonCardSubtitle>
+                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", marginTop: "2px" }}>
+                  Synchronous Localized Commentary Stream
                 </IonCardTitle>
               </div>
 
@@ -1356,7 +1093,7 @@ const PersonaPage: React.FC = () => {
                 }}
               >
                 <IonIcon icon={radioOutline} />
-                <span>{language.toUpperCase()}</span>
+                [Live Broadcast Teleprompter • {language.toUpperCase()}]
               </div>
 
               {/* Current Headline */}
@@ -1369,7 +1106,7 @@ const PersonaPage: React.FC = () => {
                   lineHeight: 1.5,
                 }}
               >
-                &ldquo;{activeStream.headline}&rdquo;
+                "{activeStream.headline}"
               </div>
 
               {/* Canonical Tactical Note */}
@@ -1398,6 +1135,64 @@ const PersonaPage: React.FC = () => {
                     {entry}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Broadcast Stream Studio Status Bar */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "8px",
+                fontSize: "11px",
+                background: "#020617",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                border: "1px solid #1e293b",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 8px", minWidth: 0 }}>
+                <IonIcon icon={globeOutline} style={{ color: "#38bdf8", fontSize: "14px", flexShrink: 0 }} />
+                <span style={{ color: "#e2e8f0", fontWeight: 700 }}>
+                  Gamoventure Premier League Studio Feed
+                </span>
+                <span style={{ color: "#64748b" }}>•</span>
+                <span style={{ color: "#94a3b8" }}>
+                  Synchronous 5-Language Stream
+                </span>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 8px", flexShrink: 0 }}>
+                <span
+                  style={{
+                    background: "rgba(0, 229, 255, 0.1)",
+                    color: "#00e5ff",
+                    border: "1px solid rgba(0, 229, 255, 0.25)",
+                    padding: "2px 8px",
+                    borderRadius: "4px",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  Gamoventure AI Engine
+                </span>
+                <span
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    color: "#34d399",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                    padding: "2px 8px",
+                    borderRadius: "4px",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  Live Sync 42ms
+                </span>
               </div>
             </div>
           </IonCardContent>

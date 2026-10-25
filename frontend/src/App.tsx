@@ -25,9 +25,7 @@ import TacticalPage from "./pages/TacticalPage";
 import PersonaPage from "./pages/PersonaPage";
 import StudioControlPage from "./pages/StudioControlPage";
 import { SidebarNav } from "./components/SidebarNav";
-import { TacticalCopilotDrawer } from "./components/TacticalCopilotDrawer";
 import { telemetryService } from "./services/telemetryService";
-import { useBaseMemory } from "./store/baseMemory";
 
 /* Core CSS required for Ionic components to work properly */
 import "@ionic/react/css/core.css";
@@ -60,8 +58,6 @@ const AppShell: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
-  const theme = useBaseMemory((s) => s.theme);
 
   useEffect(() => {
     const path = location.pathname.replace("/", "");
@@ -69,34 +65,24 @@ const AppShell: React.FC = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    // Apply theme classes to document
-    const isDark = theme === "dark";
-    document.documentElement.classList.toggle("dark", isDark);
-    document.documentElement.classList.toggle("ion-palette-dark", isDark);
-    document.body.classList.toggle("dark", isDark);
-    document.body.classList.toggle("ion-palette-dark", isDark);
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+    // Permanent Dark Mode initialization
+    document.documentElement.classList.add("dark", "ion-palette-dark");
+    document.body.classList.add("dark", "ion-palette-dark");
+    document.documentElement.setAttribute("data-theme", "dark");
+  }, []);
 
   const handleSelectTab = (tab: string) => {
     setActiveTab(tab);
-    navigate(`/${tab}`);
+    const targetPath = `/${tab}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
   };
 
   return (
-    <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
+    <div style={{ display: "flex", width: "100%", height: "100%", minHeight: "100dvh", maxHeight: "100dvh", overflow: "hidden", position: "relative", backgroundColor: "#080d16" }}>
       {/* Desktop/Tablet Left Navigation Rail (Matching Reference Design) */}
-      <SidebarNav
-        activeTab={activeTab}
-        onSelectTab={handleSelectTab}
-        onOpenCopilot={() => setIsCopilotOpen(true)}
-      />
-
-      {/* Slide-out Tactical Copilot Drawer */}
-      <TacticalCopilotDrawer
-        isOpen={isCopilotOpen}
-        onClose={() => setIsCopilotOpen(false)}
-      />
+      <SidebarNav activeTab={activeTab} onSelectTab={handleSelectTab} />
 
       {/* Main Workspace Area */}
       <div style={{ flex: 1, minWidth: 0, height: "100%", overflow: "hidden", position: "relative" }}>
@@ -111,30 +97,55 @@ const AppShell: React.FC = () => {
           </IonRouterOutlet>
 
           {/* Bottom iOS Tab Bar (visible on mobile screens) */}
-          <IonTabBar slot="bottom" mode="ios" className="ion-hide-md-up">
-            <IonTabButton tab="dashboard" href="/dashboard">
+          <IonTabBar slot="bottom" mode="ios" className="ion-hide-md-up studio-mobile-tab-bar">
+            <IonTabButton
+              tab="dashboard"
+              href="/dashboard"
+              selected={activeTab === "dashboard"}
+              onClick={() => handleSelectTab("dashboard")}
+            >
               <IonIcon aria-hidden="true" icon={homeOutline} />
               <IonLabel>Dashboard</IonLabel>
             </IonTabButton>
 
-            <IonTabButton tab="pitch" href="/pitch">
+            <IonTabButton
+              tab="pitch"
+              href="/pitch"
+              selected={activeTab === "pitch"}
+              onClick={() => handleSelectTab("pitch")}
+            >
               <IonIcon aria-hidden="true" icon={footballOutline} />
               <IonLabel>Pitch</IonLabel>
             </IonTabButton>
 
-            <IonTabButton tab="tactical" href="/tactical">
+            <IonTabButton
+              tab="tactical"
+              href="/tactical"
+              selected={activeTab === "tactical"}
+              onClick={() => handleSelectTab("tactical")}
+            >
               <IonIcon aria-hidden="true" icon={analyticsOutline} />
               <IonLabel>Tactical</IonLabel>
             </IonTabButton>
 
-            <IonTabButton tab="personas" href="/personas">
+            <IonTabButton
+              tab="personas"
+              href="/personas"
+              selected={activeTab === "personas"}
+              onClick={() => handleSelectTab("personas")}
+            >
               <IonIcon aria-hidden="true" icon={peopleOutline} />
               <IonLabel>Personas</IonLabel>
             </IonTabButton>
 
-            <IonTabButton tab="diagnostics" href="/diagnostics">
+            <IonTabButton
+              tab="diagnostics"
+              href="/diagnostics"
+              selected={activeTab === "diagnostics"}
+              onClick={() => handleSelectTab("diagnostics")}
+            >
               <IonIcon aria-hidden="true" icon={settingsOutline} />
-              <IonLabel>Diagnostics</IonLabel>
+              <IonLabel>Studio</IonLabel>
             </IonTabButton>
           </IonTabBar>
         </IonTabs>
