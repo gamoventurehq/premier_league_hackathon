@@ -20,6 +20,8 @@ from ..models import (
     ScenarioSummary,
     SyntheticScenarioType,
     ToolDescriptor,
+    CopilotQueryRequest,
+    CopilotQueryResponse,
 )
 from ..simulation.engine import SCENARIO_ORDER, SCENARIOS
 from ..simulation.metrics import format_match_clock
@@ -209,3 +211,124 @@ async def set_playback_speed(request: Request, payload: PlaybackSpeedRequest) ->
 
 
 __all__ = ["router"]
+
+@router.post("/api/copilot/query", response_model=CopilotQueryResponse, tags=["copilot"])
+async def copilot_query(request: Request, payload: CopilotQueryRequest) -> CopilotQueryResponse:
+    """Query the Tactical Copilot agent directly with live match telemetry grounding."""
+    runtime = _runtime(request)
+    frame = runtime.latest_frame() or runtime.engine.build_frame()
+    settings = runtime.settings
+    match_clock = frame.matchClock
+    query = payload.query.strip()
+    lower_q = query.lower()
+
+    # 1. Compile real-time tactical facts from the frame
+    metrics = frame.metrics
+    control = round(metrics.controlVsChaosIndex)
+    rhythm = str(metrics.gameRhythm.value if hasattr(metrics.gameRhythm, 'value') else metrics.gameRhythm)
+    pdr = round(metrics.passDifficultyRating, 1)
+    split = metrics.pitchControl
+    home_ctrl = round(split.home, 1)
+    away_ctrl = round(split.away, 1)
+    contested_ctrl = round(split.contested, 1)
+
+    player_stats = list(frame.playerStats)
+    sorted_players = sorted(player_stats, key=lambda s: s.rating)
+    best_p = sorted_players[-1] if sorted_players else None
+    worst_p = sorted_players[0] if sorted_players else None
+
+    # 2. Check if local LLM is enabled and responsive
+    if settings.llm_enabled:
+        try:
+            import urllib.request, json
+            base_url = settings.effective_llm_base_url.rstrip("/")
+            url = f"{base_url}/chat/completions"
+            model = settings.effective_llm_model
+
+            stats_summary = []
+            for p in sorted_players[:3]:
+                acc = round((p.passesCompleted / max(1, p.passesAttempted)) * 100)
+                stats_summary.append(f"{p.name} ({p.team.value if hasattr(p.team, 'value') else p.team}, {p.position}): Rating {p.rating:.1f}/10, {p.touches} touches, {p.passesCompleted}/{p.passesAttempted} passes ({acc}%)")
+            for p in sorted_players[-3:]:
+                acc = round((p.passesCompleted / max(1, p.passesAttempted)) * 100)
+                stats_summary.append(f"{p.name} ({p.team.value if hasattr(p.team, 'value') else p.team}, {p.position}): Rating {p.rating:.1f}/10, {p.touches} touches, {p.passesCompleted}/{p.passesAttempted} passes ({acc}%), top speed {p.topSpeedKmH:.1f} km/h")
+
+            recent_events = [f"[{e.matchClock}] {e.description}" for e in frame.events[-4:]]
+
+            context_prompt = (
+                f"MATCH CONTEXT (Clock: {match_clock}, Scenario: {frame.scenario.value if hasattr(frame.scenario, 'value') else frame.scenario}):\n"
+                f"- Tactical Rhythm: {rhythm}, Control vs Chaos Index: {control}/100, Pass Difficulty Rating: {pdr}\n"
+                f"- Pitch Control: Manchester City {home_ctrl}% vs Arsenal {away_ctrl}% (Contested: {contested_ctrl}%)\n"
+                f"- Player Ratings & Statistics:\n  " + "\n  ".join(stats_summary) + "\n"
+                f"- Recent Events:\n  " + "\n  ".join(recent_events) + "\n\n"
+                f"User Question: {query}\n\n"
+                "Instructions: Answer concisely (2-3 sentences max) with strict tactical grounding in the data provided above. Mention specific player names and statistics."
+            )
+
+            req_payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": "You are the Premier League Studio Tactical Copilot AI. Ground all insights strictly in live telemetry."},
+                    {"role": "user", "content": context_prompt}
+                ],
+                "max_tokens": 150,
+                "temperature": 0.2
+            }
+
+            headers = {"Content-Type": "application/json"}
+            if settings.effective_llm_api_key:
+                headers["Authorization"] = f"Bearer {settings.effective_llm_api_key}"
+
+            req = urllib.request.Request(url, data=json.dumps(req_payload).encode(), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=12.0) as resp:
+                data = json.loads(resp.read().decode())
+                ans = data["choices"][0]["message"]["content"].strip()
+                return CopilotQueryResponse(
+                    answer=ans,
+                    source=f"local_llm ({settings.active_llm_provider})",
+                    model=model,
+                    matchClock=match_clock,
+                    toolUsed="llm_tactical_copilot",
+                )
+        except Exception as exc:
+            logger.warning("Local LLM inference failed: %s, falling back to deterministic reasoning", exc)
+
+    # 3. Deterministic Grounded Reasoning Fallback
+    if "worst" in lower_q or "poor" in lower_q or "struggling" in lower_q or "bad" in lower_q:
+        acc = round((worst_p.passesCompleted / max(1, worst_p.passesAttempted)) * 100) if worst_p else 0
+        ans = (
+            f"Under-Performer Grounding: {worst_p.name} ({worst_p.team.value.upper() if hasattr(worst_p.team, 'value') else str(worst_p.team).upper()} #{worst_p.number}) "
+            f"registers the lowest match rating ({worst_p.rating:.1f}/10) with only {worst_p.touches} touches and {worst_p.passesCompleted}/{worst_p.passesAttempted} passes completed ({acc}% accuracy)."
+            if worst_p else "All players performing at baseline."
+        )
+        tool = "tactical_reasoning:player_ratings"
+    elif "best" in lower_q or "top" in lower_q or "mvp" in lower_q:
+        acc = round((best_p.passesCompleted / max(1, best_p.passesAttempted)) * 100) if best_p else 0
+        ans = (
+            f"Top Performer Grounding: {best_p.name} ({best_p.team.value.upper() if hasattr(best_p.team, 'value') else str(best_p.team).upper()} #{best_p.number}) "
+            f"leads with a {best_p.rating:.1f}/10 rating, {best_p.touches} touches, {best_p.passesCompleted}/{best_p.passesAttempted} completed passes ({acc}% accuracy), and top speed of {best_p.topSpeedKmH:.1f} km/h."
+            if best_p else "All players performing at baseline."
+        )
+        tool = "tactical_reasoning:player_ratings"
+    elif "pitch" in lower_q or "dominance" in lower_q or "space" in lower_q:
+        ans = f"Pitch Dominance Grounding: Manchester City hold {home_ctrl}% territorial dominance versus Arsenal's {away_ctrl}%, with {contested_ctrl}% contested space in the current sequence."
+        tool = "get_pitch_control"
+    elif "inflection" in lower_q or "shift" in lower_q or "momentum" in lower_q:
+        inflections = runtime.get_inflection_points(limit=3)
+        if inflections:
+            ans = f"Tactical Inflections: Latest shift at {inflections[-1]['matchClock']} - {inflections[-1]['description']}"
+        else:
+            ans = "No severe tactical inflection points detected in the current sequence; positional structure remains stable."
+        tool = "get_inflection_points"
+    else:
+        ans = f"Tactical Context at {match_clock}: Game rhythm is '{rhythm}' with Control vs Chaos Index at {control}/100 and Pass Difficulty Rating at {pdr}."
+        tool = "get_tactical_state"
+
+    return CopilotQueryResponse(
+        answer=ans,
+        source="deterministic_swarm_grounding",
+        model=None,
+        matchClock=match_clock,
+        toolUsed=tool,
+    )
+
