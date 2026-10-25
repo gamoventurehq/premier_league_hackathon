@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { baseMemory, normalizeFrame, normalizeBlackboard } from "./baseMemory";
+import { baseMemory, normalizeFrame, normalizeBlackboard, sanitizeText } from "./baseMemory";
 
 describe("baseMemory Normalization & Contract Synchronization", () => {
   it("normalizes backend Pydantic TelemetryFrame into Studio FrameTelemetry without errors", () => {
@@ -180,5 +180,70 @@ describe("baseMemory Normalization & Contract Synchronization", () => {
 
     expect(() => baseMemory.updateFrame(null)).not.toThrow();
     expect(() => baseMemory.updateBlackboard(null)).not.toThrow();
+  });
+
+  it("reactively switches between all 5 supported languages and updates narrative headline and explanation", () => {
+    baseMemory.resetScenario();
+    // English
+    baseMemory.setLanguage("en");
+    expect(baseMemory.language).toBe("en");
+    let bb = baseMemory.getState().blackboard;
+    expect(bb.narrative_headline).toContain("Man City sustained possession");
+    expect(bb.narrative_explanation).toContain("High territorial compression");
+
+    // Spanish
+    baseMemory.setLanguage("es");
+    expect(baseMemory.language).toBe("es");
+    bb = baseMemory.getState().blackboard;
+    expect(bb.narrative_headline).toContain("Posesión sostenida del Man City");
+    expect(bb.narrative_explanation).toContain("Alta compresión territorial");
+
+    // French
+    baseMemory.setLanguage("fr");
+    expect(baseMemory.language).toBe("fr");
+    bb = baseMemory.getState().blackboard;
+    expect(bb.narrative_headline).toContain("Possession soutenue de Man City");
+    expect(bb.narrative_explanation).toContain("Forte compression territoriale");
+
+    // Japanese
+    baseMemory.setLanguage("ja");
+    expect(baseMemory.language).toBe("ja");
+    bb = baseMemory.getState().blackboard;
+    expect(bb.narrative_headline).toContain("マンチェスター・シティ");
+    expect(bb.narrative_explanation).toContain("中央レーンでの高い陣形圧縮");
+
+    // Arabic
+    baseMemory.setLanguage("ar");
+    expect(baseMemory.language).toBe("ar");
+    bb = baseMemory.getState().blackboard;
+    expect(bb.narrative_headline).toContain("مانشستر سيتي");
+    expect(bb.narrative_explanation).toContain("ضغط مساحي مكثف");
+
+    // Reset back to English
+    baseMemory.setLanguage("en");
+    expect(baseMemory.language).toBe("en");
+  });
+
+  it("sanitizeText cleanly unwraps multilingual objects and guards against object stringification and NarrativeDraft artifacts", () => {
+    expect(sanitizeText(null, "fallback")).toBe("fallback");
+    expect(sanitizeText(undefined, "fallback")).toBe("fallback");
+    expect(sanitizeText("[object Object]", "fallback")).toBe("fallback");
+    expect(sanitizeText("NarrativeDraft(headline='test')", "fallback")).toBe("fallback");
+
+    const multi = { en: "English headline", es: "Titular en español" };
+    expect(sanitizeText(multi, "fallback", "es")).toBe("Titular en español");
+    expect(sanitizeText(multi, "fallback", "en")).toBe("English headline");
+    expect(sanitizeText({ en: "Only English" }, "fallback", "fr")).toBe("Only English");
+    expect(sanitizeText("Clean direct string", "fallback")).toBe("Clean direct string");
+  });
+
+  it("exposes baseMemory.language getter matching selectedLanguage", () => {
+    baseMemory.setLanguage("ja");
+    expect(baseMemory.language).toBe("ja");
+    expect(baseMemory.getState().selectedLanguage).toBe("ja");
+
+    baseMemory.setLanguage("en");
+    expect(baseMemory.language).toBe("en");
+    expect(baseMemory.getState().selectedLanguage).toBe("en");
   });
 });

@@ -61,6 +61,10 @@ def make_event(
     xg: float | None = None,
     pdr: float | None = None,
     completed: bool | None = None,
+    pitch_sector: str | None = None,
+    speed_kmh: float | None = None,
+    sub_action: str | None = None,
+    secondary_actor_id: str | None = None,
 ) -> MatchEvent:
     """Build a contract-valid :class:`MatchEvent`."""
     return MatchEvent(
@@ -77,6 +81,10 @@ def make_event(
         pdr=pdr,
         completed=completed,
         description=description,
+        pitchSector=pitch_sector,
+        speedKmH=speed_kmh,
+        subAction=sub_action,
+        secondaryActorId=secondary_actor_id,
     )
 
 

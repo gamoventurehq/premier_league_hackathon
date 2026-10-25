@@ -116,10 +116,10 @@ class FanPersonalizationAgent:
             f"Pass Difficulty Rating {frame.metrics.passDifficultyRating:.1f} | "
             f"Control vs. Chaos Index {frame.metrics.controlVsChaosIndex:.1f}"
         )
-        casual = f"{frame.matchClock} - the match is unfolding at {frame.matchClock}."
+        casual = f"{frame.matchClock} — High-octane Premier League clash! The intensity is palpable under the floodlights."
         club = {
-            "homeFrame": f"City hold {frame.metrics.pitchControl.home:.1f}% of the Pitch Space.",
-            "awayFrame": f"Arsenal hold {frame.metrics.pitchControl.away:.1f}% of the Pitch Space.",
+            "homeFrame": f"City command {frame.metrics.pitchControl.home:.1f}% of the pitch with relentless territorial control.",
+            "awayFrame": f"Arsenal lock down {frame.metrics.pitchControl.away:.1f}% of the territory, maintaining rigid defensive shape.",
         }
         player_cam = self._player_cam(frame, "the tracked player")
         view.write(K_ANALYST_CONTEXT, analyst)
@@ -163,9 +163,7 @@ class FanPersonalizationAgent:
             f"Game Rhythm {rhythm} | principal actor {lead}"
         )
 
-        casual = (
-            f"{clock} - {arc}. {self._casual_sentence(frame, phase_label, lead)}"
-        )
+        casual = f"{clock} - {arc}. {self._casual_sentence(frame, phase_label, lead)}"
 
         home_frame = (
             f"{lead} is running the {phase_label} phase; City hold {home_control:.1f}% of the "
@@ -191,22 +189,22 @@ class FanPersonalizationAgent:
         scenario = frame.scenario.value
         if scenario == "high_possession":
             return (
-                f"City keep the ball and squeeze the space out of the game - {lead} is the one "
-                f"asking Arsenal to come and get it."
+                f"Total dominance from City! They are suffocating the pitch and dictating every blade of grass, "
+                f"with {lead} conducting the orchestra."
             )
         if scenario == "counter_attack_transition":
             return (
-                f"Straight down the middle! {lead} breaks at pace and the whole shape turns to "
-                f"chase - the game has suddenly become very fast."
+                f"Sensational break! {lead} bursts forward with frightening speed as the stadium roars — "
+                f"Arsenal are carving City wide open on the counter!"
             )
         if scenario == "low_block_siege":
             return (
-                f"Arsenal have packed the box and City are passing it sideways, looking for one "
-                f"gap - {lead} is still waiting for the moment."
+                f"Absolute siege at the Emirates! Arsenal have thrown up a brick wall inside the box, "
+                f"and {lead} is probing patiently for the killer ball."
             )
         return (
-            f"Everyone is lunging at it! {lead} cannot get a clean touch and the ball is bobbing "
-            f"around the six-yard box."
+            f"Heart-stopping chaos in the six-yard box! Desperate lunges, sliding tackles, and {lead} "
+            f"fighting tooth and nail for the rebound!"
         )
 
     def _player_cam(self, frame, lead: str) -> str:

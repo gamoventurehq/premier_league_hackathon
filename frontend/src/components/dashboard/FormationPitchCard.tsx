@@ -98,9 +98,6 @@ export const FormationPitchCard: React.FC = () => {
         }}
       >
         <span style={{ color: "#00e5ff" }}>4 - 3 - 3</span>
-        <span style={{ color: "var(--studio-subtext)", fontSize: "11px", letterSpacing: "1px" }}>
-          FORMATION
-        </span>
         <span style={{ color: "#f43f5e" }}>4 - 2 - 3 - 1</span>
       </div>
 
@@ -373,7 +370,6 @@ export const FormationPitchCard: React.FC = () => {
           {/* Header Legend */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 8px" }}>
             <span style={{ fontSize: "12px", fontWeight: 800, color: "#00e5ff" }}>Manchester City</span>
-            <span style={{ fontSize: "11px", color: "var(--studio-subtext)", fontWeight: 700, textTransform: "uppercase" }}>Match Comparison</span>
             <span style={{ fontSize: "12px", fontWeight: 800, color: "#f43f5e" }}>Arsenal</span>
           </div>
 
@@ -442,9 +438,6 @@ export const FormationPitchCard: React.FC = () => {
             <div>
               <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--ion-text-color)" }}>
                 Tactical Inflection Engine • Live Narrative
-              </div>
-              <div style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
-                Synthesized across Telemetry, Tactical, and Narrative Agent Swarm
               </div>
             </div>
           </div>

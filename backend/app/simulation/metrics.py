@@ -180,7 +180,9 @@ def chaos_inputs(observations: MatchObservations) -> ChaosInputs:
     """Derive the normalised chaos inputs from the observed match state."""
     variability = _sequence_variability(observations.sequence_durations)
     turnover_rate = _clamp01((observations.turnover_count / observations.minutes) / TURNOVER_RATE_SCALE)
-    transition_rate = _clamp01((observations.possession_changes / observations.minutes) / TRANSITION_RATE_SCALE)
+    transition_rate = _clamp01(
+        (observations.possession_changes / observations.minutes) / TRANSITION_RATE_SCALE
+    )
     pressure_share = (
         observations.passes_under_pressure / observations.pass_attempts if observations.pass_attempts else 0.0
     )

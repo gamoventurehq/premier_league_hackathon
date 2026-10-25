@@ -13,31 +13,99 @@ import {
   swapHorizontalOutline,
   warningOutline,
   videocamOutline,
+  shieldCheckmarkOutline,
+  handLeftOutline,
+  flashOutline,
+  gitBranchOutline,
+  refreshOutline,
+  radioOutline,
+  checkmarkDoneOutline,
+  arrowForwardCircleOutline,
+  shuffleOutline,
+  sparklesOutline,
+  trendingUpOutline,
+  arrowUpCircleOutline,
+  flameOutline,
+  navigateOutline,
+  gitCompareOutline,
+  flagOutline,
+  locateOutline,
+  alertCircleOutline,
+  pulseOutline,
+  handRightOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
+import { MatchEvent } from "../../types/telemetry";
 
-interface MatchEventItem {
-  id: string;
-  time: string;
-  timeSec: number;
-  type: "goal" | "sub" | "card";
-  player: string;
-  playerId: string;
-  detail?: string;
-  score?: string;
-  subOut?: string;
+export function getMatchEventVisuals(evt: MatchEvent) {
+  switch (evt.type) {
+    case "clearance":
+      return { icon: shieldCheckmarkOutline, color: "#3b82f6", bg: "rgba(59, 130, 246, 0.18)", tag: "CLEARANCE" };
+    case "block":
+      return { icon: handLeftOutline, color: "#6366f1", bg: "rgba(99, 102, 241, 0.18)", tag: "BLOCK" };
+    case "tackle":
+      return { icon: flashOutline, color: "#0284c7", bg: "rgba(2, 132, 199, 0.18)", tag: "TACKLE" };
+    case "interception":
+      return { icon: gitBranchOutline, color: "#06b6d4", bg: "rgba(6, 182, 212, 0.18)", tag: "INTERCEPT" };
+    case "recovery":
+      return { icon: refreshOutline, color: "#0ea5e9", bg: "rgba(14, 165, 233, 0.18)", tag: "RECOVERY" };
+    case "save":
+      return { icon: shieldCheckmarkOutline, color: "#ec4899", bg: "rgba(236, 72, 153, 0.18)", tag: "REFLEX SAVE" };
+    case "punch":
+      return { icon: radioOutline, color: "#d946ef", bg: "rgba(217, 70, 239, 0.18)", tag: "PUNCH" };
+    case "claim":
+      return { icon: checkmarkDoneOutline, color: "#a855f7", bg: "rgba(168, 85, 247, 0.18)", tag: "CLAIM" };
+    case "goal_kick":
+      return { icon: arrowForwardCircleOutline, color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.18)", tag: "GOAL KICK" };
+    case "cross":
+      return { icon: shuffleOutline, color: "#10b981", bg: "rgba(16, 185, 129, 0.18)", tag: "CROSS" };
+    case "key_pass":
+      return { icon: sparklesOutline, color: "#eab308", bg: "rgba(234, 179, 8, 0.18)", tag: "KEY PASS" };
+    case "progressive_carry":
+      return { icon: trendingUpOutline, color: "#14b8a6", bg: "rgba(20, 184, 166, 0.18)", tag: "CARRY" };
+    case "aerial_duel":
+      return { icon: arrowUpCircleOutline, color: "#f97316", bg: "rgba(249, 115, 22, 0.18)", tag: "AERIAL DUEL" };
+    case "shot":
+      return { icon: flameOutline, color: "#f59e0b", bg: "rgba(245, 158, 11, 0.18)", tag: "SHOT" };
+    case "goal":
+      return { icon: footballOutline, color: "#22c55e", bg: "rgba(34, 197, 94, 0.22)", tag: "GOAL" };
+    case "pass":
+      return { icon: swapHorizontalOutline, color: "#64748b", bg: "rgba(100, 116, 139, 0.18)", tag: "PASS" };
+    case "carry":
+      return { icon: navigateOutline, color: "#64748b", bg: "rgba(100, 116, 139, 0.18)", tag: "CARRY" };
+    case "duel":
+      return { icon: gitCompareOutline, color: "#f97316", bg: "rgba(249, 115, 22, 0.18)", tag: "DUEL" };
+    case "turnover":
+      return { icon: repeatOutline, color: "#e11d48", bg: "rgba(225, 29, 72, 0.18)", tag: "TURNOVER" };
+    case "corner_kick":
+      return { icon: flagOutline, color: "#c084fc", bg: "rgba(192, 132, 252, 0.18)", tag: "CORNER" };
+    case "free_kick":
+      return { icon: locateOutline, color: "#38bdf8", bg: "rgba(56, 189, 248, 0.18)", tag: "FREE KICK" };
+    case "yellow_card":
+      return { icon: warningOutline, color: "#eab308", bg: "rgba(234, 179, 8, 0.22)", tag: "CAUTION" };
+    case "red_card":
+      return { icon: alertCircleOutline, color: "#ef4444", bg: "rgba(239, 68, 68, 0.25)", tag: "RED CARD" };
+    case "foul":
+      return { icon: warningOutline, color: "#fb923c", bg: "rgba(251, 146, 60, 0.18)", tag: "FOUL" };
+    case "offside":
+      return { icon: handRightOutline, color: "#94a3b8", bg: "rgba(148, 163, 184, 0.18)", tag: "OFFSIDE" };
+    case "inflection":
+      return { icon: pulseOutline, color: "#00e5ff", bg: "rgba(0, 229, 255, 0.20)", tag: "INFLECTION" };
+    default:
+      return { icon: footballOutline, color: "#38bdf8", bg: "rgba(56, 189, 248, 0.18)", tag: "EVENT" };
+  }
 }
 
-const simulatedEvents: MatchEventItem[] = [
-  { id: "e1", time: "90'+1", timeSec: 5460, type: "card", player: "E. Eze Fouls", playerId: "away_2", detail: "Tactical breakdown" },
-  { id: "e2", time: "88'", timeSec: 5280, type: "sub", player: "A. Diallo", subOut: "N. Mazraoui", playerId: "away_7" },
-  { id: "e3", time: "87'", timeSec: 5220, type: "goal", player: "K. De Bruyne", score: "2 - 3", playerId: "home_7" },
-  { id: "e4", time: "84'", timeSec: 5040, type: "goal", player: "B. Saka", score: "2 - 2", playerId: "away_8" },
-  { id: "e5", time: "81'", timeSec: 4860, type: "sub", player: "P. Dorgu", subOut: "B. Šeško", playerId: "away_5" },
-  { id: "e6", time: "75'", timeSec: 4500, type: "sub", player: "J. Grealish", subOut: "P. Foden", playerId: "home_11" },
-  { id: "e7", time: "69'", timeSec: 4140, type: "goal", player: "E. Haaland", score: "1 - 2", playerId: "home_10" },
-  { id: "e8", time: "64'", timeSec: 3840, type: "card", player: "D. Rice Fouls", playerId: "away_7", detail: "Yellow card" },
-  { id: "e9", time: "42'", timeSec: 2520, type: "goal", player: "E. Haaland", score: "1 - 0", playerId: "home_10" },
+const sampleMatchEvents: MatchEvent[] = [
+  { id: "e1", matchClock: "90'+1", timestampMs: 5460000, type: "yellow_card", actorId: "away_2", targetId: null, x: 75, y: 30, team: "away", pitchSector: "Defensive Corridor", description: "E. Eze Cautioned • Tactical Breakdown" },
+  { id: "e2", matchClock: "88'", timestampMs: 5280000, type: "tackle", actorId: "away_7", targetId: null, x: 60, y: 35, team: "away", pitchSector: "Midfield Pivot", description: "D. Rice Ground Challenge Won" },
+  { id: "e3", matchClock: "87'", timestampMs: 5220000, type: "key_pass", actorId: "home_7", targetId: "home_10", x: 68, y: 22, team: "home", pitchSector: "Right Half-Space", pdr: 88, description: "K. De Bruyne Line-Breaking Key Pass" },
+  { id: "e4", matchClock: "84'", timestampMs: 5040000, type: "goal", actorId: "away_8", targetId: null, x: 92, y: 32, team: "away", score: { home: 1, away: 1 }, speedKmH: 33.8, xG: 0.72, pitchSector: "Right Flank", description: "B. Saka Equalizer Goal!" },
+  { id: "e5", matchClock: "81'", timestampMs: 4860000, type: "cross", actorId: "away_5", targetId: null, x: 88, y: 15, team: "away", pitchSector: "Left Channel", pdr: 82, description: "P. Dorgu Whipped Cross" },
+  { id: "e6", matchClock: "75'", timestampMs: 4500000, type: "progressive_carry", actorId: "home_11", targetId: null, x: 55, y: 48, team: "home", speedKmH: 29.4, pitchSector: "Left Flank", description: "J. Grealish Vertical Progression" },
+  { id: "e7", matchClock: "69'", timestampMs: 4140000, type: "clearance", actorId: "away_6", targetId: null, x: 12, y: 34, team: "away", pitchSector: "Penalty Box", description: "Gabriel Critical Box Clearance" },
+  { id: "e8", matchClock: "64'", timestampMs: 3840000, type: "save", actorId: "away_1", targetId: null, x: 5, y: 34, team: "away", speedKmH: 98.2, xG: 0.64, pitchSector: "Goal Line", description: "D. Raya Reflex Diving Save" },
+  { id: "e9", matchClock: "42'", timestampMs: 2520000, type: "goal", actorId: "home_10", targetId: "home_7", x: 95, y: 34, team: "home", score: { home: 1, away: 0 }, speedKmH: 108.4, xG: 0.78, pitchSector: "Penalty Box", description: "E. Haaland Opening Goal!" },
 ];
 
 const TOTAL_MATCH_SEC = 5400; // 90 minutes
@@ -49,6 +117,10 @@ export const MediaTimelinePanel: React.FC = () => {
 
   const matchClock = useBaseMemory((s) => s.matchClock);
   const score = useBaseMemory((s) => s.score);
+  const liveMatchEvents = useBaseMemory((s) => s.matchEvents);
+  const displayEvents: MatchEvent[] = (liveMatchEvents && liveMatchEvents.length > 0)
+    ? liveMatchEvents
+    : sampleMatchEvents;
 
   const formatClock = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -74,10 +146,13 @@ export const MediaTimelinePanel: React.FC = () => {
     baseMemory.setMatchClock(nextSec);
   };
 
-  const handleSelectEvent = (evt: MatchEventItem) => {
+  const handleSelectEvent = (evt: MatchEvent) => {
     setSelectedEventId(evt.id);
-    baseMemory.setMatchClock(evt.timeSec);
-    baseMemory.setSelectedPlayer(evt.playerId);
+    const targetSec = evt.timestampMs ? Math.round(evt.timestampMs / 1000) : 0;
+    baseMemory.setMatchClock(targetSec);
+    if (evt.actorId) {
+      baseMemory.setSelectedPlayer(evt.actorId);
+    }
   };
 
   const playheadPercent = Math.min(100, Math.max(0, (matchClock / TOTAL_MATCH_SEC) * 100));
@@ -149,7 +224,7 @@ export const MediaTimelinePanel: React.FC = () => {
 
           <div style={{ textAlign: "center", color: "var(--studio-subtext)", fontSize: "12px" }}>
             <IonIcon icon={videocamOutline} style={{ fontSize: "28px", color: "var(--ion-color-secondary)", display: "block", margin: "0 auto 4px" }} />
-            <span>Simulated Broadcast Camera (Angle 1)</span>
+            <span>Main Camera</span>
           </div>
         </div>
 
@@ -170,7 +245,6 @@ export const MediaTimelinePanel: React.FC = () => {
             <span style={{ position: "absolute", top: "4px", left: "6px", fontSize: "9px", color: "#00e5ff", fontWeight: 700 }}>
               Player Cam (K. De Bruyne)
             </span>
-            <span style={{ fontSize: "11px", color: "#94a3b8" }}>Optical Isolation</span>
           </div>
 
           {/* Angle 3: Ball Physics Tracking */}
@@ -374,12 +448,30 @@ export const MediaTimelinePanel: React.FC = () => {
           overflowY: "auto",
         }}
       >
-        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--studio-subtext)", textTransform: "uppercase" }}>
-          Match Events Timeline (Click to Jump)
-        </span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "12px", fontWeight: 800, color: "var(--ion-text-color)" }}>
+            Match Events Timeline
+          </span>
+          <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--studio-subtext)", fontFamily: "monospace" }}>
+            {displayEvents.length} Events Logged
+          </span>
+        </div>
 
-        {simulatedEvents.map((evt) => {
+        {displayEvents.map((evt) => {
           const isSelected = selectedEventId === evt.id;
+          const visuals = getMatchEventVisuals(evt);
+          const metricPill = evt.xG !== undefined
+            ? `xG: ${evt.xG.toFixed(2)}`
+            : evt.pdr !== undefined
+            ? `PDR: ${Math.round(evt.pdr)}%`
+            : evt.speedKmH
+            ? `${evt.speedKmH.toFixed(1)} km/h`
+            : evt.score && evt.type === "goal"
+            ? `${evt.score.home} - ${evt.score.away}`
+            : evt.pitchSector
+            ? evt.pitchSector
+            : null;
+
           return (
             <div
               key={evt.id}
@@ -395,44 +487,66 @@ export const MediaTimelinePanel: React.FC = () => {
                 border: isSelected ? "1.5px solid #7c3aed" : "1px solid var(--studio-panel-border)",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
+                gap: "8px",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontWeight: 800, fontFamily: "monospace", color: isSelected ? "#00e5ff" : "var(--ion-color-primary)", minWidth: "34px" }}>
-                  {evt.time}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: "1 1 auto" }}>
+                <span style={{ fontWeight: 800, fontFamily: "monospace", color: isSelected ? "#00e5ff" : "var(--ion-color-primary)", minWidth: "34px", flexShrink: 0 }}>
+                  {evt.matchClock}
                 </span>
-                {evt.type === "goal" && (
-                  <IonIcon icon={footballOutline} style={{ color: "#10b981", fontSize: "15px" }} />
-                )}
-                {evt.type === "sub" && (
-                  <IonIcon icon={swapHorizontalOutline} style={{ color: "#38bdf8", fontSize: "15px" }} />
-                )}
-                {evt.type === "card" && (
-                  <IonIcon icon={warningOutline} style={{ color: "#f59e0b", fontSize: "15px" }} />
-                )}
-                <span style={{ fontWeight: 700, color: "var(--ion-text-color)" }}>
-                  {evt.player}
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "22px",
+                    height: "22px",
+                    borderRadius: "5px",
+                    backgroundColor: visuals.bg,
+                    flexShrink: 0,
+                  }}
+                >
+                  <IonIcon icon={visuals.icon} style={{ color: visuals.color, fontSize: "14px" }} />
+                </div>
+
+                <span
+                  style={{
+                    backgroundColor: visuals.bg,
+                    color: visuals.color,
+                    padding: "1px 5px",
+                    borderRadius: "3px",
+                    fontWeight: 900,
+                    fontSize: "8.5px",
+                    letterSpacing: "0.4px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {visuals.tag}
+                </span>
+
+                <span style={{ fontWeight: 700, color: "var(--ion-text-color)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {evt.description || `${evt.actorId || 'Player'} ${evt.type}`}
                 </span>
               </div>
 
-              {evt.score ? (
+              {metricPill && (
                 <span
                   style={{
-                    backgroundColor: "rgba(16, 185, 129, 0.2)",
-                    color: "#10b981",
+                    backgroundColor: evt.type === "goal" ? "rgba(34, 197, 94, 0.2)" : "rgba(255, 255, 255, 0.08)",
+                    color: evt.type === "goal" ? "#22c55e" : "#94a3b8",
                     padding: "2px 7px",
                     borderRadius: "4px",
                     fontWeight: 800,
-                    fontSize: "10px",
+                    fontSize: "9.5px",
+                    fontFamily: "monospace",
+                    flexShrink: 0,
+                    border: evt.type === "goal" ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid rgba(255, 255, 255, 0.1)",
                   }}
                 >
-                  {evt.score}
+                  {metricPill}
                 </span>
-              ) : evt.subOut ? (
-                <span style={{ color: "var(--studio-subtext)", fontSize: "10px" }}>
-                  ⇄ {evt.subOut}
-                </span>
-              ) : null}
+              )}
             </div>
           );
         })}

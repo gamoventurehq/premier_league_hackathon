@@ -82,6 +82,7 @@ export interface PitchControlCell extends PitchPosition {
 export type GameRhythm = 'Structured' | 'Fluid' | 'Transitional' | 'Chaotic';
 
 export type MatchEventType =
+  // Existing baseline
   | 'pass'
   | 'carry'
   | 'shot'
@@ -91,7 +92,27 @@ export type MatchEventType =
   | 'foul'
   | 'goal'
   | 'turnover'
-  | 'inflection';
+  | 'inflection'
+  // Defensive
+  | 'clearance'
+  | 'block'
+  | 'recovery'
+  // Goalkeeping
+  | 'save'
+  | 'claim'
+  | 'punch'
+  | 'goal_kick'
+  // Attacking
+  | 'cross'
+  | 'key_pass'
+  | 'progressive_carry'
+  | 'aerial_duel'
+  // Set Pieces & Disciplinary
+  | 'corner_kick'
+  | 'free_kick'
+  | 'yellow_card'
+  | 'red_card'
+  | 'offside';
 
 export interface MatchEvent {
   id: string;
@@ -111,6 +132,10 @@ export interface MatchEvent {
   /** The score at the moment the event happened. */
   score?: { home: number; away: number };
   description: string;
+  pitchSector?: string;
+  speedKmH?: number;
+  subAction?: string;
+  secondaryActorId?: string;
 }
 
 /**
@@ -285,7 +310,7 @@ export interface TelemetryFrame {
   players: PlayerTelemetry[];
   passingLanes: PassingLane[];
   pitchControlCells: PitchControlCell[];
-  /** Most recent discrete match events, newest last (CHALLENGE.md Stage 1). */
+  /** Most recent discrete match events, newest last. */
   events: MatchEvent[];
   /** Every shot taken in the fixture, for the Shoot Map. */
   shots: ShotRecord[];
@@ -370,6 +395,9 @@ export interface FrameTelemetry {
   metrics?: MatchMetrics;
   latestNarrative?: NarrativeEvent;
   agentTrace?: AgentTrace[];
+  events?: MatchEvent[];
+  shots?: ShotRecord[];
+  playerStats?: PlayerMatchStats[];
 }
 
 export interface TacticalBlackboard {
@@ -380,6 +408,11 @@ export interface TacticalBlackboard {
   active_tactical_inflection: boolean;
   latest_pdr: number;
   narrative_headline: string;
+  narrative_explanation?: string;
+  narrative_multilingual?: {
+    headline?: Record<string, string>;
+    tacticalExplanation?: Record<string, string>;
+  };
   persona_overviews: {
     analyst: string;
     casual: string;

@@ -232,3 +232,189 @@ def test_the_fallback_outcome_is_marked_as_such(full_match):
     assert outcome.status.value == "fallback"
     assert outcome.latency_ms >= 0.0
     assert outcome.summary
+
+
+# --- Milestone 1: Simulation Enrichment & Physics Verification -----------------
+
+
+def test_biomechanical_velocity_integration_enforces_acceleration_limits():
+    """Players cannot accelerate or decelerate beyond physiological human limits."""
+    from app.simulation.spatial import integrate_player_velocity
+
+    dt = 0.2
+    # 1. Forward acceleration from rest: normal sprint cap is 4.5 m/s^2 -> max dv = 0.9 m/s in 0.2s
+    vx, vy, ax, ay = integrate_player_velocity(0.0, 0.0, 10.0, 0.0, dt, max_sprint=9.5, is_pressing=False)
+    accel = (vx**2 + vy**2) ** 0.5 / dt
+    assert accel <= 4.5001, f"Normal acceleration {accel} exceeded 4.5 m/s^2"
+    assert (ax**2 + ay**2) ** 0.5 <= 4.5001
+
+    # 2. Pressing burst from rest: pressing burst cap is 5.2 m/s^2 -> max dv = 1.04 m/s in 0.2s
+    vx_p, vy_p, ax_p, ay_p = integrate_player_velocity(0.0, 0.0, 10.0, 0.0, dt, max_sprint=9.5, is_pressing=True)
+    accel_p = (vx_p**2 + vy_p**2) ** 0.5 / dt
+    assert accel_p <= 5.2001, f"Pressing burst acceleration {accel_p} exceeded 5.2 m/s^2"
+    assert accel_p > accel, "Pressing burst should accelerate faster than normal sprint"
+
+    # 3. Braking / deceleration cap: 7.0 m/s^2 -> from 8.0 m/s to 0 m/s
+    vx_b, vy_b, ax_b, ay_b = integrate_player_velocity(8.0, 0.0, 0.0, 0.0, dt, max_sprint=9.5, is_pressing=False)
+    decel = (8.0 - vx_b) / dt
+    assert decel <= 7.0001, f"Deceleration {decel} exceeded 7.0 m/s^2"
+
+    # 4. Maximum sprint speed clamp
+    vx_max, vy_max, _, _ = integrate_player_velocity(9.4, 0.0, 20.0, 0.0, 1.0, max_sprint=9.5, is_pressing=False)
+    assert (vx_max**2 + vy_max**2) ** 0.5 <= 9.5001
+
+
+def test_tactical_pitch_sector_resolution():
+    """Positions resolve accurately to Premier League canonical tactical pitch sectors."""
+    from app.simulation.sectors import resolve_pitch_sector
+
+    # Corner quadrant
+    assert resolve_pitch_sector(1.0, 1.0, TeamSide.HOME) == "Corner Quadrant"
+    assert resolve_pitch_sector(104.0, 67.0, TeamSide.HOME) == "Corner Quadrant"
+
+    # Goal Mouth
+    assert resolve_pitch_sector(100.0, 34.0, TeamSide.HOME) == "Goal Mouth"
+
+    # Penalty spot at (94, 34)
+    assert resolve_pitch_sector(94.0, 34.0, TeamSide.HOME) == "Penalty Spot"
+
+    # Penalty Areas
+    assert resolve_pitch_sector(98.0, 20.0, TeamSide.HOME) == "Left Penalty Area"
+    assert resolve_pitch_sector(98.0, 34.0, TeamSide.HOME) == "Penalty Spot"
+    assert resolve_pitch_sector(98.0, 25.0, TeamSide.HOME) == "Central Penalty Area"
+    assert resolve_pitch_sector(98.0, 50.0, TeamSide.HOME) == "Right Penalty Area"
+
+    # Zone 14: attacking central area outside the box
+    assert resolve_pitch_sector(80.0, 34.0, TeamSide.HOME) == "Zone 14 (Edge of the Box)"
+
+    # Half-spaces
+    assert resolve_pitch_sector(60.0, 20.0, TeamSide.HOME) == "Left Half-Space"
+    assert resolve_pitch_sector(60.0, 50.0, TeamSide.HOME) == "Right Half-Space"
+
+    # Wide flanks
+    assert resolve_pitch_sector(75.0, 5.0, TeamSide.HOME) == "Attacking Third - Left Flank"
+    assert resolve_pitch_sector(75.0, 63.0, TeamSide.HOME) == "Attacking Third - Right Flank"
+
+
+def test_enriched_event_taxonomy_and_metadata(full_match):
+    """The simulated match produces an enriched taxonomy with required spatial and tactical metadata."""
+    events = full_match.events.all()
+    types = {event.type for event in events}
+
+    # At least 10 different event types in a 90 minute match
+    assert len(types) >= 10, f"Expected diverse taxonomy, got {len(types)}: {types}"
+
+    # Verify key new event types appear in the match
+    assert MatchEventType.CROSS in types
+    assert MatchEventType.RECOVERY in types
+    assert MatchEventType.CORNER_KICK in types
+    assert MatchEventType.SAVE in types
+    assert MatchEventType.CARRY in types
+    assert MatchEventType.PROGRESSIVE_CARRY in types
+    assert MatchEventType.CLEARANCE in types
+    assert MatchEventType.FOUL in types
+
+    # Check that pitch sectors and metadata fields are properly populated
+    for event in events:
+        assert event.pitchSector is not None and len(event.pitchSector) > 0
+        if event.speedKmH is not None:
+            assert event.speedKmH >= 0.0
+        if event.subAction is not None:
+            assert len(event.subAction) > 0
+
+
+def test_3d_ball_physics_and_parabolic_flight():
+    """Ball elevates on crosses and clearances and returns cleanly to pitch surface."""
+    import math
+    from app.simulation.engine import Flight
+
+    engine = MatchEngine(seed=42)
+    engine.reset(SyntheticScenarioType.COUNTER_ATTACK_TRANSITION, start_seconds=0.0, warmup_seconds=0.0)
+
+    # Initially on ground with carrier
+    assert engine.state.ball_z == 0.0
+    assert engine.state.ball_vz == 0.0
+
+    # Inject an airborne flight with apex_z = 3.5m over 1.0s
+    engine.state.flight = Flight(
+        passer_id="test_p",
+        receiver_id="test_r",
+        start_x=30.0,
+        start_y=34.0,
+        end_x=60.0,
+        end_y=34.0,
+        duration=1.0,
+        outcome="completed",
+        pdr=40.0,
+        speed_kmh=45.0,
+        apex_z=3.5,
+        flight_type="cross",
+    )
+
+    # Step forward 0.5s (progress = 0.5, apex)
+    engine._update_ball(0.5)
+    assert math.isclose(engine.state.ball_z, 3.5, rel_tol=1e-2), f"Expected apex ~3.5m, got {engine.state.ball_z}"
+    assert math.isclose(engine.state.ball_vz, 0.0, abs_tol=1e-2), f"Expected vz ~0.0 at apex, got {engine.state.ball_vz}"
+
+    # Step forward remaining 0.5s to landing
+    engine._update_ball(0.5)
+    assert engine.state.ball_z == 0.0
+    assert engine.state.ball_vz == 0.0
+
+    # Verify 3D speed in frame
+    engine.state.ball_vx = 10.0
+    engine.state.ball_vy = 0.0
+    engine.state.ball_vz = 0.0
+    frame = engine.build_frame()
+    assert math.isclose(frame.ball.speedKmH, 36.0, rel_tol=1e-2)
+
+    # 4. Inject an airborne shot flight with apex_z = 1.6m over 0.6s
+    engine.state.flight = Flight(
+        passer_id="shooter_1",
+        receiver_id="gk_1",
+        start_x=85.0,
+        start_y=34.0,
+        end_x=105.0,
+        end_y=34.0,
+        duration=0.6,
+        outcome="saved",
+        pdr=0.25,
+        speed_kmh=95.0,
+        apex_z=1.6,
+        flight_type="shot",
+    )
+    # Step forward 0.3s (midpoint apex)
+    engine._update_ball(0.3)
+    assert 0.8 <= engine.state.ball_z <= 2.4, f"Shot elevation {engine.state.ball_z}m outside [0.8, 2.4]m"
+    assert math.isclose(engine.state.ball_z, 1.6, rel_tol=1e-2)
+
+    # Step forward remaining 0.3s to completion / landing
+    engine._update_ball(0.3)
+    assert engine.state.ball_z == 0.0
+    assert engine.state.ball_vz == 0.0
+
+
+def test_all_four_scenarios_maintain_premier_league_invariants():
+    """Across all 4 tactical scenarios, Premier League invariants hold."""
+    for scenario in SCENARIO_ORDER:
+        engine = MatchEngine(seed=20260922)
+        engine.reset(scenario, start_seconds=0.0, warmup_seconds=0.0)
+        engine.fast_forward(45 * 60, dt=0.2)
+        frame = engine.build_frame()
+
+        # Invariant 1: Shot ledger matches shot events exactly
+        shot_events = [e for e in engine.events.all() if e.type is MatchEventType.SHOT]
+        assert len(frame.shots) == len(shot_events), (
+            f"Scenario {scenario.value}: frame.shots ({len(frame.shots)}) != shot_events ({len(shot_events)})"
+        )
+
+        # Invariant 2: Pass completion rate inside Premier League band [75.0, 85.0]
+        for side in ("home", "away"):
+            completion = getattr(frame.metrics.passCompletion, side)
+            assert 75.0 <= completion <= 85.0, (
+                f"Scenario {scenario.value} ({side}): pass completion {completion}% outside [75%, 85%]"
+            )
+
+        # Invariant 3: Ball height never goes negative
+        assert frame.ball.z >= 0.0
+
