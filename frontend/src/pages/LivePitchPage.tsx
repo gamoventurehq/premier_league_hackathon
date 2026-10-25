@@ -14,6 +14,7 @@ import {
   IonCardContent,
   IonCardHeader,
   IonCardTitle,
+  IonCardSubtitle,
   IonProgressBar,
   useIonViewDidEnter,
   useIonViewWillEnter,
@@ -440,7 +441,7 @@ const LivePitchPage: React.FC = () => {
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase" }}>
-                  Key Squad Selection
+                  Spotlight Key Players
                 </span>
                 <span style={{ fontSize: "10px", color: "#64748b" }}>Swipe ⇄</span>
               </div>
@@ -502,10 +503,10 @@ const LivePitchPage: React.FC = () => {
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader style={{ paddingBottom: "8px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                  <div style={{ color: teamMeta.color, fontWeight: 800, fontSize: "12px", display: "flex", alignItems: "center" }}>
+                  <IonCardSubtitle style={{ color: teamMeta.color, fontWeight: 800 }}>
                     <IonIcon icon={personOutline} style={{ marginRight: "4px" }} />
                     {teamMeta.name} • #{profile.number} {profile.pos}
-                  </div>
+                  </IonCardSubtitle>
                   {isCarrier && (
                     <IonBadge color="warning" style={{ fontWeight: 800 }}>
                       Active Ball Carrier
@@ -613,10 +614,10 @@ const LivePitchPage: React.FC = () => {
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader style={{ paddingBottom: "8px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                  <div style={{ color: "#38bdf8", fontWeight: 800, margin: 0, fontSize: "12px", display: "flex", alignItems: "center" }}>
+                  <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 800, margin: 0 }}>
                     <IonIcon icon={pulseOutline} style={{ marginRight: "4px" }} />
                     Tactical Dominance
-                  </div>
+                  </IonCardSubtitle>
                   {activeInflection && (
                     <IonBadge color="danger" style={{ fontWeight: 800, flexShrink: 0 }}>
                       Inflection Active
@@ -659,6 +660,19 @@ const LivePitchPage: React.FC = () => {
                       }}
                     />
                   </div>
+                </div>
+
+                <div
+                  style={{
+                    background: "#1e293b",
+                    padding: "8px 10px",
+                    borderRadius: "6px",
+                    fontSize: "11px",
+                    color: "#cbd5e1",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  <strong style={{ color: "#00e5ff" }}>Core Memory Linked:</strong> Clicking any player on the canvas or selecting pills updates Spotlight across the entire studio in real time.
                 </div>
               </IonCardContent>
             </IonCard>

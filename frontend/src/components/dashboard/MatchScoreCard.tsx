@@ -1,6 +1,8 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { IonIcon } from "@ionic/react";
 import {
+  openOutline,
   footballOutline,
   calendarOutline,
   trophyOutline,
@@ -9,6 +11,7 @@ import {
 import { useBaseMemory } from "../../store/baseMemory";
 
 export const MatchScoreCard: React.FC = () => {
+  const navigate = useNavigate();
   const score = useBaseMemory((s) => s.score);
   const matchClock = useBaseMemory((s) => s.matchClock);
   const serverStatus = useBaseMemory((s) => s.serverStatus);
@@ -44,6 +47,12 @@ export const MatchScoreCard: React.FC = () => {
         <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--ion-text-color)" }}>
           Match Score
         </span>
+        <IonIcon
+          icon={openOutline}
+          onClick={() => navigate("/pitch")}
+          title="Open Full Pitch Radar"
+          style={{ fontSize: "16px", color: "var(--studio-subtext)", cursor: "pointer" }}
+        />
       </div>
 
       {/* Main Scoreboard Section */}
@@ -77,7 +86,7 @@ export const MatchScoreCard: React.FC = () => {
               flexShrink: 0,
             }}
           >
-            {score.homeMeta?.shortCode || "MCI"}
+            {score.homeMeta.shortCode}
           </div>
           <span
             style={{
@@ -89,9 +98,9 @@ export const MatchScoreCard: React.FC = () => {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
-            title={score.homeMeta?.name || "Man City"}
+            title={score.homeMeta.name}
           >
-            {score.homeMeta?.name || "Man City"}
+            {score.homeMeta.name}
           </span>
         </div>
 
@@ -146,7 +155,7 @@ export const MatchScoreCard: React.FC = () => {
               flexShrink: 0,
             }}
           >
-            {score.awayMeta?.shortCode || "ARS"}
+            {score.awayMeta.shortCode}
           </div>
           <span
             style={{
@@ -158,9 +167,9 @@ export const MatchScoreCard: React.FC = () => {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
-            title={score.awayMeta?.name || "Arsenal"}
+            title={score.awayMeta.name}
           >
-            {score.awayMeta?.name || "Arsenal"}
+            {score.awayMeta.name}
           </span>
         </div>
       </div>

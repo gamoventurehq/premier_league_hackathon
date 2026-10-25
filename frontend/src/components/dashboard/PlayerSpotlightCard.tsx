@@ -1,6 +1,7 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { IonIcon } from "@ionic/react";
-import { trophyOutline, personOutline } from "ionicons/icons";
+import { trophyOutline, openOutline, personOutline } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 import { StudioChipScroller } from "../StudioChipScroller";
 
@@ -16,6 +17,7 @@ const KEY_PLAYER_PRESETS = [
 ];
 
 export const PlayerSpotlightCard: React.FC = () => {
+  const navigate = useNavigate();
   const selectedPlayerId = useBaseMemory((s) => s.selectedPlayerId);
   const homeLineup = useBaseMemory((s) => s.homeLineup);
   const awayLineup = useBaseMemory((s) => s.awayLineup);
@@ -27,8 +29,6 @@ export const PlayerSpotlightCard: React.FC = () => {
   const player = allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6]; // default to CM
   const isHome = player.team === "home";
   const teamMeta = isHome ? score.homeMeta : score.awayMeta;
-  const club = teamMeta.name;
-  const num = player.number;
 
   // Real-time spatial speed and ball carrier state from 5Hz tracking stream
   const liveTelemetry = currentFrame?.players?.find(
@@ -38,6 +38,11 @@ export const PlayerSpotlightCard: React.FC = () => {
   const isCarrier = liveTelemetry?.is_ball_carrier ?? (liveTelemetry as any)?.onBall ?? player.is_ball_carrier ?? false;
 
   const { shoot, passing, dribbling, defending, shotAccuracyPct, avgRating } = player.attributes;
+
+  const handleOpenPlayerExperience = () => {
+    baseMemory.setPersona("player_cam");
+    navigate("/personas");
+  };
 
   return (
     <div
@@ -63,16 +68,19 @@ export const PlayerSpotlightCard: React.FC = () => {
             Player Spotlight
           </span>
         </div>
-        <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--studio-subtext)", textTransform: "uppercase" }}>
-          Player of the Match
-        </span>
+        <IonIcon
+          icon={openOutline}
+          onClick={handleOpenPlayerExperience}
+          title="Open Player Cam Experience"
+          style={{ fontSize: "15px", color: "var(--studio-subtext)", cursor: "pointer" }}
+        />
       </div>
 
       {/* Key Players Preset Horizontal Scroll Option */}
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--studio-subtext)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            Key Squad Roster
+            Spotlight Key Players
           </span>
           <span style={{ fontSize: "9px", color: "#64748b" }}>Scroll ⇄</span>
         </div>
@@ -138,7 +146,7 @@ export const PlayerSpotlightCard: React.FC = () => {
               {player.name}
             </div>
             <div style={{ fontSize: "11px", color: "var(--studio-subtext)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {club} • #{num} • {player.pos}
+              {teamMeta.name} • #{player.number} • {player.pos}
             </div>
           </div>
         </div>
