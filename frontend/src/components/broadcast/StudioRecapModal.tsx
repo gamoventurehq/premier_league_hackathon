@@ -530,9 +530,49 @@ Al descanso en el Etihad Stadium, Manchester City y Arsenal igualan 1-1 tras una
 - **السيطرة على الملعب**: مانشستر سيتي 61% • أرسنال 39%
 - **مؤشر صعوبة التمرير (PDR)**: 86% مقابل 79%
 - **كثافة الضغط العالي**: معدل جهد بدني لأرسنال بلغ 94% طوال الـ 45 دقيقة الأولى
-
+ 
 *تقرير تحليلي تم إنشاؤه بواسطة محرك استوديو غاموفنتشر للدوري الإنجليزي الممتاز.*`,
 };
+
+function synthesizeChaptersFromEvents(events: MatchEvent[]): ChapterMarker[] {
+  const milestoneEvents = events.filter((e) =>
+    ["goal", "save", "punch", "claim", "red_card", "key_pass", "cross", "clearance", "block", "inflection"].includes(e.type)
+  );
+
+  if (milestoneEvents.length < 2) {
+    return [];
+  }
+
+  return milestoneEvents.map((e) => {
+    let cat: ChapterMarker["category"] = "tactical";
+    if (e.type === "goal") cat = "goal";
+    else if (e.type === "save" || e.type === "punch" || e.type === "claim") cat = "keeper";
+    else if (e.type === "clearance" || e.type === "block" || e.type === "tackle") cat = "defense";
+    else if (e.type === "red_card" || e.type === "yellow_card") cat = "whistle";
+    else cat = "tactical";
+
+    const metric = e.xG !== undefined
+      ? `${e.xG.toFixed(2)} xG`
+      : e.speedKmH
+      ? `${e.speedKmH.toFixed(1)} km/h`
+      : e.pdr !== undefined
+      ? `PDR: ${Math.round(e.pdr)}%`
+      : e.score && e.type === "goal"
+      ? `${e.score.home} - ${e.score.away}`
+      : (e.pitchSector ?? "Match Milestone");
+
+    return {
+      timeLabel: e.matchClock,
+      timeSec: Math.round((e.timestampMs || 0) / 1000),
+      title: e.description || `${(e.actorId ?? "Player").toUpperCase()} ${e.type.toUpperCase()}`,
+      summary: e.pitchSector
+        ? `Action executed in ${e.pitchSector} with decisive tactical impact.`
+        : `Significant match event recorded at ${e.matchClock}.`,
+      metric,
+      category: cat,
+    };
+  });
+}
 
 export const StudioRecapModal: React.FC<StudioRecapModalProps> = ({ isOpen, onClose }) => {
   const score = useBaseMemory((s) => s.score);
@@ -581,58 +621,16 @@ export const StudioRecapModal: React.FC<StudioRecapModalProps> = ({ isOpen, onCl
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
-function synthesizeChaptersFromEvents(events: MatchEvent[]): ChapterMarker[] {
-  const milestoneEvents = events.filter((e) =>
-    ["goal", "save", "punch", "claim", "red_card", "key_pass", "cross", "clearance", "block", "inflection"].includes(e.type)
-  );
-
-  if (milestoneEvents.length < 2) {
-    return [];
-  }
-
-  return milestoneEvents.map((e) => {
-    let cat: ChapterMarker["category"] = "tactical";
-    if (e.type === "goal") cat = "goal";
-    else if (e.type === "save" || e.type === "punch" || e.type === "claim") cat = "keeper";
-    else if (e.type === "clearance" || e.type === "block" || e.type === "tackle") cat = "defense";
-    else if (e.type === "red_card" || e.type === "yellow_card") cat = "whistle";
-    else cat = "tactical";
-
-    const metric = e.xG !== undefined
-      ? `${e.xG.toFixed(2)} xG`
-      : e.speedKmH
-      ? `${e.speedKmH.toFixed(1)} km/h`
-      : e.pdr !== undefined
-      ? `PDR: ${Math.round(e.pdr)}%`
-      : e.score && e.type === "goal"
-      ? `${e.score.home} - ${e.score.away}`
-      : (e.pitchSector ?? "Match Milestone");
-
-    return {
-      timeLabel: e.matchClock,
-      timeSec: Math.round((e.timestampMs || 0) / 1000),
-      title: e.description || `${(e.actorId ?? "Player").toUpperCase()} ${e.type.toUpperCase()}`,
-      summary: e.pitchSector
-        ? `Action executed in ${e.pitchSector} with decisive tactical impact.`
-        : `Significant match event recorded at ${e.matchClock}.`,
-      metric,
-      category: cat,
-    };
-  });
-}
-
-  const handleSeekChapter = (sec: number) => {
-    baseMemory.setMatchClock(sec);
-  };
-
   const matchEvents = useBaseMemory((s) => s.matchEvents);
   const synthesizedChapters = synthesizeChaptersFromEvents(matchEvents);
   const fallbackChapters = CHAPTER_MARKERS_BY_LANG[selectedLanguage] || CHAPTER_MARKERS_BY_LANG.en;
   const chapters = synthesizedChapters.length >= 2 ? synthesizedChapters : fallbackChapters;
   const teleprompterScript = TELEPROMPTER_SCRIPT_BY_LANG[selectedLanguage] || TELEPROMPTER_SCRIPT_BY_LANG.en;
   const digitalArticleMarkdown = DIGITAL_ARTICLE_BY_LANG[selectedLanguage] || DIGITAL_ARTICLE_BY_LANG.en;
+
+  const handleSeekChapter = (sec: number) => {
+    baseMemory.setMatchClock(sec);
+  };
 
   const handleCopyPrompter = () => {
     const textToCopy = teleprompterScript.map(
@@ -642,6 +640,8 @@ function synthesizeChaptersFromEvents(events: MatchEvent[]): ChapterMarker[] {
     setCopiedNotification(true);
     setTimeout(() => setCopiedNotification(false), 2000);
   };
+
+  if (!isOpen) return null;
 
   const modalContent = (
     <div
