@@ -13,19 +13,28 @@ export const AttackingShapeCard: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         gap: "10px",
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <IonIcon icon={walkOutline} style={{ color: "#10b981", fontSize: "16px" }} />
-          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", minWidth: 0, flexWrap: "wrap", gap: "6px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+          <IonIcon icon={walkOutline} style={{ color: "#10b981", fontSize: "16px", flexShrink: 0 }} />
+          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--ion-text-color)", whiteSpace: "nowrap" }}>
             Attacking Shape
           </span>
         </div>
-        <span style={{ fontSize: "11px", color: "var(--studio-subtext)", fontWeight: 700 }}>
-          Manchester City
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, flexWrap: "wrap" }}>
+          <span style={{ fontSize: "10px", color: "var(--studio-subtext)", fontFamily: "monospace" }}>
+            LIVE 5Hz
+          </span>
+          <span style={{ fontSize: "11px", color: "var(--studio-subtext)", fontWeight: 700, whiteSpace: "nowrap" }}>
+            Manchester City
+          </span>
+        </div>
       </div>
 
       {/* Attacking Shape Pitch Visualizer */}

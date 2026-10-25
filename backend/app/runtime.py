@@ -12,11 +12,28 @@ and its narrative is folded into the following frame.
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import queue
 import threading
 import time
+from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any
 
+from .agents.base import (
+    K_ANALYST_CONTEXT,
+    K_CASUAL_CONTEXT,
+    K_CLUB_CENTRIC_CONTEXT,
+    K_COMMENTATOR_CUE,
+    K_INFLECTION_CANDIDATES,
+    K_MULTILINGUAL_STREAM,
+    K_NARRATIVE,
+    K_NARRATIVE_ARC,
+    K_PLAYER_CAM_CONTEXT,
+    AgentContext,
+    BlackboardView,
+)
+from .agents.broadcast_narrative import NARRATIVE_ARCS, NarrativeDraft, RuleBasedNarrativeGenerator
 from .agents.swarm import AgentSwarm, SwarmResult
 from .config import Settings
 from .models import (
@@ -24,6 +41,7 @@ from .models import (
     BroadcastOverlayPayload,
     ExperiencePersona,
     MatchEvent,
+    MatchEventType,
     NarrativeEvent,
     PlaybackStatus,
     SyntheticScenarioType,
@@ -40,17 +58,44 @@ from .simulation.metrics import MATCH_LENGTH_SECONDS, format_match_clock
 logger = logging.getLogger(__name__)
 
 
+@dataclass(slots=True)
+class NarrativeInferenceRequest:
+    """Envelope for an out-of-band asynchronous LLM narrative inference request."""
+
+    epoch: int
+    context: AgentContext
+    match_clock: str
+    match_seconds: float
+    scenario: str
+
+
 class MatchRuntime:
     """Owns the synthetic match, the agent swarm and the Azure integrations."""
 
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        model_service: Any | None = None,
+    ) -> None:
         self.settings = settings or Settings()
         self.engine = MatchEngine(seed=self.settings.random_seed)
         self.publisher = EventHubsPublisher(self.settings)
         self.store = OverlayStore(self.settings)
+
+        # Milestone 2: Asynchronous Decoupling & Latency Isolation (ADR 0004)
+        if model_service is not None:
+            self.model_service = model_service
+        elif self.settings.llm_enabled:
+            self.model_service = FoundryNarrativeService(
+                self.settings, timeout=self.settings.llm_timeout_seconds
+            )
+        else:
+            self.model_service = None
+
+        # Tier 1 fast-path swarm uses deterministic generator without blocking on slow inference
         self.swarm = AgentSwarm(
             self.settings,
-            model_service=FoundryNarrativeService(self.settings) if self.settings.foundry_enabled else None,
+            model_service=None,
         )
         self._lock = threading.RLock()
         self._wire: dict[str, Any] | None = None
@@ -76,14 +121,30 @@ class MatchRuntime:
         self._worker_error: str | None = None
         self.tools: ToolRegistry = build_registry(self)
 
+        # Decoupled out-of-band background narrative worker state
+        self._scrub_epoch: int = 0
+        self._narrative_queue: queue.Queue[NarrativeInferenceRequest] = queue.Queue(maxsize=1)
+        self._active_ai_narrative: NarrativeEvent | None = None
+        self._active_ai_latency_ms: float = 0.0
+        self._narrative_worker_thread: threading.Thread | None = None
+        self._rule_generator = RuleBasedNarrativeGenerator()
+        self._last_async_narrative_submit: float = 0.0
+        self._async_narrative_interval: float = 5.0
+
     # -- lifecycle ------------------------------------------------------------
 
     def start(self) -> None:
-        """Start the simulation worker thread."""
+        """Start the simulation worker thread and the asynchronous narrative worker."""
         if self._thread is not None:
             return
         self._thread = threading.Thread(target=self._worker, name="pl-simulation", daemon=True)
         self._thread.start()
+
+        if self._narrative_worker_thread is None and hasattr(self, "_narrative_worker_loop"):
+            self._narrative_worker_thread = threading.Thread(
+                target=self._narrative_worker_loop, name="pl-narrative-worker", daemon=True
+            )
+            self._narrative_worker_thread.start()
 
     def stop(self) -> None:
         self._stop.set()
@@ -91,9 +152,20 @@ class MatchRuntime:
         if thread is not None:
             thread.join(timeout=2.0)
             self._thread = None
+        narrative_thread = self._narrative_worker_thread
+        if narrative_thread is not None:
+            narrative_thread.join(timeout=2.0)
+            self._narrative_worker_thread = None
+        if self.model_service is not None and hasattr(self.model_service, "close"):
+            self.model_service.close()
         self.publisher.close()
         self.store.close()
         self.swarm.shutdown()
+
+    @property
+    def scrub_epoch(self) -> int:
+        with self._lock:
+            return self._scrub_epoch
 
     @property
     def ready(self) -> bool:
@@ -174,6 +246,9 @@ class MatchRuntime:
     def _warm_up(self) -> None:
         """Generate the match history that precedes the live feed."""
         with self._lock:
+            self._scrub_epoch += 1
+            self._active_ai_narrative = None
+            self._narrative = None
             self.engine.reset(
                 self._scenario,
                 start_seconds=self.scenario_anchor(self._scenario),
@@ -192,6 +267,9 @@ class MatchRuntime:
             return
         command = self._commands.pop(0)
         logger.info("Applying scenario command: %s", command)
+        self._scrub_epoch += 1
+        self._active_ai_narrative = None
+        self._narrative = None
         self.engine.reset(
             command,
             start_seconds=self.scenario_anchor(SyntheticScenarioType(command)),
@@ -199,17 +277,223 @@ class MatchRuntime:
             dt=self.settings.sim_fast_forward_dt,
         )
         self._scenario = SyntheticScenarioType(command)
-        self._narrative = None
         self._traces = []
+
+    def _build_instant_narrative(self, frame: TelemetryFrame) -> NarrativeEvent:
+        """Evaluate RuleBasedNarrativeGenerator instantly (<0.25ms) for zero-latency publishing."""
+        context = AgentContext(
+            frame=frame,
+            view=BlackboardView(blackboard=self.swarm.blackboard),
+            persona=self._persona,
+        )
+        draft = self._rule_generator.build(context)
+
+        # Write to blackboard so immediate downstream readers have valid tactical narrative
+        self.swarm.blackboard.write(K_NARRATIVE, draft)
+        self.swarm.blackboard.write(
+            K_MULTILINGUAL_STREAM,
+            {
+                "headline": draft.headline.model_dump(),
+                "tacticalExplanation": draft.tacticalExplanation.model_dump(),
+            },
+        )
+        self.swarm.blackboard.write(K_COMMENTATOR_CUE, draft.commentatorCue)
+        self.swarm.blackboard.write(
+            K_NARRATIVE_ARC, NARRATIVE_ARCS.get(frame.scenario.value, frame.scenario.value)
+        )
+
+        analyst = self.swarm.blackboard.read(K_ANALYST_CONTEXT)
+        casual = self.swarm.blackboard.read(K_CASUAL_CONTEXT)
+        player_cam = self.swarm.blackboard.read(K_PLAYER_CAM_CONTEXT)
+        club = self.swarm.blackboard.read(K_CLUB_CENTRIC_CONTEXT)
+
+        if not analyst:
+            analyst = (
+                f"Control vs. Chaos Index sits at {frame.metrics.controlVsChaosIndex:.0f} "
+                f"with Pass Difficulty Rating at {frame.metrics.passDifficultyRating:.0f}."
+            )
+        if not casual:
+            casual = f"{frame.scenario.value.replace('_', ' ').title()} underway at {frame.matchClock}."
+        if not player_cam:
+            player_cam = "Tactical tracking active on key pitch influencers."
+        if not isinstance(club, dict) or not club:
+            club = {
+                "homeFrame": f"Manchester City maintaining tactical shape at {frame.matchClock}.",
+                "awayFrame": f"Arsenal organizing defensive corridors at {frame.matchClock}.",
+            }
+
+        return NarrativeEvent(
+            id=draft.id,
+            matchClock=draft.matchClock,
+            timestamp=draft.timestamp,
+            isTacticalInflectionPoint=draft.isTacticalInflectionPoint,
+            headline=draft.headline,
+            tacticalExplanation=draft.tacticalExplanation,
+            analystContext=analyst,
+            casualContext=casual,
+            playerCamContext=player_cam,
+            clubCentricContext={
+                "homeFrame": str(club.get("homeFrame", "")),
+                "awayFrame": str(club.get("awayFrame", "")),
+            },
+        )
+
+    def _compose_ai_narrative_event(
+        self, draft: NarrativeDraft, frame: TelemetryFrame | None = None
+    ) -> NarrativeEvent:
+        """Compose a full NarrativeEvent from an AI-generated draft."""
+        analyst = self.swarm.blackboard.read(K_ANALYST_CONTEXT) or ""
+        casual = self.swarm.blackboard.read(K_CASUAL_CONTEXT) or ""
+        player_cam = self.swarm.blackboard.read(K_PLAYER_CAM_CONTEXT) or ""
+        club = self.swarm.blackboard.read(K_CLUB_CENTRIC_CONTEXT) or {"homeFrame": "", "awayFrame": ""}
+
+        if not analyst and frame is not None:
+            analyst = (
+                f"Control vs. Chaos Index sits at {frame.metrics.controlVsChaosIndex:.0f} "
+                f"with Pass Difficulty Rating at {frame.metrics.passDifficultyRating:.0f}."
+            )
+        if not casual and frame is not None:
+            casual = f"AI tactical analysis updated at {draft.matchClock}."
+
+        return NarrativeEvent(
+            id=draft.id,
+            matchClock=draft.matchClock,
+            timestamp=draft.timestamp,
+            isTacticalInflectionPoint=draft.isTacticalInflectionPoint,
+            headline=draft.headline,
+            tacticalExplanation=draft.tacticalExplanation,
+            analystContext=analyst,
+            casualContext=casual,
+            playerCamContext=player_cam,
+            clubCentricContext={
+                "homeFrame": str(club.get("homeFrame", "") if isinstance(club, dict) else ""),
+                "awayFrame": str(club.get("awayFrame", "") if isinstance(club, dict) else ""),
+            },
+        )
+
+    def submit_async_narrative(self, context: AgentContext, epoch: int | None = None) -> bool:
+        """Submit a context to the out-of-band LLM worker without blocking.
+
+        If the single-item queue is full, coalesces non-blockingly (draining the
+        stale item or skipping), ensuring the fast-path tick loop is NEVER blocked.
+        """
+        if self.model_service is None:
+            return False
+
+        current_epoch = self._scrub_epoch if epoch is None else epoch
+        request = NarrativeInferenceRequest(
+            epoch=current_epoch,
+            context=context,
+            match_clock=context.frame.matchClock if context.frame else "",
+            match_seconds=context.frame.matchSeconds if context.frame else 0.0,
+            scenario=context.frame.scenario.value if context.frame else "",
+        )
+
+        try:
+            self._narrative_queue.put_nowait(request)
+            return True
+        except queue.Full:
+            with contextlib.suppress(queue.Empty):
+                self._narrative_queue.get_nowait()
+            try:
+                self._narrative_queue.put_nowait(request)
+                return True
+            except queue.Full:
+                return False
+
+    def _narrative_worker_loop(self) -> None:
+        """Dedicated background worker executing slow LLM inference out-of-band."""
+        logger.info("Background narrative worker thread started.")
+        while not self._stop.is_set():
+            try:
+                request = self._narrative_queue.get(timeout=0.2)
+            except queue.Empty:
+                continue
+
+            # 1. Inspect request.epoch == self._scrub_epoch before LLM inference
+            if request.epoch != self._scrub_epoch:
+                logger.debug(
+                    "Discarding stale narrative request before inference: epoch %d != %d",
+                    request.epoch,
+                    self._scrub_epoch,
+                )
+                continue
+
+            started = time.perf_counter()
+            try:
+                if self.model_service is None:
+                    continue
+                draft = self.model_service(request.context)
+            except Exception as exc:  # noqa: BLE001 - worker survives any network or model error
+                logger.warning("Background narrative LLM inference failed: %s", exc)
+                continue
+
+            elapsed_ms = (time.perf_counter() - started) * 1000.0
+
+            # 2. Inspect request.epoch == self._scrub_epoch after LLM inference
+            if request.epoch != self._scrub_epoch:
+                logger.debug(
+                    "Discarding stale narrative response after inference: epoch %d != %d",
+                    request.epoch,
+                    self._scrub_epoch,
+                )
+                continue
+
+            # 3. Atomic swap under synchronization lock
+            with self._lock:
+                if request.epoch != self._scrub_epoch:
+                    logger.debug(
+                        "Discarding stale narrative response under lock: epoch %d != %d",
+                        request.epoch,
+                        self._scrub_epoch,
+                    )
+                    continue
+
+                ai_narrative = self._compose_ai_narrative_event(draft, request.context.frame)
+                self._active_ai_narrative = ai_narrative
+                self._active_ai_latency_ms = elapsed_ms
+                self._narrative = ai_narrative
+                self._swarm_latency_ms = elapsed_ms
+
+                # Commit to shared blackboard
+                self.swarm.blackboard.write(K_NARRATIVE, draft)
+                self.swarm.blackboard.write(
+                    K_MULTILINGUAL_STREAM,
+                    {
+                        "headline": draft.headline.model_dump(),
+                        "tacticalExplanation": draft.tacticalExplanation.model_dump(),
+                    },
+                )
+                self.swarm.blackboard.write(K_COMMENTATOR_CUE, draft.commentatorCue)
+                self.swarm.blackboard.write(
+                    K_NARRATIVE_ARC, NARRATIVE_ARCS.get(request.scenario, request.scenario)
+                )
+                logger.info(
+                    "Atomic swap completed: AI narrative for %s (epoch %d) swapped in (%.1fms).",
+                    draft.matchClock,
+                    request.epoch,
+                    elapsed_ms,
+                )
 
     def _build_and_publish(self) -> None:
         """Tier 1: build and publish the deterministic frame."""
         frame = self.engine.build_frame()
-        if self._narrative is not None:
-            frame.latestNarrative = self._narrative
+
+        # Instant zero-latency frames: if a freshly completed AI narrative is available,
+        # incorporate it; otherwise evaluate RuleBasedNarrativeGenerator instantly (<0.25ms)
+        if self._active_ai_narrative is not None:
+            frame.latestNarrative = self._active_ai_narrative
+            self._narrative = self._active_ai_narrative
+            frame.metrics.agentReasoningLatencyMs = round(self._active_ai_latency_ms, 2)
+        else:
+            instant_narrative = self._build_instant_narrative(frame)
+            frame.latestNarrative = instant_narrative
+            self._narrative = instant_narrative
+            frame.metrics.agentReasoningLatencyMs = round(self._swarm_latency_ms, 2)
+
         if self._traces:
             frame.agentTrace = list(self._traces)
-        frame.metrics.agentReasoningLatencyMs = round(self._swarm_latency_ms, 2)
+
         self._frame = frame
         self._frame_counter += 1
         self._wire = frame.to_wire()
@@ -219,6 +503,24 @@ class MatchRuntime:
             self.engine.add_external_event(self._swarm_result.inflection_event)
             self._swarm_result = None
 
+        # Check if we should trigger out-of-band asynchronous LLM inference (Tier 2 slow path)
+        if self.model_service is not None:
+            inflection_present = bool(self.swarm.blackboard.read(K_INFLECTION_CANDIDATES))
+            now = time.time()
+            time_since_submit = now - self._last_async_narrative_submit
+            if (
+                self._active_ai_narrative is None
+                or inflection_present
+                or time_since_submit >= self._async_narrative_interval
+            ):
+                context = AgentContext(
+                    frame=frame,
+                    view=BlackboardView(blackboard=self.swarm.blackboard),
+                    persona=self._persona,
+                )
+                if self.submit_async_narrative(context, epoch=self._scrub_epoch):
+                    self._last_async_narrative_submit = now
+
         # Tier 2: the agent swarm runs asynchronously (ADR 0004).
         if not self._swarm_busy:
             self._swarm_busy = True
@@ -226,11 +528,12 @@ class MatchRuntime:
 
     def _on_swarm_complete(self, result: SwarmResult) -> None:
         self._swarm_busy = False
-        self._narrative = result.narrative
         self._traces = result.traces
         self._swarm_latency_ms = result.latency_ms
         if result.inflection_event is not None:
             self._swarm_result = result
+        if self._active_ai_narrative is None:
+            self._narrative = result.narrative
 
     # -- public API -------------------------------------------------------------
 
@@ -246,6 +549,9 @@ class MatchRuntime:
         """Queue a scenario change; the worker thread applies it on the next tick."""
         value = SyntheticScenarioType(scenario)
         with self._lock:
+            self._scrub_epoch += 1
+            self._active_ai_narrative = None
+            self._narrative = None
             self._commands.append(value.value)
         return value
 
@@ -267,6 +573,7 @@ class MatchRuntime:
 
     def pause(self) -> PlaybackStatus:
         with self._lock:
+            self._scrub_epoch += 1
             self._paused = True
             return self.playback_status()
 
@@ -297,6 +604,9 @@ class MatchRuntime:
 
     def jump_to_seconds(self, target_seconds: float) -> PlaybackStatus:
         with self._lock:
+            self._scrub_epoch += 1
+            self._active_ai_narrative = None
+            self._narrative = None
             self.engine.jump_to_seconds(target_seconds)
             self._build_and_publish()
             return self.playback_status()
@@ -345,7 +655,7 @@ class MatchRuntime:
 
     def latest_narrative(self) -> NarrativeEvent | None:
         with self._lock:
-            return self._narrative
+            return self._active_ai_narrative or self._narrative
 
     def latest_traces(self) -> list[AgentTrace]:
         with self._lock:
@@ -379,6 +689,10 @@ class MatchRuntime:
             payload["cells"] = [cell.model_dump() for cell in frame.pitchControlCells]
         return payload
 
+    def get_pitch_control(self, include_cells: bool = True) -> dict[str, Any]:
+        """Return the pitch control surface and dominance split (alias for get_pitch_control_surface)."""
+        return self.get_pitch_control_surface(include_cells=include_cells)
+
     def evaluate_passing_lane(self, passer_id: str, receiver_id: str) -> dict[str, Any]:
         from .simulation.spatial import evaluate_lane
 
@@ -405,6 +719,65 @@ class MatchRuntime:
             "turnovers": self.engine.observations.turnover_count,
             "possessionChanges": self.engine.observations.possession_changes,
         }
+
+    def get_tactical_state(self) -> dict[str, Any]:
+        """Return the full tactical state including phase, rhythm, chaos, PDR, pitch control split, score, and key players."""
+        with self._lock:
+            frame = self._frame or self.engine.build_frame()
+            bb = self.swarm.blackboard.snapshot()
+
+        key_players = bb.get("key_players")
+        if not key_players:
+            carrier = next((p for p in frame.players if p.onBall), None)
+            if carrier is not None:
+                key_players = [
+                    {
+                        "id": carrier.id,
+                        "name": carrier.name,
+                        "shortName": carrier.shortName,
+                        "team": carrier.team.value if hasattr(carrier.team, "value") else str(carrier.team),
+                        "role": carrier.role.value if hasattr(carrier.role, "value") else str(carrier.role),
+                        "involvement": 1.0,
+                        "speedKmH": carrier.speedKmH,
+                        "touches": carrier.touches,
+                    }
+                ]
+            else:
+                key_players = []
+
+        tactical_phase = bb.get("tactical_phase", "progression")
+        return {
+            "matchClock": frame.matchClock,
+            "matchSeconds": frame.matchSeconds,
+            "scenario": frame.scenario.value if hasattr(frame.scenario, "value") else str(frame.scenario),
+            "phase": tactical_phase,
+            "tacticalPhase": tactical_phase,
+            "gameRhythm": bb.get(
+                "game_rhythm",
+                frame.metrics.gameRhythm.value if hasattr(frame.metrics.gameRhythm, "value") else str(frame.metrics.gameRhythm),
+            ),
+            "controlVsChaosIndex": bb.get("control_vs_chaos", frame.metrics.controlVsChaosIndex),
+            "passDifficultyRating": bb.get("pass_difficulty_rating", frame.metrics.passDifficultyRating),
+            "pitchControl": (
+                frame.metrics.pitchControl.model_dump()
+                if hasattr(frame.metrics.pitchControl, "model_dump")
+                else frame.metrics.pitchControl
+            ),
+            "score": {"home": frame.score.home, "away": frame.score.away},
+            "keyPlayers": key_players,
+        }
+
+    def get_inflection_points(self, limit: int = 10) -> list[dict[str, Any]]:
+        """Return match inflection points (discrete tactical shifts and momentum swings)."""
+        limit = max(1, min(100, int(limit)))
+        with self._lock:
+            all_events = self.engine.events.all()
+            inflections = [
+                e.model_dump()
+                for e in all_events
+                if getattr(e.type, "value", str(e.type)) == MatchEventType.INFLECTION.value
+            ]
+        return inflections[-limit:]
 
     def emit_broadcast_overlay(self, persona: str = "analyst") -> dict[str, Any]:
         frame = self.latest_frame()
@@ -463,6 +836,8 @@ def _json_safe(value: Any) -> Any:
         return [_json_safe(item) for item in value]
     if hasattr(value, "model_dump"):
         return _json_safe(value.model_dump(mode="json"))
+    if is_dataclass(value) and not isinstance(value, type):
+        return _json_safe(asdict(value))
     return str(value)
 
 

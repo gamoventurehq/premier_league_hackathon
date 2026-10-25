@@ -114,6 +114,9 @@ class SimPlayer:
     top_speed_kmh: float = 0.0
     on_ball: bool = False
     is_designated_player_cam: bool = False
+    ax: float = 0.0
+    ay: float = 0.0
+    is_pressing: bool = False
     _anchor_offset: tuple[float, float] = field(default=(0.0, 0.0), repr=False)
 
     @property
@@ -180,6 +183,76 @@ def reflect_velocity(value: float, position: float, low: float, high: float, mar
     if position >= hi and value > 0.0:
         return -value * 0.6
     return value
+
+
+def integrate_player_velocity(
+    vx: float,
+    vy: float,
+    desired_vx: float,
+    desired_vy: float,
+    dt: float,
+    max_sprint: float,
+    is_pressing: bool = False,
+) -> tuple[float, float, float, float]:
+    """Integrate player velocity with biomechanical acceleration and deceleration limits.
+
+    Caps concentric acceleration to 4.5 m/s² (5.2 m/s² during sprint/pressing burst)
+    and eccentric braking/deceleration to 7.0 m/s², eliminating unphysical velocity spikes.
+
+    Returns:
+        tuple of (new_vx, new_vy, ax, ay)
+    """
+    effective_max = max_sprint * (1.10 if is_pressing else 1.0)
+    spd = math.hypot(desired_vx, desired_vy)
+    if spd > effective_max:
+        desired_vx = desired_vx / spd * effective_max
+        desired_vy = desired_vy / spd * effective_max
+
+    req_dvx = desired_vx - vx
+    req_dvy = desired_vy - vy
+    dt_safe = max(0.001, dt)
+    req_accel = math.hypot(req_dvx, req_dvy) / dt_safe
+
+    if req_accel > 1e-4:
+        # Motion classification via vector dot product
+        dot = vx * req_dvx + vy * req_dvy
+        if dot >= 0.0:
+            a_cap = 5.2 if is_pressing else 4.5
+        else:
+            a_cap = 7.0
+        applied_accel = min(req_accel, a_cap)
+        scale = applied_accel / req_accel
+        new_vx = vx + req_dvx * scale
+        new_vy = vy + req_dvy * scale
+    else:
+        new_vx = desired_vx
+        new_vy = desired_vy
+
+    spd = math.hypot(new_vx, new_vy)
+    if spd > effective_max:
+        excess_dv = spd - effective_max
+        clamped_dv = min(excess_dv, 7.0 * dt_safe)
+        new_spd = spd - clamped_dv
+        new_vx = new_vx / spd * new_spd
+        new_vy = new_vy / spd * new_spd
+
+    # Safety clamp: strictly enforce acceleration/braking limits on total velocity change
+    step_dvx = new_vx - vx
+    step_dvy = new_vy - vy
+    step_accel = math.hypot(step_dvx, step_dvy) / dt_safe
+    step_dot = vx * step_dvx + vy * step_dvy
+    if step_dot >= 0.0:
+        max_allowed_accel = 5.2 if is_pressing else 4.5
+    else:
+        max_allowed_accel = 7.0
+    if step_accel > max_allowed_accel:
+        clamping_ratio = max_allowed_accel / step_accel
+        new_vx = vx + step_dvx * clamping_ratio
+        new_vy = vy + step_dvy * clamping_ratio
+
+    ax = (new_vx - vx) / dt_safe
+    ay = (new_vy - vy) / dt_safe
+    return new_vx, new_vy, ax, ay
 
 
 def point_to_segment_distance(
@@ -470,6 +543,7 @@ __all__ = [
     "defender_velocity_alignment",
     "distance",
     "evaluate_lane",
+    "integrate_player_velocity",
     "lane_weight",
     "own_goal",
     "passer_pressure",

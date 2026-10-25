@@ -45,6 +45,7 @@ class GameRhythm(StrEnum):
 
 
 class MatchEventType(StrEnum):
+    # Existing baseline
     PASS = "pass"
     CARRY = "carry"
     SHOT = "shot"
@@ -55,6 +56,26 @@ class MatchEventType(StrEnum):
     GOAL = "goal"
     TURNOVER = "turnover"
     INFLECTION = "inflection"
+    # Defensive
+    CLEARANCE = "clearance"
+    BLOCK = "block"
+    RECOVERY = "recovery"
+    # Goalkeeping
+    SAVE = "save"
+    CLAIM = "claim"
+    PUNCH = "punch"
+    GOAL_KICK = "goal_kick"
+    # Attacking
+    CROSS = "cross"
+    KEY_PASS = "key_pass"
+    PROGRESSIVE_CARRY = "progressive_carry"
+    AERIAL_DUEL = "aerial_duel"
+    # Set Pieces & Disciplinary
+    CORNER_KICK = "corner_kick"
+    FREE_KICK = "free_kick"
+    YELLOW_CARD = "yellow_card"
+    RED_CARD = "red_card"
+    OFFSIDE = "offside"
 
 
 class ExperiencePersona(StrEnum):
@@ -188,12 +209,25 @@ class MatchEvent(_Contract):
     completed: bool | None = None
     score: ScorePair | None = None
     description: str
+    pitchSector: str | None = None
+    speedKmH: float | None = None
+    subAction: str | None = None
+    secondaryActorId: str | None = None
 
     @model_serializer(mode="wrap")
     def _drop_absent_optional(self, handler: Any) -> Any:
         data = handler(self)
-        for optional in ("xG", "pdr", "completed", "score"):
-            if getattr(self, optional) is None:
+        for optional in (
+            "xG",
+            "pdr",
+            "completed",
+            "score",
+            "pitchSector",
+            "speedKmH",
+            "subAction",
+            "secondaryActorId",
+        ):
+            if getattr(self, optional, None) is None:
                 data.pop(optional, None)
         return data
 

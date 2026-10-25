@@ -60,11 +60,88 @@ class Settings(BaseSettings):
     cosmos_db_container: str = "overlays"
     azure_mcp_server_url: str | None = None
 
+    # --- Unified LLM Provider Settings (OpenAI / GitHub / Ollama / Azure) --
+    llm_provider: str | None = None
+    llm_base_url: str | None = None
+    llm_api_key: str | None = None
+    llm_model: str | None = None
+    github_token: str | None = None
+    llm_timeout_seconds: float = 10.0
+    llm_max_tokens: int = 250
+
     @property
-    def foundry_enabled(self) -> bool:
-        return bool(
+    def active_llm_provider(self) -> str | None:
+        if self.llm_provider:
+            return self.llm_provider.strip().lower()
+        if self.azure_ai_foundry_endpoint and (self.azure_openai_api_key or self.azure_ai_foundry_deployment):
+            return "azure"
+        if self.llm_base_url:
+            base = self.llm_base_url.lower()
+            if "11434" in base or "ollama" in base:
+                return "ollama"
+            if "github" in base or "inference.ai.azure.com" in base:
+                return "github"
+            return "openai"
+        if self.github_token:
+            return "github"
+        if self.llm_api_key:
+            return "openai"
+        return None
+
+    @property
+    def llm_enabled(self) -> bool:
+        azure_configured = bool(
             self.azure_ai_foundry_endpoint and (self.azure_openai_api_key or self.azure_ai_foundry_deployment)
         )
+        return bool(
+            azure_configured
+            or self.llm_provider
+            or self.llm_base_url
+            or self.github_token
+            or self.llm_api_key
+        )
+
+    @property
+    def foundry_enabled(self) -> bool:
+        """Alias for backward compatibility."""
+        return self.llm_enabled
+
+    @property
+    def effective_llm_base_url(self) -> str:
+        if self.llm_base_url:
+            return self.llm_base_url.rstrip("/")
+        provider = self.active_llm_provider
+        if provider == "github":
+            return "https://models.github.ai/inference"
+        if provider == "ollama":
+            return "http://localhost:11434/v1"
+        if provider == "azure":
+            return (self.azure_ai_foundry_endpoint or "").rstrip("/")
+        return "http://localhost:11434/v1"
+
+    @property
+    def effective_llm_api_key(self) -> str | None:
+        if self.llm_api_key:
+            return self.llm_api_key
+        provider = self.active_llm_provider
+        if provider == "github":
+            return self.github_token
+        if provider == "azure":
+            return self.azure_openai_api_key
+        return None
+
+    @property
+    def effective_llm_model(self) -> str:
+        if self.llm_model:
+            return self.llm_model
+        provider = self.active_llm_provider
+        if provider == "azure":
+            return self.azure_ai_foundry_deployment or "gpt-4o"
+        if provider == "github":
+            return "gpt-4o-mini"
+        if provider == "ollama":
+            return "llama3.2"
+        return "llama3.2"
 
     @property
     def event_hubs_enabled(self) -> bool:

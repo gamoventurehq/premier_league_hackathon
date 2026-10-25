@@ -1,5 +1,5 @@
 import { baseMemory, normalizeFrame, normalizeBlackboard } from "../store/baseMemory";
-import { FrameTelemetry, PlayerKinematics } from "../types/telemetry";
+import { FrameTelemetry, PlayerKinematics, MatchEvent, MatchEventType, ShotRecord } from "../types/telemetry";
 
 class TelemetryService {
   private ws: WebSocket | null = null;
@@ -145,6 +145,85 @@ class TelemetryService {
     const chaos = Math.round(34.0 + 22.0 * Math.sin(t * 0.2));
     const control = 100 - chaos;
 
+    // Authentic airborne ball elevation for crosses, duels, and clearances
+    const isAirborne = (t % 12.0 < 3.2);
+    const ballZ = isAirborne ? Math.max(0, 2.4 * Math.sin(((t % 12.0) / 3.2) * Math.PI)) : 0;
+
+    // 26-Type Visual Taxonomy Event Stream Generation for Offline / Demo Mode
+    const synthTemplates: Array<{
+      type: MatchEventType;
+      actorId: string;
+      secondaryActorId?: string;
+      team: "home" | "away";
+      sector: string;
+      speedKmH: number;
+      xG?: number;
+      pdr?: number;
+      desc: string;
+    }> = [
+      { type: "key_pass", actorId: "home_7", secondaryActorId: "home_10", team: "home", sector: "Right Half-Space", speedKmH: 28.4, pdr: 84, desc: "K. De Bruyne Line-Breaking Key Pass" },
+      { type: "cross", actorId: "away_8", secondaryActorId: "away_9", team: "away", sector: "Right Flank", speedKmH: 29.5, pdr: 78, desc: "B. Saka Whipped Near-Post Cross" },
+      { type: "clearance", actorId: "home_3", team: "home", sector: "Penalty Box", speedKmH: 26.2, desc: "R. Dias Powerful Box Clearance" },
+      { type: "aerial_duel", actorId: "home_10", secondaryActorId: "away_2", team: "home", sector: "Central Corridor", speedKmH: 18.0, desc: "E. Haaland Aerial Contest Won" },
+      { type: "save", actorId: "away_1", team: "away", sector: "Goal Mouth", speedKmH: 94.0, xG: 0.82, desc: "D. Raya Diving Reflex Save" },
+      { type: "progressive_carry", actorId: "away_8", team: "away", sector: "Right Half-Space", speedKmH: 33.2, desc: "B. Saka Vertical Progression Burst" },
+      { type: "block", actorId: "away_6", team: "away", sector: "Deep Defensive Corridor", speedKmH: 21.0, xG: 0.45, desc: "Gabriel Sliding Shot Block" },
+      { type: "tackle", actorId: "away_7", team: "away", sector: "Midfield Pivot", speedKmH: 24.1, desc: "D. Rice Ground Challenge Won" },
+      { type: "punch", actorId: "home_1", team: "home", sector: "6-Yard Box", speedKmH: 32.0, desc: "Ederson High Box Punch" },
+      { type: "shot", actorId: "home_10", team: "home", sector: "Penalty Spot", speedKmH: 104.5, xG: 0.68, desc: "E. Haaland Fierce Shot on Target" },
+      { type: "goal", actorId: "home_10", secondaryActorId: "home_7", team: "home", sector: "Top Right Corner", speedKmH: 108.4, xG: 0.78, desc: "E. Haaland Goal! Assisted by De Bruyne" },
+      { type: "recovery", actorId: "home_4", team: "home", sector: "Rest-Defense Line", speedKmH: 22.0, desc: "Rodri Loose Ball Recovery" },
+      { type: "corner_kick", actorId: "home_7", team: "home", sector: "Corner Arc", speedKmH: 30.0, desc: "K. De Bruyne Inswinging Corner" },
+      { type: "interception", actorId: "home_2", team: "home", sector: "Central Channel", speedKmH: 25.0, desc: "K. Walker Passing Lane Cut" },
+      { type: "yellow_card", actorId: "away_7", team: "away", sector: "Defensive Third", speedKmH: 0, desc: "D. Rice Cautioned for Tactical Breakdown" },
+      { type: "claim", actorId: "home_1", team: "home", sector: "Penalty Area", speedKmH: 15.0, desc: "Ederson Dominant High Catch" },
+      { type: "free_kick", actorId: "away_10", team: "away", sector: "Danger Corridor", speedKmH: 31.0, desc: "M. Odegaard Direct Free Kick" },
+      { type: "offside", actorId: "away_9", team: "away", sector: "High Defensive Line", speedKmH: 27.0, desc: "K. Havertz Caught Offside" },
+    ];
+
+    const cycleIndex = Math.floor(tickSec / 5);
+    const tpl = synthTemplates[cycleIndex % synthTemplates.length];
+    const clockMin = Math.floor(tickSec / 60);
+    const clockSec = Math.floor(tickSec % 60);
+    const formattedClock = `${clockMin.toString().padStart(2, "0")}:${clockSec.toString().padStart(2, "0")}`;
+
+    const syntheticEvent: MatchEvent = {
+      id: `synth_evt_${cycleIndex}`,
+      type: tpl.type,
+      matchClock: formattedClock,
+      timestampMs: Date.now() - (clockSec * 100),
+      team: tpl.team,
+      actorId: tpl.actorId,
+      targetId: tpl.secondaryActorId ?? null,
+      x: bx,
+      y: by,
+      xG: tpl.xG,
+      pdr: tpl.pdr,
+      completed: true,
+      score: { home: 1, away: 0 },
+      description: tpl.desc,
+      pitchSector: tpl.sector,
+      speedKmH: tpl.speedKmH,
+      secondaryActorId: tpl.secondaryActorId,
+    };
+
+    const syntheticShots: ShotRecord[] = (tpl.type === "shot" || tpl.type === "goal") ? [
+      {
+        id: `synth_shot_${cycleIndex}`,
+        team: tpl.team,
+        playerId: tpl.actorId,
+        playerName: tpl.desc,
+        matchClock: formattedClock,
+        timestampMs: Date.now(),
+        xG: tpl.xG ?? 0.68,
+        distanceToGoalM: 14.5,
+        outcome: tpl.type === "goal" ? "goal" : "saved",
+        onTarget: true,
+        x: bx,
+        y: by,
+      }
+    ] : [];
+
     return {
       frame_id: Math.floor(tickSec * 5),
       timestamp_ms: Date.now(),
@@ -152,7 +231,7 @@ class TelemetryService {
       ball: {
         x: Math.max(2, Math.min(103, bx)),
         y: Math.max(2, Math.min(66, by)),
-        z: 0,
+        z: ballZ,
         velocity_mps: bSpeed,
         speed_kmh: bSpeed * 3.6,
       },
@@ -160,6 +239,8 @@ class TelemetryService {
       control_chaos: { control, chaos },
       game_rhythm: chaos < 45 ? "structured_possession" : "counter_attacking_transition",
       active_tactical_inflection: chaos > 50,
+      events: [syntheticEvent],
+      shots: syntheticShots,
     };
   }
 

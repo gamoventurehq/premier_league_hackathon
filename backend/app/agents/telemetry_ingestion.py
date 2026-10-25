@@ -54,6 +54,10 @@ class TelemetryIngestionAgent:
             {
                 "x": frame.ball.x,
                 "y": frame.ball.y,
+                "z": frame.ball.z,
+                "vx": frame.ball.vx,
+                "vy": frame.ball.vy,
+                "vz": frame.ball.vz,
                 "speedKmH": frame.ball.speedKmH,
                 "possessionTeam": frame.ball.possessionTeam.value if frame.ball.possessionTeam else None,
                 "possessionPlayerId": frame.ball.possessionPlayerId,
@@ -175,6 +179,10 @@ class TelemetryIngestionAgent:
         ball = {
             "x": getattr(ball_obj, "x", 52.5) if ball_obj else 52.5,
             "y": getattr(ball_obj, "y", 34.0) if ball_obj else 34.0,
+            "z": getattr(ball_obj, "z", 0.0) if ball_obj else 0.0,
+            "vx": getattr(ball_obj, "vx", 0.0) if ball_obj else 0.0,
+            "vy": getattr(ball_obj, "vy", 0.0) if ball_obj else 0.0,
+            "vz": getattr(ball_obj, "vz", 0.0) if ball_obj else 0.0,
             "speedKmH": getattr(ball_obj, "speedKmH", 0.0) if ball_obj else 0.0,
             "possessionTeam": ball_possession_team,
             "possessionPlayerId": getattr(ball_obj, "possessionPlayerId", None) if ball_obj else None,

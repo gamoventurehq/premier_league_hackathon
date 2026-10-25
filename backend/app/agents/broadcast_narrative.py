@@ -16,10 +16,18 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
 from time import perf_counter
+from typing import Any
 
-from ..models import AgentRole, AgentStatus, BroadcastLanguage, MultilingualNarrative
+from ..models import (
+    AgentRole,
+    AgentStatus,
+    BroadcastLanguage,
+    ExperiencePersona,
+    MultilingualNarrative,
+    TelemetryFrame,
+    _Contract,
+)
 from .base import (
     K_COMMENTATOR_CUE,
     K_CONTROL_VS_CHAOS,
@@ -34,6 +42,7 @@ from .base import (
     K_TACTICAL_PHASE,
     AgentContext,
     AgentOutcome,
+    BlackboardView,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,90 +63,110 @@ INFLECTION_PREFIX = {
 HEADLINE_TEMPLATES: dict[str, dict[str, list[str]]] = {
     "high_possession": {
         "en": [
-            "{home} keep {away} pinned inside their own defensive third",
-            "A patient {home} siege compresses the Pitch Space of {away}",
+            "Total suffocation: {home} pin {away} deep with relentless territorial pressure",
+            "A masterclass in control: {home} dismantle space as {away} brace the low block",
+            "Relentless siege: {home} circulate on the edge of the box probing for the killer pass",
         ],
         "es": [
-            "{home} mantiene a {away} atrapados en su propio tercio defensivo",
-            "Un asedio paciente de {home} comprime el espacio de juego de {away}",
+            "Asedio total: {home} asfixia a {away} en su propio tercio defensivo",
+            "Monólogo táctico: {home} domina el espacio mientras {away} resiste en bloque bajo",
+            "Presión constante: {home} circula al borde del área buscando el pase decisivo",
         ],
         "fr": [
-            "{home} maintient {away} cantonne dans son propre tiers défensif",
-            "Un siège patient de {home} comprime l'espace de jeu de {away}",
+            "Étouffement total : {home} accule {away} dans son tiers défensif avec une pression étouffante",
+            "Maîtrise absolue : {home} confisque le ballon face au bloc compact d'{away}",
+            "Siège implacable : {home} fait tourner aux abords de la surface en quête de l'ouverture",
         ],
         "ja": [
-            "{home}が{away}を自陣の深い位置まで封じ込める",
-            "{home}の緩やかな包囲網が{away}のピッチスペースを圧縮する",
+            "完全な包囲網：{home}が圧倒的な圧力で{away}を自陣深くに釘付けにする",
+            "戦術的支配：{home}がパスワークで{away}の低位ブロックを揺さぶる",
+            "怒涛の攻撃：{home}がペナルティエリア手前で決定打の隙を窺う",
         ],
         "ar": [
-            "{home}يقبس على {away} داخل ثلثه الدفاعي",
-            "حصار صبور من {home} يضيق مساحة الملعب أمام {away}",
+            "حصار مطبق: {home} يخنق {away} في مناطقه الدفاعية بضغط هجومي متواصل",
+            "هيمنة مطلقة: {home} يفرض إيقاعه التكتيكي و{away} يدافع بتكتل دفاعي عميق",
+            "طوفان هجومي: {home} يناور على حافة منطقة الجزاء بحثاً عن الثغرة القاتلة",
         ],
     },
     "counter_attack_transition": {
         "en": [
-            "{away} turn the break into a vertical sprint through the middle",
-            "{away} counter straight through the {home} recovery shape",
+            "Lightning strike! {away} rip through the lines with an electric vertical counter",
+            "Devastating transition: {away} puncture the recovery shape at breakneck speed",
+            "Pure vertical danger! {away} exploit the high line in three blistering touches",
         ],
         "es": [
-            "{away} convierten la recuperación en una carrera vertical por el centro",
-            "{away} contraatacan en vertical y rompen la recuperación de {home}",
+            "¡Contragolpe letal! {away} rompe las líneas a velocidad supersónica",
+            "Transición fulgurante: {away} castiga la espalda defensiva de {home}",
+            "¡Peligro vertiginoso! {away} desgarra el repliegue con verticalidad pura",
         ],
         "fr": [
-            "{away} transforment la rupture en sprint vertical dans l'axe",
-            "{away} contre-attaquent en vertical et percent le bloc de remontee de {home}",
+            "Attaque éclair ! {away} transperce les lignes sur un contre supersonique",
+            "Transition dévastatrice : {away} punit le bloc haut d'une verticalité chirurgicale",
+            "Fulgurance absolue : {away} perce le repli défensif en trois touches tranchantes",
         ],
         "ja": [
-            "{away}がセンターからの縦の反撃へ振り切る",
-            "{away}が{home}の復旧ブレイクを縦に突破する",
+            "電光石火のカウンター！{away}が縦への鋭い推進力で一気にラインを切り裂く",
+            "電撃反撃：{away}がハイラインの背後を突いて急襲を仕掛ける",
+            "驚異のトランジション：わずか数タッチで{home}の守備陣を無力化",
         ],
         "ar": [
-            "{away}يحوّل الاستخلاص إلى هجمة عمودية عبر الوسط",
-            "{away}يرد بسرعة عمودية ويخترق شكل استعادة {home}",
+            "صاعقة مرتدة! {away} يمزق الخطوط بانطلاقة عمودية خاطفة نحو المرمى",
+            "تحول هجومي مدمر: {away} يعاقب دفاع {home} المتقدم بلمسات حاسمة",
+            "سرعة فائقة! {away} يضرب عمق الملعب بهجمة مرتدة نموذجية",
         ],
     },
     "low_block_siege": {
         "en": [
-            "{away} shut the box down and force {home} to go wide",
-            "A low block absorbs the {home} siege corridor by corridor",
+            "Iron curtain: {away} seal every corridor, forcing {home} into wide circulation",
+            "Heroic resistance: {away} throw bodies on the line as {home} hammer the box",
+            "The wall holds firm: {away} suffocate the central lanes under intense pressure",
         ],
         "es": [
-            "{away} cierran el área y obligan a {home} a buscar los flancos",
-            "El bloque bajo absorbe el asedio de {home} pasillo a pasillo",
+            "Muro de contención: {away} clausura los pasillos y fuerza a {home} a las bandas",
+            "Resistencia numantina: {away} defiende cada metro ante las oleadas de {home}",
+            "Bloque infranqueable: {away} cierra el cerrojo en el área bajo máximo asedio",
         ],
         "fr": [
-            "{away} ferment la surface et obligent {home} a jouer sur les cotes",
-            "Le bloc bas absorbe le siège de {home} couloir par couloir",
+            "Rideau de fer : {away} verrouille l'axe et pousse {home} vers les ailes",
+            "Résistance héroïque : {away} fait front face aux assauts répétés de {home}",
+            "Muraille impénétrable : {away} colmate chaque brèche sous un siège intense",
         ],
         "ja": [
-            "{away}がエリアを封鎖し、{home}をサイドへ誘導する",
-            "低位ブロックが{home}の包囲をレーンごとに吸収する",
+            "鉄壁の要塞：{away}が中央の全レーンを封鎖し、{home}をサイドへ押し出す",
+            "決死のディフェンス：{away}がペナルティエリア内で体を張って猛攻を凌ぐ",
+            "頑強な低位ブロック：{away}が密集守備で決定機を許さない",
         ],
         "ar": [
-            "{away}يسدّ منطقة الجزاء ويجبر {home}على الاعتماد على الأطراف",
-            "كتلة منخفضة تمتص حصار {home} ممرًا تلو الآخر",
+            "جدار فولاذي: {away} يغلق جميع المنافذ ويجبر {home} على الاعتماد على الأطراف",
+            "استبسال دفاعي: {away} يستميت في حماية مرماه أمام أمواج هجمات {home}",
+            "حصن منيع: {away} يخنق ممرات التمرير تحت ضغط تكتيكي مكثف",
         ],
     },
     "box_scramble": {
         "en": [
-            "Penalty area scramble: {home} ricochet the ball around the six-yard box",
-            "Chaos breaks out inside the {away} area",
+            "Heart in mouth! Desperate goal-line blocks as pure chaos engulfs the six-yard box",
+            "Incredible scramble! How did that stay out? Bodies colliding in the goalmouth",
+            "Absolute bedlam! High-wire drama inside the penalty box with xG through the roof",
         ],
         "es": [
-            "Batalla en el área: {home} hacen rebotar el balón alrededor de la línea de portería",
-            "El caos estalla dentro del area de {away}",
+            "¡De milagro no entra! Caos absoluto y despejes in extremis en la línea de gol",
+            "¡Batalla campal en el área! Bloqueos desesperados bajo los palos",
+            "¡Pánico en la zaga! Balón suelto en el área pequeña con drama máximo",
         ],
         "fr": [
-            "Bagarre dans la surface : {home} font rebondir le ballon sur la ligne de but",
-            "Le chaos explose dans la surface de {away}",
+            "Sauvetage héroïque sur la ligne ! Chaos absolu dans les six mètres",
+            "Incroyable cafouillage ! Les corps s'entrechoquent devant le but dans une tension maximale",
+            "Folie totale dans la surface ! Des sauvetages désespérés sauvent le but",
         ],
         "ja": [
-            "ペナルティエリアの乱戦：{home}がゴールライン周辺でボールを跳ね返す",
-            "{away}のエリア内で混沌が爆発する",
+            "ゴール前大混戦！ゴールライン上での決死のブロックが炸裂",
+            "奇跡の防戦！混戦の6ヤードボックス内でボールが跳ね回る",
+            "絶体絶命の危機！ペナルティエリア内の激闘でスタジアムが息を呑む",
         ],
         "ar": [
-            "ارتباك داخل منطقة الجزاء: {home}يرتد الكرة على خط المرمى",
-            "الفوضى تندلع داخل منطقة {away}",
+            "إثارة تحبس الأنفاس! استبسال على خط المرمى وفوضى عارمة داخل الست ياردات",
+            "معمعة كروية كبرى! كيف لم تسكن الشباك؟ تدخلات بطولية تمنع هدفاً محققاً",
+            "دراما حقيقية في منطقة الجزاء! صراع مشتعل والكرة ترفض معانقة الشباك",
         ],
     },
 }
@@ -250,8 +279,7 @@ PHASE_LABELS = {
 }
 
 
-@dataclass(slots=True)
-class NarrativeDraft:
+class NarrativeDraft(_Contract):
     """The multilingual part of a Narrative Event, produced by the narrative agent."""
 
     id: str
@@ -276,13 +304,25 @@ class RuleBasedNarrativeGenerator:
         scenario = frame.scenario.value
         language_keys = [language.value for language in BroadcastLanguage]
 
-        clock = view.read(K_MATCH_CLOCK) or frame.matchClock
-        chaos = float(view.read(K_CONTROL_VS_CHAOS) or frame.metrics.controlVsChaosIndex)
-        pdr = float(view.read(K_PASS_DIFFICULTY_RATING) or frame.metrics.passDifficultyRating)
-        home_control = float(view.read(K_PITCH_CONTROL_HOME) or frame.metrics.pitchControl.home)
-        away_control = float(view.read(K_PITCH_CONTROL_AWAY) or frame.metrics.pitchControl.away)
-        phase = str(view.read(K_TACTICAL_PHASE) or "progression")
-        inflections = view.read(K_INFLECTION_CANDIDATES) or []
+        clock = (view.read(K_MATCH_CLOCK) if view is not None else None) or frame.matchClock
+        chaos = float(
+            (view.read(K_CONTROL_VS_CHAOS) if view is not None else None)
+            or frame.metrics.controlVsChaosIndex
+        )
+        pdr = float(
+            (view.read(K_PASS_DIFFICULTY_RATING) if view is not None else None)
+            or frame.metrics.passDifficultyRating
+        )
+        home_control = float(
+            (view.read(K_PITCH_CONTROL_HOME) if view is not None else None)
+            or frame.metrics.pitchControl.home
+        )
+        away_control = float(
+            (view.read(K_PITCH_CONTROL_AWAY) if view is not None else None)
+            or frame.metrics.pitchControl.away
+        )
+        phase = str((view.read(K_TACTICAL_PHASE) if view is not None else None) or "progression")
+        inflections = (view.read(K_INFLECTION_CANDIDATES) if view is not None else None) or []
         is_inflection = bool(inflections)
 
         values = {
@@ -336,6 +376,18 @@ class RuleBasedNarrativeGenerator:
             tacticalExplanation=explanation,
             commentatorCue=cue,
         )
+
+    def build_from_frame(
+        self,
+        frame: TelemetryFrame,
+        blackboard: Any | None = None,
+        persona: ExperiencePersona = ExperiencePersona.ANALYST,
+        variant: int = 0,
+    ) -> NarrativeDraft:
+        """Directly build a draft from a frame without requiring manual context setup."""
+        view = BlackboardView(blackboard=blackboard) if blackboard is not None else None
+        context = AgentContext(frame=frame, view=view, persona=persona)  # type: ignore[arg-type]
+        return self.build(context, variant=variant)
 
     def _render(
         self,

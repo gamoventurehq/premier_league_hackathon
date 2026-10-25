@@ -45,6 +45,7 @@ from .metrics import (
     match_statistics,
     rhythm_inputs,
 )
+from .sectors import resolve_pitch_sector
 from .spatial import (
     BOUNDARY_MARGIN,
     GOAL_HALF_WIDTH,
@@ -56,6 +57,8 @@ from .spatial import (
     attack_direction,
     distance,
     evaluate_lane,
+    integrate_player_velocity,
+    own_goal,
     pitch_control_percentages,
     pitch_control_surface,
     reflect,
@@ -285,6 +288,8 @@ class Flight:
     pdr: float = 0.0
     foul: bool = False
     speed_kmh: float = 0.0
+    apex_z: float = 0.0
+    flight_type: str = "ground"
 
 
 @dataclass(slots=True)
@@ -414,6 +419,8 @@ class MatchEngine:
         self._anchor_tick: int = 0
         self._lane_cache: list = []
         self._last_fast_path_ms: float = 0.0
+        self._last_passer_id: str | None = None
+        self._last_pass_time: float = 0.0
 
     # -- lifecycle ------------------------------------------------------------
 
@@ -442,6 +449,8 @@ class MatchEngine:
         self._possession_ema = 0.5
         self._shape_ball_x = PITCH_CENTRE_X
         self._shape_ball_y = PITCH_CENTRE_Y
+        self._last_passer_id = None
+        self._last_pass_time = 0.0
         self._build_players()
         self._kickoff(TeamSide.HOME)
         anchor = self.scenario.anchor_seconds if start_seconds is None else start_seconds
@@ -601,6 +610,11 @@ class MatchEngine:
             return
         state = self.state
         for team, shape in ((TeamSide.HOME, self.scenario.home), (TeamSide.AWAY, self.scenario.away)):
+            opp_weight = max(0.0, 1.0 - self._possession_weight[team])
+            # Dynamic line depth compression: under opponent pressure, def and mid lines compress (9-14m)
+            base_depth = shape.mid_line - shape.def_line
+            line_compression = max(0.0, base_depth - 11.0) * 0.35 * opp_weight * min(1.2, self.scenario.press_intensity)
+
             for player in state.players:
                 if player.team is not team:
                     continue
@@ -608,11 +622,13 @@ class MatchEngine:
                     base_x = 4.5
                     base_y = PITCH_CENTRE_Y
                 else:
-                    base_x = {
-                        "def": shape.def_line,
-                        "mid": shape.mid_line,
-                        "fwd": shape.fwd_line,
-                    }[player.slot] + self._bias_of(player.id)
+                    if player.slot == "def":
+                        slot_x = shape.def_line + line_compression * 0.35
+                    elif player.slot == "mid":
+                        slot_x = shape.mid_line - line_compression * 0.65
+                    else:
+                        slot_x = shape.fwd_line
+                    base_x = slot_x + self._bias_of(player.id)
                     base_y = self._lateral_of(player.id) * PITCH_WIDTH * shape.spread
                 if team is TeamSide.AWAY:
                     x = PITCH_LENGTH - base_x
@@ -632,6 +648,14 @@ class MatchEngine:
                 if player.slot != "gk":
                     x += ball_delta * (shape.ball_shift * push / 12.0)
                 y += max(-14.0, min(14.0, self._shape_ball_y - PITCH_CENTRE_Y)) * 0.35
+
+                # Shift weak-side outfield players centrally during flank play
+                if player.slot != "gk":
+                    if self._shape_ball_y < 20.0 and y > PITCH_CENTRE_Y:
+                        y -= 5.5 * opp_weight
+                    elif self._shape_ball_y > 48.0 and y < PITCH_CENTRE_Y:
+                        y += 5.5 * opp_weight
+
                 x = self._clamp_to_ball(x, player, team)
                 player.home_x = max(2.0, min(PITCH_LENGTH - 2.0, x))
                 player.home_y = max(3.0, min(PITCH_WIDTH - 3.0, y))
@@ -705,8 +729,15 @@ class MatchEngine:
             )
             presser_id = presser.id
             coverer_id = ranked[1].id if len(ranked) > 1 else None
+            # Tactical pressing trigger: burst on primary presser when opponent enters
+            # defensive third or wide touchline trap corridor.
+            own_gx, _ = own_goal(team)
+            dist_to_own_goal = abs(ball_x - own_gx)
+            defensive_danger = dist_to_own_goal <= 35.0 or (ball_y < 12.0 or ball_y > 56.0)
+            should_press_burst = (not in_possession) and defensive_danger
 
             for player in mates:
+                player.is_pressing = should_press_burst and (player.id == presser_id)
                 anchor_x, anchor_y = player.home_x, player.home_y
                 if player.slot == "gk":
                     # The keeper holds his line and only shifts across his goal.
@@ -756,14 +787,20 @@ class MatchEngine:
 
                 desired_vx = (target_x - player.x) * self.STEERING_GAIN + sep_x
                 desired_vy = (target_y - player.y) * self.STEERING_GAIN + sep_y
-                speed = math.hypot(desired_vx, desired_vy)
-                if speed > player.max_sprint:
-                    desired_vx = desired_vx / speed * player.max_sprint
-                    desired_vy = desired_vy / speed * player.max_sprint
 
-                blend = min(1.0, dt * 6.0)
-                player.vx += (desired_vx - player.vx) * blend
-                player.vy += (desired_vy - player.vy) * blend
+                new_vx, new_vy, ax, ay = integrate_player_velocity(
+                    player.vx,
+                    player.vy,
+                    desired_vx,
+                    desired_vy,
+                    dt,
+                    player.max_sprint,
+                    player.is_pressing,
+                )
+                player.ax = ax
+                player.ay = ay
+                player.vx = new_vx
+                player.vy = new_vy
 
                 player.x = reflect(player.x + player.vx * dt, 0.0, PITCH_LENGTH, BOUNDARY_MARGIN)
                 player.y = reflect(player.y + player.vy * dt, 0.0, PITCH_WIDTH, BOUNDARY_MARGIN)
@@ -788,18 +825,29 @@ class MatchEngine:
         flight = state.flight
         if flight is not None:
             flight.elapsed += dt
-            progress = min(1.0, flight.elapsed / max(0.05, flight.duration))
+            duration = max(0.05, flight.duration)
+            progress = min(1.0, flight.elapsed / duration)
             previous_x = state.ball_x
             state.ball_x = flight.start_x + (flight.end_x - flight.start_x) * progress
             state.ball_y = flight.start_y + (flight.end_y - flight.start_y) * progress
-            state.ball_vx = (flight.end_x - flight.start_x) / max(0.05, flight.duration)
-            state.ball_vy = (flight.end_y - flight.start_y) / max(0.05, flight.duration)
-            state.ball_vz = 0.0
+            state.ball_vx = (flight.end_x - flight.start_x) / duration
+            state.ball_vy = (flight.end_y - flight.start_y) / duration
+
+            # 3D Parabolic Gravity Physics:
+            if flight.apex_z > 0.0:
+                state.ball_z = max(0.0, 4.0 * flight.apex_z * progress * (1.0 - progress))
+                state.ball_vz = 4.0 * flight.apex_z * (1.0 - 2.0 * progress) / duration
+            else:
+                state.ball_z = 0.0
+                state.ball_vz = 0.0
+
             passer = self._player(flight.passer_id)
             if passer is not None:
                 direction = attack_direction(passer.team)
                 self.ball_progression_m += max(0.0, direction * (state.ball_x - previous_x))
             if flight.elapsed >= flight.duration:
+                state.ball_z = 0.0
+                state.ball_vz = 0.0
                 self._resolve_flight(flight)
             return
 
@@ -830,6 +878,7 @@ class MatchEngine:
         carrier = self._carrier()
         if carrier is None:
             return
+        self._track_carry(carrier)
         self._decision_timer -= dt
         if self._decision_timer <= 0.0:
             self._decide(carrier)
@@ -867,7 +916,20 @@ class MatchEngine:
                 self._take_shot(carrier, opponents)
                 return
 
-        # 2. Pass.
+        # 2. Dribble / Carry into open space:
+        direction = attack_direction(team)
+        opps_ahead = sum(
+            1
+            for o in opponents
+            if direction * (o.x - carrier.x) > 0 and distance(carrier.x, carrier.y, o.x, o.y) <= 7.0
+        )
+        if opps_ahead == 0 and carrier.role != "GK":
+            dribble_prob = 0.28 if scenario.id == SyntheticScenarioType.COUNTER_ATTACK_TRANSITION else 0.18
+            if self.rng.random() < dribble_prob:
+                self._decision_timer = 1.0 + self.rng.random() * 0.8
+                return
+
+        # 3. Pass.
         self._attempt_pass(carrier, opponents)
 
     def _attempt_pass(self, carrier: SimPlayer, opponents: list[SimPlayer]) -> None:
@@ -910,6 +972,39 @@ class MatchEngine:
                 break
 
         lane = evaluate_lane(carrier, receiver, opponents, self.scenario.interception_bias)
+
+        # Tactical action classification:
+        target_gx, target_gy = target_goal(team)
+        own_gx, own_gy = own_goal(team)
+        carrier_to_target = distance(carrier.x, carrier.y, target_gx, target_gy)
+        receiver_to_target = distance(receiver.x, receiver.y, target_gx, target_gy)
+        carrier_to_own = distance(carrier.x, carrier.y, own_gx, own_gy)
+
+        is_wide_flank = carrier.y < 16.0 or carrier.y > 52.0
+        is_attacking_third = carrier_to_target < 44.0
+        receiver_in_box = receiver_to_target < 28.0
+
+        is_cross = is_wide_flank and is_attacking_third and receiver_in_box
+        is_clearance = (
+            (carrier.role in ("DF", "GK") or (carrier.role == "MF" and carrier_to_own < 24.0))
+            and carrier_to_own < 28.0
+            and lane.passerPressure > 0.35
+            and self.rng.random() < max(0.30, 0.45 * min(1.3, self.scenario.press_intensity))
+        )
+
+        flight_type = "ground"
+        apex_z = 0.0
+        if is_cross:
+            flight_type = "cross"
+            apex_z = round(2.4 + self.rng.random() * 1.6, 2)
+            pass_speed = 22.0 + self.rng.random() * 5.0
+        elif is_clearance:
+            flight_type = "clearance"
+            apex_z = round(5.0 + self.rng.random() * 5.0, 2)
+            pass_speed = 22.0 + self.rng.random() * 6.0
+        else:
+            pass_speed = 11.0 + 5.0 * self.scenario.tempo + self.rng.random() * 3.5
+
         # The completion probability is calibrated so that the aggregate pass
         # completion of a Premier League fixture lands inside the 75-85% band
         # in every Synthetic Match Scenario, while still responding to the
@@ -934,13 +1029,26 @@ class MatchEngine:
         interceptor: SimPlayer | None = None
         foul = False
         completed = self.rng.random() < completion
-        if not completed:
+
+        # Check offside condition on forward passes
+        fwd_pass = direction * (receiver.x - carrier.x)
+        if not is_clearance and fwd_pass > 7.0 and direction * (receiver.x - PITCH_CENTRE_X) > 8.0:
+            def_outfield = [o for o in opponents if o.slot != "gk"]
+            if len(def_outfield) >= 2:
+                xs = sorted([o.x for o in def_outfield])
+                second_deepest = xs[-2] if direction == 1 else xs[1]
+                is_ahead = (receiver.x > second_deepest + 0.4) if direction == 1 else (receiver.x < second_deepest - 0.4)
+                if is_ahead and self.rng.random() < 0.035:
+                    completed = False
+                    outcome = "offside"
+
+        if not completed and outcome != "offside":
             # The pass does not reach the intended receiver. The ball is loose:
             # either the opposition wins it (a turnover) or the passing side
             # recovers it and the possession sequence continues.
             if self.rng.random() < self._turnover_probability(team):
                 interceptor = self._nearest_to_corridor(carrier, receiver, opponents)
-                duel_chance = min(0.85, self.scenario.duel_rate * self.scenario.press_intensity)
+                duel_chance = min(0.85, max(0.28, self.scenario.duel_rate * self.scenario.press_intensity))
                 if interceptor is not None and self.rng.random() < duel_chance:
                     outcome = "duel"
                 else:
@@ -953,11 +1061,10 @@ class MatchEngine:
                         opponents,
                         key=lambda o: distance(o.x, o.y, receiver.x, receiver.y),
                     )
-                foul = outcome == "duel" and self.rng.random() < 0.12
+                foul = outcome == "duel" and self.rng.random() < (0.30 * min(1.3, self.scenario.press_intensity + 0.1))
             else:
                 outcome = "loose"
 
-        pass_speed = 11.0 + 5.0 * self.scenario.tempo + self.rng.random() * 3.5
         lane_length = distance(carrier.x, carrier.y, receiver.x, receiver.y)
         self.state.flight = Flight(
             passer_id=carrier.id,
@@ -973,6 +1080,8 @@ class MatchEngine:
             pdr=lane.passDifficultyRating,
             foul=foul,
             speed_kmh=pass_speed * 3.6,
+            apex_z=apex_z,
+            flight_type=flight_type,
         )
         self.state.carrier_id = None
         carrier.on_ball = False
@@ -1022,7 +1131,7 @@ class MatchEngine:
         return best if best is not None and best_distance <= 6.0 else None
 
     def _resolve_flight(self, flight: Flight) -> None:
-        """A pass arrives: the outcome is applied and the event is emitted."""
+        """A pass or delivery arrives: the outcome is applied and discrete events emitted."""
         state = self.state
         state.flight = None
         passer = self._player(flight.passer_id)
@@ -1031,60 +1140,445 @@ class MatchEngine:
         timestamp = int(self.match_seconds * 1000)
         lane_length = distance(flight.start_x, flight.start_y, flight.end_x, flight.end_y)
 
-        # Every attempt is logged as a pass attempt so that the pass completion
-        # statistic is always consistent with the event log.
+        team = passer.team if passer else None
+        start_sector = resolve_pitch_sector(flight.start_x, flight.start_y, team)
+        arrival_sector = resolve_pitch_sector(flight.end_x, flight.end_y, team)
+
         completed = flight.outcome == "completed"
+
+        # 0. Shot flight resolution
+        if flight.flight_type == "shot":
+            shooter = passer
+            if shooter is None:
+                return
+            defending = TeamSide.AWAY if team is TeamSide.HOME else TeamSide.HOME
+            goal_x, goal_y = target_goal(team)
+            shot_sector = resolve_pitch_sector(flight.start_x, flight.start_y, team)
+            shot_distance = distance(flight.start_x, flight.start_y, goal_x, goal_y)
+            sub_shot = "header" if (shot_distance < 12.0 and flight.apex_z > 1.8) else "open_play"
+
+            if flight.outcome == "goal":
+                shooter.goals += 1
+                self.events.append(
+                    self._event(
+                        MatchEventType.GOAL,
+                        clock,
+                        timestamp,
+                        team,
+                        shooter.id,
+                        None,
+                        goal_x,
+                        goal_y,
+                        f"GOAL! {shooter.short_name} finds the net from {shot_sector} ({flight.speed_kmh:.1f} km/h).",
+                        xg=flight.pdr,
+                        pitch_sector=shot_sector,
+                        speed_kmh=flight.speed_kmh,
+                        sub_action=sub_shot,
+                    )
+                )
+                self.score[team.value] += 1
+                self._close_sequence()
+                self._kickoff(TeamSide.AWAY if team is TeamSide.HOME else TeamSide.HOME)
+                return
+
+            if flight.outcome == "blocked":
+                nearest_def = self._player(flight.interceptor_id) if flight.interceptor_id else None
+                if nearest_def:
+                    block_sector = resolve_pitch_sector(nearest_def.x, nearest_def.y, defending)
+                    self.events.append(
+                        self._event(
+                            MatchEventType.BLOCK,
+                            clock,
+                            timestamp,
+                            defending,
+                            nearest_def.id,
+                            shooter.id,
+                            nearest_def.x,
+                            nearest_def.y,
+                            f"{nearest_def.short_name} blocks {shooter.short_name}'s strike in {block_sector}.",
+                            pitch_sector=block_sector,
+                            speed_kmh=flight.speed_kmh,
+                            sub_action="shot_block",
+                            secondary_actor_id=shooter.id,
+                        )
+                    )
+                    if self.rng.random() < 0.25:
+                        self.events.append(
+                            self._event(
+                                MatchEventType.CORNER_KICK,
+                                clock,
+                                timestamp,
+                                team,
+                                shooter.id,
+                                None,
+                                goal_x,
+                                3.0 if shooter.y < 34.0 else 65.0,
+                                "Blocked strike deflects behind for an attacking corner kick.",
+                                pitch_sector="Corner Quadrant",
+                                sub_action="out_swinger",
+                            )
+                        )
+                        self._close_sequence()
+                        self._set_carrier(self._restart_player(team))
+                        self._sequence_team = team
+                        self._sequence_started_at = self.match_seconds
+                        return
+                    self._close_sequence()
+                    self._set_carrier(nearest_def)
+                    self.observations.possession_changes += 1
+                    self._sequence_team = defending
+                    self._sequence_started_at = self.match_seconds
+                    return
+
+            if flight.outcome == "saved":
+                gk = self._player(flight.interceptor_id or flight.receiver_id)
+                if gk is None:
+                    gk = next((p for p in self.state.players if p.team is defending and p.slot == "gk"), None)
+                gk_sector = resolve_pitch_sector(gk.x, gk.y, defending) if gk else "Goal Mouth"
+                sub_save = "diving_stop" if shot_distance > 15 else ("reflex" if shot_distance < 9 else "parry")
+                self.events.append(
+                    self._event(
+                        MatchEventType.SAVE,
+                        clock,
+                        timestamp,
+                        defending,
+                        gk.id if gk else None,
+                        shooter.id,
+                        gk.x if gk else goal_x,
+                        gk.y if gk else goal_y,
+                        f"{gk.short_name if gk else 'Goalkeeper'} executes a {sub_save} save ({flight.speed_kmh:.1f} km/h) in {gk_sector} to deny {shooter.short_name}.",
+                        pitch_sector=gk_sector,
+                        speed_kmh=flight.speed_kmh,
+                        sub_action=sub_save,
+                        secondary_actor_id=shooter.id,
+                    )
+                )
+                if self.rng.random() < 0.35:
+                    corner_sub = "in_swinger" if self.rng.random() < 0.5 else "out_swinger"
+                    self.events.append(
+                        self._event(
+                            MatchEventType.CORNER_KICK,
+                            clock,
+                            timestamp,
+                            team,
+                            shooter.id,
+                            None,
+                            goal_x,
+                            3.0 if shooter.y < 34.0 else 65.0,
+                            f"{shooter.short_name}'s strike tipped behind for a {corner_sub} corner kick.",
+                            pitch_sector="Corner Quadrant",
+                            sub_action=corner_sub,
+                        )
+                    )
+                    self._close_sequence()
+                    self._set_carrier(self._restart_player(team))
+                    self._sequence_team = team
+                    self._sequence_started_at = self.match_seconds
+                    return
+
+                self._close_sequence()
+                self._set_carrier(gk if gk else self._deepest_player(defending))
+                self.observations.possession_changes += 1
+                self._sequence_team = defending
+                self._sequence_started_at = self.match_seconds
+                return
+
+            # Off target (missed): Goal Kick
+            gk = next((p for p in self.state.players if p.team is defending and p.slot == "gk"), None)
+            gk_sector = resolve_pitch_sector(gk.x, gk.y, defending) if gk else "Goal Mouth"
+            self.events.append(
+                self._event(
+                    MatchEventType.GOAL_KICK,
+                    clock,
+                    timestamp,
+                    defending,
+                    gk.id if gk else None,
+                    None,
+                    own_goal(defending)[0],
+                    own_goal(defending)[1],
+                    f"Strike sails wide of the target in {shot_sector}. {gk.short_name if gk else 'Goalkeeper'} to restart with a goal kick.",
+                    pitch_sector=gk_sector,
+                    sub_action="restart_distribution",
+                )
+            )
+            self._close_sequence()
+            self._set_carrier(gk if gk else self._deepest_player(defending))
+            self.observations.possession_changes += 1
+            self._sequence_team = defending
+            self._sequence_started_at = self.match_seconds
+            return
+
+        # 1. Offside resolution
+        if flight.outcome == "offside":
+            self.events.append(
+                self._event(
+                    MatchEventType.PASS,
+                    clock,
+                    timestamp,
+                    team,
+                    flight.passer_id,
+                    flight.receiver_id,
+                    flight.end_x,
+                    flight.end_y,
+                    f"{passer.short_name if passer else 'Carrier'} plays the ball towards {receiver.short_name if receiver else 'attacker'} ({arrival_sector}).",
+                    pdr=flight.pdr,
+                    completed=False,
+                    pitch_sector=start_sector,
+                    speed_kmh=flight.speed_kmh,
+                )
+            )
+            self.events.append(
+                self._event(
+                    MatchEventType.OFFSIDE,
+                    clock,
+                    timestamp,
+                    team,
+                    flight.receiver_id,
+                    flight.passer_id,
+                    flight.end_x,
+                    flight.end_y,
+                    f"Offside flag raised against {receiver.short_name if receiver else 'attacker'} in {arrival_sector}.",
+                    pitch_sector=arrival_sector,
+                    sub_action="line_breach",
+                )
+            )
+            defending = TeamSide.AWAY if team is TeamSide.HOME else TeamSide.HOME
+            self.events.append(
+                self._event(
+                    MatchEventType.FREE_KICK,
+                    clock,
+                    timestamp,
+                    defending,
+                    None,
+                    None,
+                    flight.end_x,
+                    flight.end_y,
+                    f"{defending.value.title()} awarded indirect free kick for offside in {arrival_sector}.",
+                    pitch_sector=arrival_sector,
+                    sub_action="indirect",
+                )
+            )
+            self._turnover(passer, None, "offside")
+            return
+
+        # 2. Clearance resolution
+        if flight.flight_type == "clearance":
+            sub_clearance = "headed" if (passer and passer.role == "DF" and self.rng.random() < 0.40) else "kicked"
+            self.events.append(
+                self._event(
+                    MatchEventType.CLEARANCE,
+                    clock,
+                    timestamp,
+                    team,
+                    flight.passer_id,
+                    flight.receiver_id,
+                    flight.start_x,
+                    flight.start_y,
+                    f"{passer.short_name if passer else 'Defender'} executes a {sub_clearance} clearance ({flight.speed_kmh:.1f} km/h) from {start_sector}.",
+                    pitch_sector=start_sector,
+                    speed_kmh=flight.speed_kmh,
+                    sub_action=sub_clearance,
+                    secondary_actor_id=flight.receiver_id,
+                )
+            )
+            if completed and receiver is not None:
+                self.events.append(
+                    self._event(
+                        MatchEventType.RECOVERY,
+                        clock,
+                        timestamp,
+                        receiver.team,
+                        receiver.id,
+                        None,
+                        flight.end_x,
+                        flight.end_y,
+                        f"{receiver.short_name} recovers the cleared ball in {arrival_sector}.",
+                        pitch_sector=arrival_sector,
+                        sub_action="second_ball",
+                    )
+                )
+                self._set_carrier(receiver)
+                return
+            else:
+                interceptor = self._player(flight.interceptor_id) if flight.interceptor_id else None
+                if interceptor is not None:
+                    self.events.append(
+                        self._event(
+                            MatchEventType.RECOVERY,
+                            clock,
+                            timestamp,
+                            interceptor.team,
+                            interceptor.id,
+                            None,
+                            flight.end_x,
+                            flight.end_y,
+                            f"{interceptor.short_name} recovers the loose ball in {arrival_sector}.",
+                            pitch_sector=arrival_sector,
+                            sub_action="loose_ball",
+                        )
+                    )
+                    self._turnover(passer, interceptor, "clearance")
+                else:
+                    self._turnover(passer, None, "turnover")
+                return
+
+        # 3. Standard Pass logging
         self.events.append(
             self._event(
                 MatchEventType.PASS,
                 clock,
                 timestamp,
-                passer.team if passer else None,
+                team,
                 flight.passer_id,
                 flight.receiver_id,
                 flight.end_x,
                 flight.end_y,
-                f"{passer.short_name if passer else 'The carrier'} plays the ball {lane_length:.0f}m "
-                f"to {receiver.short_name if receiver else 'a teammate'}.",
+                f"{passer.short_name if passer else 'The carrier'} plays the ball {lane_length:.0f}m ({flight.speed_kmh:.1f} km/h) from {start_sector} to {receiver.short_name if receiver else 'a teammate'} ({arrival_sector}).",
                 pdr=flight.pdr,
                 completed=completed,
+                pitch_sector=start_sector,
+                speed_kmh=flight.speed_kmh,
             )
         )
 
+        # If this delivery was a cross, also emit CROSS event
+        if flight.flight_type == "cross":
+            sub_cross = (
+                "cutback"
+                if distance(flight.start_x, flight.start_y, target_goal(team)[0], target_goal(team)[1]) < 22
+                else ("whipped" if flight.speed_kmh > 80 else "lofted")
+            )
+            self.events.append(
+                self._event(
+                    MatchEventType.CROSS,
+                    clock,
+                    timestamp,
+                    team,
+                    flight.passer_id,
+                    flight.receiver_id,
+                    flight.end_x,
+                    flight.end_y,
+                    f"{passer.short_name if passer else 'Winger'} delivers a {sub_cross} cross ({flight.speed_kmh:.1f} km/h) from {start_sector} into {arrival_sector}.",
+                    pitch_sector=start_sector,
+                    speed_kmh=flight.speed_kmh,
+                    sub_action=sub_cross,
+                    secondary_actor_id=flight.receiver_id,
+                    completed=completed,
+                )
+            )
+
+        # 4. Completed Pass / Cross
         if completed and receiver is not None:
             self.observations.completed_passes += 1
             if passer is not None:
                 passer.passes_completed += 1
             if receiver is not None:
                 receiver.touches += 1
+            self._last_passer_id = flight.passer_id
+            self._last_pass_time = self.match_seconds
             self._set_carrier(receiver)
-            self._track_carry(receiver)
             return
 
         interceptor = self._player(flight.interceptor_id) if flight.interceptor_id else None
 
+        # 5. Loose Ball Recovery
         if flight.outcome == "loose":
-            # The passing side recovers the loose ball: the possession sequence
-            # continues, but the pass itself never reached the receiver.
             self.observations.loose_balls += 1
             if receiver is not None:
+                self.events.append(
+                    self._event(
+                        MatchEventType.RECOVERY,
+                        clock,
+                        timestamp,
+                        receiver.team,
+                        receiver.id,
+                        None,
+                        flight.end_x,
+                        flight.end_y,
+                        f"{receiver.short_name} recovers the loose ball in {arrival_sector}.",
+                        pitch_sector=arrival_sector,
+                        sub_action="loose_ball",
+                    )
+                )
                 self._set_carrier(receiver)
             return
 
-        if flight.outcome == "duel" and interceptor is not None:
+        # 6. Goalkeeper Claim or Punch on Crosses
+        if flight.flight_type == "cross" and interceptor is not None and interceptor.slot == "gk":
+            if self.rng.random() < 0.65:
+                self.events.append(
+                    self._event(
+                        MatchEventType.CLAIM,
+                        clock,
+                        timestamp,
+                        interceptor.team,
+                        interceptor.id,
+                        flight.passer_id,
+                        flight.end_x,
+                        flight.end_y,
+                        f"{interceptor.short_name} climbs in {arrival_sector} to claim the aerial cross cleanly.",
+                        pitch_sector=arrival_sector,
+                        sub_action="aerial_claim",
+                    )
+                )
+                self._set_carrier(interceptor)
+                self.observations.possession_changes += 1
+                return
+            else:
+                self.events.append(
+                    self._event(
+                        MatchEventType.PUNCH,
+                        clock,
+                        timestamp,
+                        interceptor.team,
+                        interceptor.id,
+                        flight.passer_id,
+                        flight.end_x,
+                        flight.end_y,
+                        f"{interceptor.short_name} punches the delivery clear from {arrival_sector}.",
+                        pitch_sector=arrival_sector,
+                        sub_action="two_handed_punch",
+                    )
+                )
+                self._turnover(passer, interceptor, "punch")
+                return
+
+        # 7. Aerial Duel on Elevated Balls
+        if flight.apex_z > 1.8 and interceptor is not None:
             self.events.append(
                 self._event(
-                    MatchEventType.DUEL,
+                    MatchEventType.AERIAL_DUEL,
                     clock,
                     timestamp,
                     interceptor.team,
                     interceptor.id,
-                    flight.passer_id,
+                    flight.receiver_id or flight.passer_id,
                     flight.end_x,
                     flight.end_y,
-                    f"{interceptor.short_name} contests the ball with {passer.short_name if passer else 'the carrier'}.",
+                    f"{interceptor.short_name} wins an aerial duel against {receiver.short_name if receiver else 'attacker'} in {arrival_sector}.",
+                    pitch_sector=arrival_sector,
+                    sub_action="box_aerial",
                 )
             )
+
+        # 8. Ground Duel / Tackle / Foul
+        if flight.outcome == "duel" and interceptor is not None:
+            if flight.apex_z <= 1.8:
+                self.events.append(
+                    self._event(
+                        MatchEventType.DUEL,
+                        clock,
+                        timestamp,
+                        interceptor.team,
+                        interceptor.id,
+                        flight.passer_id,
+                        flight.end_x,
+                        flight.end_y,
+                        f"{interceptor.short_name} contests the ball with {passer.short_name if passer else 'the carrier'} in {arrival_sector}.",
+                        pitch_sector=arrival_sector,
+                        sub_action="ground_duel",
+                    )
+                )
             if flight.foul:
                 self.events.append(
                     self._event(
@@ -1096,13 +1590,63 @@ class MatchEngine:
                         flight.passer_id,
                         flight.end_x,
                         flight.end_y,
-                        f"Foul by {interceptor.short_name}; {passer.short_name if passer else 'the carrier'} keeps the ball.",
+                        f"Foul by {interceptor.short_name} in {arrival_sector}; free kick awarded.",
+                        pitch_sector=arrival_sector,
+                        sub_action="trip",
+                    )
+                )
+                card_roll = self.rng.random()
+                if card_roll < 0.38:
+                    self.events.append(
+                        self._event(
+                            MatchEventType.YELLOW_CARD,
+                            clock,
+                            timestamp,
+                            interceptor.team,
+                            interceptor.id,
+                            None,
+                            flight.end_x,
+                            flight.end_y,
+                            f"Yellow card shown to {interceptor.short_name} for challenge in {arrival_sector}.",
+                            pitch_sector=arrival_sector,
+                            sub_action="tactical_break",
+                        )
+                    )
+                elif card_roll < 0.41:
+                    self.events.append(
+                        self._event(
+                            MatchEventType.RED_CARD,
+                            clock,
+                            timestamp,
+                            interceptor.team,
+                            interceptor.id,
+                            None,
+                            flight.end_x,
+                            flight.end_y,
+                            f"Red card shown to {interceptor.short_name} for dangerous play in {arrival_sector}.",
+                            pitch_sector=arrival_sector,
+                            sub_action="serious_foul",
+                        )
+                    )
+                self.events.append(
+                    self._event(
+                        MatchEventType.FREE_KICK,
+                        clock,
+                        timestamp,
+                        team,
+                        flight.receiver_id or flight.passer_id,
+                        None,
+                        flight.end_x,
+                        flight.end_y,
+                        f"{team.value.title() if team else 'Attacking'} side awarded free kick in {arrival_sector}.",
+                        pitch_sector=arrival_sector,
+                        sub_action="direct",
                     )
                 )
                 if receiver is not None:
                     self._set_carrier(receiver)
-                    self._track_carry(receiver)
                 return
+
             self.events.append(
                 self._event(
                     MatchEventType.TACKLE,
@@ -1113,13 +1657,15 @@ class MatchEngine:
                     flight.passer_id,
                     flight.end_x,
                     flight.end_y,
-                    f"{interceptor.short_name} wins the tackle from {passer.short_name if passer else 'the carrier'}.",
+                    f"{interceptor.short_name} wins the tackle cleanly from {passer.short_name if passer else 'the carrier'} in {arrival_sector}.",
+                    pitch_sector=arrival_sector,
+                    sub_action="standing_tackle",
                 )
             )
             self._turnover(passer, interceptor, "tackle")
             return
 
-        # Clean interception.
+        # 9. Clean Interception
         if interceptor is not None:
             self.events.append(
                 self._event(
@@ -1131,26 +1677,30 @@ class MatchEngine:
                     flight.passer_id,
                     flight.end_x,
                     flight.end_y,
-                    f"{interceptor.short_name} intercepts the pass from {passer.short_name if passer else 'the carrier'}.",
+                    f"{interceptor.short_name} intercepts the pass from {passer.short_name if passer else 'the carrier'} in {arrival_sector}.",
                     pdr=flight.pdr,
                     completed=False,
+                    pitch_sector=arrival_sector,
+                    sub_action="passing_lane_cutoff",
                 )
             )
             self._turnover(passer, interceptor, "interception")
             return
 
-        # The pass runs out of play: the defending side restarts.
+        # 10. Out of Play Turnover
         self.events.append(
             self._event(
                 MatchEventType.TURNOVER,
                 clock,
                 timestamp,
-                passer.team if passer else None,
+                team,
                 flight.passer_id,
                 None,
                 flight.end_x,
                 flight.end_y,
-                "The pass runs out of play.",
+                f"The pass runs out of play in {arrival_sector}.",
+                pitch_sector=arrival_sector,
+                sub_action="out_of_play",
             )
         )
         self._turnover(passer, None, "turnover")
@@ -1163,6 +1713,34 @@ class MatchEngine:
         clock = format_match_clock(self.match_seconds)
         timestamp = int(self.match_seconds * 1000)
         shot_distance = distance(shooter.x, shooter.y, goal_x, goal_y)
+        shot_sector = resolve_pitch_sector(shooter.x, shooter.y, team)
+        shot_speed = round(88.0 + self.rng.random() * 26.0, 1)
+        sub_shot = "header" if (shot_distance < 12.0 and self.rng.random() < 0.28) else "open_play"
+
+        # Check if assisted by prior pass (KEY_PASS)
+        if self._last_passer_id is not None and (self.match_seconds - self._last_pass_time) <= 6.0:
+            last_passer = self._player(self._last_passer_id)
+            if last_passer and last_passer.team is team and last_passer.id != shooter.id:
+                lp_sector = resolve_pitch_sector(last_passer.x, last_passer.y, team)
+                self.events.append(
+                    self._event(
+                        MatchEventType.KEY_PASS,
+                        clock,
+                        timestamp,
+                        team,
+                        last_passer.id,
+                        shooter.id,
+                        last_passer.x,
+                        last_passer.y,
+                        f"{last_passer.short_name} creates the opening for {shooter.short_name} with an incisive pass from {lp_sector}.",
+                        pitch_sector=lp_sector,
+                        sub_action="shot_assist",
+                        secondary_actor_id=shooter.id,
+                    )
+                )
+        self._last_passer_id = None
+
+        # CRITICAL INVARIANT: Emit SHOT first, and append to self.shot_log
         self.events.append(
             self._event(
                 MatchEventType.SHOT,
@@ -1173,8 +1751,11 @@ class MatchEngine:
                 None,
                 shooter.x,
                 shooter.y,
-                f"{shooter.short_name} lets fly from {shot_distance:.0f}m.",
+                f"{shooter.short_name} lets fly ({shot_speed:.1f} km/h) from {shot_distance:.0f}m in {shot_sector}.",
                 xg=xg,
+                pitch_sector=shot_sector,
+                speed_kmh=shot_speed,
+                sub_action=sub_shot,
             )
         )
         self.observations.shots += 1
@@ -1208,34 +1789,60 @@ class MatchEngine:
             )
         )
 
-        if is_goal:
-            shooter.goals += 1
-            self.events.append(
-                self._event(
-                    MatchEventType.GOAL,
-                    clock,
-                    timestamp,
-                    team,
-                    shooter.id,
-                    None,
-                    goal_x,
-                    goal_y,
-                    f"GOAL! {shooter.short_name} finds the net.",
-                    xg=xg,
-                )
-            )
-            self.score[team.value] += 1
-            self._close_sequence()
-            self._kickoff(TeamSide.AWAY if team is TeamSide.HOME else TeamSide.HOME)
-            return
-
-        # Saved, blocked or out of play: the defending side restarts.
         defending = TeamSide.AWAY if team is TeamSide.HOME else TeamSide.HOME
-        self._close_sequence()
-        self._set_carrier(self._deepest_player(defending))
-        self.observations.possession_changes += 1
-        self._sequence_team = defending
-        self._sequence_started_at = self.match_seconds
+        nearest_def = min(opponents, key=lambda o: distance(shooter.x, shooter.y, o.x, o.y)) if opponents else None
+        def_dist = distance(shooter.x, shooter.y, nearest_def.x, nearest_def.y) if nearest_def else 999.0
+        is_block = (def_dist <= 3.2 and not on_target and self.rng.random() < 0.65) or (def_dist <= 2.2 and self.rng.random() < 0.50)
+
+        # 3D Parabolic Ball Flight Kinematics on Shot:
+        shot_apex = round(0.85 + self.rng.random() * 1.35, 2)
+        flight_duration = round(0.40 + self.rng.random() * 0.35, 2)
+
+        gk = next((p for p in opponents if p.slot == "gk"), None)
+        if is_block and nearest_def:
+            target_x, target_y = nearest_def.x, nearest_def.y
+            shot_outcome_str = "blocked"
+            receiver_id = nearest_def.id
+            interceptor_id = nearest_def.id
+        elif is_goal:
+            target_x = goal_x
+            target_y = goal_y + (self.rng.random() - 0.5) * 4.0
+            shot_outcome_str = "goal"
+            receiver_id = gk.id if gk else ""
+            interceptor_id = None
+        elif on_target:
+            target_x = gk.x if gk else goal_x
+            target_y = gk.y if gk else goal_y
+            shot_outcome_str = "saved"
+            receiver_id = gk.id if gk else ""
+            interceptor_id = gk.id if gk else None
+        else:
+            target_x = goal_x
+            target_y = 34.0 + (9.0 if shooter.y > 34.0 else -9.0) + (self.rng.random() - 0.5) * 4.0
+            shot_outcome_str = "missed"
+            receiver_id = gk.id if gk else ""
+            interceptor_id = None
+
+        self.state.flight = Flight(
+            passer_id=shooter.id,
+            receiver_id=receiver_id,
+            start_x=shooter.x,
+            start_y=shooter.y,
+            end_x=target_x,
+            end_y=target_y,
+            duration=flight_duration,
+            elapsed=0.0,
+            speed=shot_speed / 3.6,
+            outcome=shot_outcome_str,
+            interceptor_id=interceptor_id,
+            pdr=xg,
+            speed_kmh=shot_speed,
+            apex_z=shot_apex,
+            flight_type="shot",
+        )
+        self.state.carrier_id = None
+        self.state.ball_z = shot_apex
+        self.state.ball_vz = 4.0 * shot_apex / flight_duration
 
     def _shot_on_target(
         self,
@@ -1272,6 +1879,7 @@ class MatchEngine:
         clock = format_match_clock(self.match_seconds)
         timestamp = int(self.match_seconds * 1000)
         if loser is not None:
+            sector = resolve_pitch_sector(loser.x, loser.y, loser.team)
             self.events.append(
                 self._event(
                     MatchEventType.TURNOVER,
@@ -1282,7 +1890,10 @@ class MatchEngine:
                     winner.id if winner else None,
                     loser.x,
                     loser.y,
-                    f"Turnover: {loser.short_name} loses the ball.",
+                    f"Turnover: {loser.short_name} loses the ball in {sector}.",
+                    pitch_sector=sector,
+                    sub_action=reason or "dispossessed",
+                    secondary_actor_id=winner.id if winner else None,
                 )
             )
         if loser is not None:
@@ -1331,29 +1942,65 @@ class MatchEngine:
         self._decision_timer = self.scenario.decision_interval / max(0.4, self.scenario.tempo)
 
     def _track_carry(self, carrier: SimPlayer) -> None:
-        """Emit a carry event when the carrier has advanced a meaningful distance."""
+        """Emit a carry or progressive carry event when the carrier has advanced a meaningful distance."""
         previous = self._carry_anchor
         moved = distance(previous[0], previous[1], carrier.x, carrier.y)
-        if moved < 9.0:
+        if moved < 4.5:
             return
+        direction = attack_direction(carrier.team)
+        fwd_gain = direction * (carrier.x - previous[0])
         self._carry_anchor = (carrier.x, carrier.y)
-        self.events.append(
-            self._event(
-                MatchEventType.CARRY,
-                format_match_clock(self.match_seconds),
-                int(self.match_seconds * 1000),
-                carrier.team,
-                carrier.id,
-                None,
-                carrier.x,
-                carrier.y,
-                f"{carrier.short_name} carries {moved:.0f}m of Pitch Space.",
+        sector = resolve_pitch_sector(carrier.x, carrier.y, carrier.team)
+        spd = round(carrier.speed_kmh, 1)
+
+        clock = format_match_clock(self.match_seconds)
+        timestamp = int(self.match_seconds * 1000)
+
+        target_gx, target_gy = target_goal(carrier.team)
+        carrier_to_target = distance(carrier.x, carrier.y, target_gx, target_gy)
+        is_penetration = carrier_to_target < 44.0 and fwd_gain >= 2.5
+
+        if fwd_gain >= 7.0 or is_penetration:
+            sub = "transition_burst" if spd > 22.0 else "box_entry"
+            self.events.append(
+                self._event(
+                    MatchEventType.PROGRESSIVE_CARRY,
+                    clock,
+                    timestamp,
+                    carrier.team,
+                    carrier.id,
+                    None,
+                    carrier.x,
+                    carrier.y,
+                    f"{carrier.short_name} drives a progressive carry ({moved:.0f}m, {spd:.1f} km/h) through {sector}.",
+                    pitch_sector=sector,
+                    speed_kmh=spd,
+                    sub_action=sub,
+                )
             )
-        )
+        else:
+            self.events.append(
+                self._event(
+                    MatchEventType.CARRY,
+                    clock,
+                    timestamp,
+                    carrier.team,
+                    carrier.id,
+                    None,
+                    carrier.x,
+                    carrier.y,
+                    f"{carrier.short_name} carries {moved:.0f}m ({spd:.1f} km/h) in {sector}.",
+                    pitch_sector=sector,
+                    speed_kmh=spd,
+                    sub_action="standard",
+                )
+            )
 
     def _event(self, *args, **kwargs) -> MatchEvent:
         """Create a match event stamped with the score at that moment."""
         event = make_event(*args, **kwargs)
+        if event.pitchSector is None and event.x is not None and event.y is not None:
+            event.pitchSector = resolve_pitch_sector(event.x, event.y, event.team)
         event.score = ScorePair(home=self.score["home"], away=self.score["away"])
         return event
 
@@ -1437,7 +2084,9 @@ class MatchEngine:
             vx=round(self.state.ball_vx, 3),
             vy=round(self.state.ball_vy, 3),
             vz=round(self.state.ball_vz, 3),
-            speedKmH=round(math.hypot(self.state.ball_vx, self.state.ball_vy) * 3.6, 1),
+            speedKmH=round(
+                math.sqrt(self.state.ball_vx**2 + self.state.ball_vy**2 + self.state.ball_vz**2) * 3.6, 1
+            ),
             possessionTeam=self._possession_team(),
             possessionPlayerId=self.state.carrier_id,
             lastTouchBy=self.state.last_touch_by,

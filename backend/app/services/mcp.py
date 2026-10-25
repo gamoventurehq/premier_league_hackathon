@@ -276,6 +276,69 @@ def build_registry(provider: Any) -> ToolRegistry:
         )
     )
 
+    registry.register(
+        McpTool(
+            name="get_pitch_control",
+            description=(
+                "Return the Pitch Control probability surface and dominance split of the current synthetic match."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "includeCells": {
+                        "type": "boolean",
+                        "description": "Return the 357 cell grid in addition to the split.",
+                        "default": True,
+                    }
+                },
+                "additionalProperties": False,
+            },
+            implementation="app.runtime.MatchRuntime.get_pitch_control_surface",
+            handler=lambda args: (
+                provider.get_pitch_control(include_cells=bool(args.get("includeCells", True)))
+                if hasattr(provider, "get_pitch_control")
+                else provider.get_pitch_control_surface(include_cells=bool(args.get("includeCells", True)))
+            ),
+        )
+    )
+
+    registry.register(
+        McpTool(
+            name="get_tactical_state",
+            description=(
+                "Return the full tactical state including phase, game rhythm, control vs chaos index, "
+                "pass difficulty rating, pitch control split, score, and key players."
+            ),
+            input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+            implementation="app.runtime.MatchRuntime.get_tactical_state",
+            handler=lambda args: provider.get_tactical_state(),
+        )
+    )
+
+    registry.register(
+        McpTool(
+            name="get_inflection_points",
+            description=(
+                "Return match inflection points (discrete tactical shifts and momentum swings)."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 50,
+                        "default": 10,
+                        "description": "Maximum number of inflection events to return.",
+                    }
+                },
+                "additionalProperties": False,
+            },
+            implementation="app.runtime.MatchRuntime.get_inflection_points",
+            handler=lambda args: provider.get_inflection_points(limit=int(args.get("limit", 10))),
+        )
+    )
+
     return registry
 
 

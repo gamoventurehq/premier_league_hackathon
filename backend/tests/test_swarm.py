@@ -28,6 +28,7 @@ from app.agents.base import (
     K_MATCH_CLOCK,
     K_MATCH_EVENTS,
     K_MATCH_SECONDS,
+    K_MULTILINGUAL_STREAM,
     K_NARRATIVE,
     K_PASSING_LANES,
     K_PITCH_CONTROL_AWAY,
@@ -51,6 +52,7 @@ from app.agents.tactical_reasoning import TacticalReasoningAgent
 from app.agents.telemetry_ingestion import TelemetryIngestionAgent
 from app.config import Settings
 from app.models import AgentRole, AgentStatus, ExperiencePersona
+from app.runtime import MatchRuntime, _json_safe
 from app.services.foundry import FoundryNarrativeService
 from app.simulation.engine import MatchEngine
 
@@ -417,3 +419,85 @@ def test_blackboard_view_discard_on_unhandled_failure_without_fallback(engine: M
     assert swarm.blackboard.read("corrupted_key") is None
     assert "corrupted_key" not in result.blackboard
     swarm.shutdown()
+
+
+def test_blackboard_serialization_clean_json_and_multilingual_keys() -> None:
+    """Verify that MatchRuntime.blackboard_payload() emits pure JSON with no dataclass repr strings and valid ISO keys."""
+    import json
+
+    settings = Settings()
+    runtime = MatchRuntime(settings)
+    runtime.start()
+    try:
+        runtime.wait_until_ready(5.0)
+        time.sleep(0.3)
+        payload = runtime.blackboard_payload()
+
+        assert K_NARRATIVE in payload
+        assert K_MULTILINGUAL_STREAM in payload
+
+        narrative = payload[K_NARRATIVE]
+        assert isinstance(narrative, dict), f"Expected dict for narrative, got {type(narrative)}"
+        assert "NarrativeDraft(" not in str(narrative)
+        assert set(narrative["headline"].keys()) == {"en", "es", "fr", "ja", "ar"}
+        assert set(narrative["tacticalExplanation"].keys()) == {"en", "es", "fr", "ja", "ar"}
+
+        multilingual = payload[K_MULTILINGUAL_STREAM]
+        assert isinstance(multilingual, dict), f"Expected dict for multilingual_stream, got {type(multilingual)}"
+        assert set(multilingual["headline"].keys()) == {"en", "es", "fr", "ja", "ar"}
+        assert set(multilingual["tacticalExplanation"].keys()) == {"en", "es", "fr", "ja", "ar"}
+
+        envelope = runtime.latest_envelope()
+        assert envelope is not None
+        raw_envelope = json.dumps(envelope)
+        assert "NarrativeDraft(" not in raw_envelope
+    finally:
+        runtime.stop()
+
+
+def test_json_safe_dataclass_and_contract() -> None:
+    """Verify _json_safe handles both Pydantic _Contract and standard dataclasses recursively."""
+    from dataclasses import dataclass
+
+    from app.agents.broadcast_narrative import NarrativeDraft
+    from app.models import MultilingualNarrative
+
+    draft = NarrativeDraft(
+        id="narr-test",
+        matchClock="05:12",
+        timestamp=312000,
+        isTacticalInflectionPoint=False,
+        headline=MultilingualNarrative(
+            en="City press high",
+            es="City presiona alto",
+            fr="City presse haut",
+            ja="Cityが高い位置からプレス",
+            ar="سيتي يضغط عالياً",
+        ),
+        tacticalExplanation=MultilingualNarrative(
+            en="Explanation EN",
+            es="Explanation ES",
+            fr="Explanation FR",
+            ja="Explanation JA",
+            ar="Explanation AR",
+        ),
+        commentatorCue="05:12 | City press high",
+    )
+
+    result = _json_safe(draft)
+    assert isinstance(result, dict)
+    assert "NarrativeDraft(" not in str(result)
+    assert set(result["headline"].keys()) == {"en", "es", "fr", "ja", "ar"}
+    assert set(result["tacticalExplanation"].keys()) == {"en", "es", "fr", "ja", "ar"}
+
+    @dataclass
+    class Container:
+        nested: NarrativeDraft
+        count: int
+
+    dc_result = _json_safe(Container(nested=draft, count=42))
+    assert isinstance(dc_result, dict)
+    assert dc_result["count"] == 42
+    assert isinstance(dc_result["nested"], dict)
+    assert dc_result["nested"]["headline"]["en"] == "City press high"
+

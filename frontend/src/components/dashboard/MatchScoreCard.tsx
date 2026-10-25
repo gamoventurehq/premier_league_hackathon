@@ -1,7 +1,6 @@
 import React from "react";
 import { IonIcon } from "@ionic/react";
 import {
-  openOutline,
   footballOutline,
   calendarOutline,
   trophyOutline,
@@ -26,10 +25,14 @@ export const MatchScoreCard: React.FC = () => {
         backgroundColor: "var(--studio-panel-bg)",
         border: "1px solid var(--studio-panel-border)",
         borderRadius: "16px",
-        padding: "18px",
+        padding: "16px",
         display: "flex",
         flexDirection: "column",
-        gap: "14px",
+        gap: "12px",
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       {/* Top Header */}
@@ -37,10 +40,6 @@ export const MatchScoreCard: React.FC = () => {
         <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--ion-text-color)" }}>
           Match Score
         </span>
-        <IonIcon
-          icon={openOutline}
-          style={{ fontSize: "16px", color: "var(--studio-subtext)", cursor: "pointer" }}
-        />
       </div>
 
       {/* Main Scoreboard Section */}
@@ -54,7 +53,7 @@ export const MatchScoreCard: React.FC = () => {
         }}
       >
         {/* Home Club */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", minWidth: 0 }}>
           <div
             style={{
               width: "48px",
@@ -72,21 +71,29 @@ export const MatchScoreCard: React.FC = () => {
           >
             {score.homeTeam}
           </div>
-          <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: 700,
+              color: "var(--ion-text-color)",
+              maxWidth: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title="Man City"
+          >
             Man City
           </span>
         </div>
 
         {/* Center Score & Match Clock */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-          <span style={{ fontSize: "11px", color: "var(--studio-subtext)", fontFamily: "monospace" }}>
-            25.01.2026 • 16:30
-          </span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", minWidth: 0, flexShrink: 0 }}>
           <div
             style={{
-              fontSize: "32px",
+              fontSize: "28px",
               fontWeight: 900,
-              letterSpacing: "4px",
+              letterSpacing: "3px",
               color: "var(--ion-text-color)",
               lineHeight: 1.1,
             }}
@@ -95,14 +102,15 @@ export const MatchScoreCard: React.FC = () => {
           </div>
           <span
             style={{
-              fontSize: "10px",
+              fontSize: "9px",
               fontWeight: 800,
-              letterSpacing: "1px",
+              letterSpacing: "0.5px",
               textTransform: "uppercase",
-              padding: "2px 8px",
+              padding: "2px 7px",
               borderRadius: "4px",
               backgroundColor: serverStatus.isConnected ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
               color: serverStatus.isConnected ? "#10b981" : "#f59e0b",
+              whiteSpace: "nowrap",
             }}
           >
             {score.period} ({formatTime(matchClock)})
@@ -110,7 +118,7 @@ export const MatchScoreCard: React.FC = () => {
         </div>
 
         {/* Away Club */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", minWidth: 0 }}>
           <div
             style={{
               width: "48px",
@@ -128,7 +136,18 @@ export const MatchScoreCard: React.FC = () => {
           >
             {score.awayTeam}
           </div>
-          <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: 700,
+              color: "var(--ion-text-color)",
+              maxWidth: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title="Arsenal"
+          >
             Arsenal
           </span>
         </div>
@@ -172,23 +191,25 @@ export const MatchScoreCard: React.FC = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: "16px",
-          fontSize: "11px",
+          flexWrap: "wrap",
+          gap: "6px 10px",
+          fontSize: "10.5px",
           color: "var(--studio-subtext)",
+          textAlign: "center",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <IonIcon icon={calendarOutline} />
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+          <IonIcon icon={calendarOutline} style={{ color: "#38bdf8" }} />
           <span>25/01/2026 - 16:30</span>
         </div>
         <span>•</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <IonIcon icon={trophyOutline} />
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+          <IonIcon icon={trophyOutline} style={{ color: "#ffd600" }} />
           <span>Premier League</span>
         </div>
         <span>•</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <IonIcon icon={locationOutline} />
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+          <IonIcon icon={locationOutline} style={{ color: "#10b981" }} />
           <span>Etihad Stadium</span>
         </div>
       </div>

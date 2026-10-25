@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+from contextlib import suppress
 from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any
@@ -168,6 +169,11 @@ class AgentSwarm:
             logger.warning(
                 "Agent %s exceeded its %.0fms deadline, using the fallback.", agent.role.value, timeout * 1000
             )
+            # Prevent thread pool starvation or zombie thread accumulation:
+            # Recycle executor so future agents don't queue behind hung worker threads.
+            with suppress(Exception):
+                self._executor.shutdown(wait=False, cancel_futures=True)
+            self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="pl-agent")
             return self._fallback(agent, context)
         except Exception as exc:  # noqa: BLE001 - the swarm must survive agent failures
             context.view.discard()
