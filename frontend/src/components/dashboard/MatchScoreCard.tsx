@@ -6,12 +6,16 @@ import {
   trophyOutline,
   locationOutline,
 } from "ionicons/icons";
-import { useBaseMemory } from "../../store/baseMemory";
+import { useBaseMemory, MATCH_GOALS } from "../../store/baseMemory";
 
 export const MatchScoreCard: React.FC = () => {
   const score = useBaseMemory((s) => s.score);
   const matchClock = useBaseMemory((s) => s.matchClock);
   const serverStatus = useBaseMemory((s) => s.serverStatus);
+
+  const elapsedGoals = MATCH_GOALS.filter((g) => g.timeSec <= matchClock);
+  const homeGoals = elapsedGoals.filter((g) => g.team === "home");
+  const awayGoals = elapsedGoals.filter((g) => g.team === "away");
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -156,9 +160,10 @@ export const MatchScoreCard: React.FC = () => {
       {/* Goalscorers & Key Events */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "12px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "28px",
           fontSize: "11px",
           color: "var(--studio-subtext)",
           padding: "8px 0",
@@ -166,23 +171,30 @@ export const MatchScoreCard: React.FC = () => {
           borderBottom: "1px solid var(--studio-panel-border)",
         }}
       >
-        <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: "4px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
-            <span>E. Haaland 42'</span>
-            <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "var(--ion-color-secondary)" }} />
+        {elapsedGoals.length === 0 ? (
+          <span style={{ fontSize: "10.5px", fontStyle: "italic", color: "var(--studio-subtext)" }}>
+            No goals scored yet ({formatTime(matchClock)})
+          </span>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", width: "100%" }}>
+            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: "4px" }}>
+              {homeGoals.map((g) => (
+                <div key={g.id} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
+                  <span style={{ fontWeight: 700, color: "var(--ion-text-color)" }}>{g.scorer} {g.matchClock}</span>
+                  <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "#00e5ff" }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: "4px" }}>
+              {awayGoals.map((g) => (
+                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "#f43f5e" }} />
+                  <span style={{ fontWeight: 700, color: "var(--ion-text-color)" }}>{g.scorer} {g.matchClock}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
-            <span>K. De Bruyne 68'</span>
-            <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "var(--ion-color-secondary)" }} />
-          </div>
-        </div>
-
-        <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: "4px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: "var(--ion-color-tertiary)" }} />
-            <span>B. Saka 51'</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Bottom Match Metadata */}

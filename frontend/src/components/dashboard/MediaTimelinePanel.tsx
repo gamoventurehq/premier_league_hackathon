@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { IonIcon } from "@ionic/react";
 import {
   playSkipBackOutline,
@@ -7,8 +7,10 @@ import {
   playSkipForwardOutline,
   scanOutline,
   expandOutline,
+  contractOutline,
   repeatOutline,
   settingsOutline,
+  closeOutline,
   footballOutline,
   swapHorizontalOutline,
   warningOutline,
@@ -36,6 +38,7 @@ import {
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 import { MatchEvent } from "../../types/telemetry";
+import { telemetryService } from "../../services/telemetryService";
 
 export function getMatchEventVisuals(evt: MatchEvent) {
   switch (evt.type) {
@@ -112,8 +115,38 @@ const TOTAL_MATCH_SEC = 5400; // 90 minutes
 
 export const MediaTimelinePanel: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isLooping, setIsLooping] = useState(false);
+  const [isTrackingVisible, setIsTrackingVisible] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [streamQuality, setStreamQuality] = useState<"1080p60" | "720p60" | "4K HDR">("1080p60");
+  const [interpolationMode, setInterpolationMode] = useState<"AI 5Hz" | "Raw 20Hz" | "Direct Telemetry">("AI 5Hz");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>("e3");
+
+  const videoPanelRef = useRef<HTMLDivElement | null>(null);
   const timelineTrackRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    const el = videoPanelRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      if (el.requestFullscreen) {
+        el.requestFullscreen().catch(() => {});
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
 
   const matchClock = useBaseMemory((s) => s.matchClock);
   const score = useBaseMemory((s) => s.score);
@@ -139,17 +172,20 @@ export const MediaTimelinePanel: React.FC = () => {
     const targetSec = Math.round(pct * TOTAL_MATCH_SEC);
 
     baseMemory.setMatchClock(targetSec);
+    telemetryService.jumpToSeconds(targetSec);
   };
 
   const handleSkip = (deltaSec: number) => {
     const nextSec = Math.min(TOTAL_MATCH_SEC + 300, Math.max(0, matchClock + deltaSec));
     baseMemory.setMatchClock(nextSec);
+    telemetryService.jumpToSeconds(nextSec);
   };
 
   const handleSelectEvent = (evt: MatchEvent) => {
     setSelectedEventId(evt.id);
     const targetSec = evt.timestampMs ? Math.round(evt.timestampMs / 1000) : 0;
     baseMemory.setMatchClock(targetSec);
+    telemetryService.jumpToSeconds(targetSec);
     if (evt.actorId) {
       baseMemory.setSelectedPlayer(evt.actorId);
     }
@@ -171,6 +207,7 @@ export const MediaTimelinePanel: React.FC = () => {
     >
       {/* Multi-Angle Video Panel */}
       <div
+        ref={videoPanelRef}
         style={{
           borderRadius: "12px",
           overflow: "hidden",
@@ -222,7 +259,7 @@ export const MediaTimelinePanel: React.FC = () => {
             </span>
           </div>
 
-          <div style={{ textAlign: "center", color: "var(--studio-subtext)", fontSize: "12px" }}>
+          <div style={{ textAlign: "center", color: "var(--studio-subtext)", fontSize: "12px", marginTop: "16px" }}>
             <IonIcon icon={videocamOutline} style={{ fontSize: "28px", color: "var(--ion-color-secondary)", display: "block", margin: "0 auto 4px" }} />
             <span>Main Camera</span>
           </div>
@@ -262,20 +299,23 @@ export const MediaTimelinePanel: React.FC = () => {
               Ball Tracking
             </span>
             {/* Visual Tracking Bounding Box */}
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                border: "2px solid #ffd600",
-                borderRadius: "4px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 0 8px rgba(255, 214, 0, 0.4)",
-              }}
-            >
-              <div style={{ width: "12px", height: "12px", borderRadius: "50%", backgroundColor: "#ffffff" }} />
-            </div>
+            {isTrackingVisible && (
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  border: "2px solid #ffd600",
+                  borderRadius: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 0 8px rgba(255, 214, 0, 0.4)",
+                  transition: "opacity 0.2s ease",
+                }}
+              >
+                <div style={{ width: "12px", height: "12px", borderRadius: "50%", backgroundColor: "#ffffff" }} />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -290,16 +330,49 @@ export const MediaTimelinePanel: React.FC = () => {
           color: "var(--studio-subtext)",
         }}
       >
-        <div style={{ display: "flex", gap: "10px" }}>
-          <IonIcon icon={repeatOutline} style={{ cursor: "pointer" }} />
-          <IonIcon icon={settingsOutline} style={{ cursor: "pointer" }} />
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            onClick={() => setIsLooping(!isLooping)}
+            title={isLooping ? "Loop Playback: Active" : "Loop Playback: Off"}
+            style={{
+              background: isLooping ? "rgba(0, 229, 255, 0.15)" : "transparent",
+              border: isLooping ? "1px solid rgba(0, 229, 255, 0.4)" : "1px solid transparent",
+              borderRadius: "6px",
+              padding: "4px",
+              color: isLooping ? "#00e5ff" : "var(--studio-subtext)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <IonIcon icon={repeatOutline} style={{ fontSize: "16px" }} />
+          </button>
+
+          <button
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            title="Camera & Stream Settings"
+            style={{
+              background: isSettingsOpen ? "rgba(124, 58, 237, 0.2)" : "transparent",
+              border: isSettingsOpen ? "1px solid var(--ion-color-primary)" : "1px solid transparent",
+              borderRadius: "6px",
+              padding: "4px",
+              color: isSettingsOpen ? "#c084fc" : "var(--studio-subtext)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <IonIcon icon={settingsOutline} style={{ fontSize: "16px" }} />
+          </button>
         </div>
 
         <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
           <button
             onClick={() => handleSkip(-300)}
             title="Rewind 5 minutes"
-            style={{ background: "transparent", border: "none", color: "var(--studio-subtext)", cursor: "pointer" }}
+            style={{ background: "transparent", border: "none", color: "var(--studio-subtext)", cursor: "pointer", display: "flex", alignItems: "center" }}
           >
             <IonIcon icon={playSkipBackOutline} style={{ fontSize: "18px" }} />
           </button>
@@ -326,17 +399,131 @@ export const MediaTimelinePanel: React.FC = () => {
           <button
             onClick={() => handleSkip(300)}
             title="Fast Forward 5 minutes"
-            style={{ background: "transparent", border: "none", color: "var(--studio-subtext)", cursor: "pointer" }}
+            style={{ background: "transparent", border: "none", color: "var(--studio-subtext)", cursor: "pointer", display: "flex", alignItems: "center" }}
           >
             <IonIcon icon={playSkipForwardOutline} style={{ fontSize: "18px" }} />
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
-          <IonIcon icon={scanOutline} style={{ cursor: "pointer" }} />
-          <IonIcon icon={expandOutline} style={{ cursor: "pointer" }} />
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            onClick={() => setIsTrackingVisible(!isTrackingVisible)}
+            title={isTrackingVisible ? "Hide Bounding Box Tracking" : "Show Bounding Box Tracking"}
+            style={{
+              background: isTrackingVisible ? "rgba(255, 214, 0, 0.12)" : "transparent",
+              border: isTrackingVisible ? "1px solid rgba(255, 214, 0, 0.35)" : "1px solid transparent",
+              borderRadius: "6px",
+              padding: "4px",
+              color: isTrackingVisible ? "#ffd600" : "var(--studio-subtext)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <IonIcon icon={scanOutline} style={{ fontSize: "16px" }} />
+          </button>
+
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Exit Fullscreen" : "Maximize / Fullscreen"}
+            style={{
+              background: isFullscreen ? "rgba(16, 185, 129, 0.15)" : "transparent",
+              border: isFullscreen ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid transparent",
+              borderRadius: "6px",
+              padding: "4px",
+              color: isFullscreen ? "#10b981" : "var(--studio-subtext)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <IonIcon icon={isFullscreen ? contractOutline : expandOutline} style={{ fontSize: "16px" }} />
+          </button>
         </div>
       </div>
+
+      {/* Camera & Stream Settings Modal / Dropdown */}
+      {isSettingsOpen && (
+        <div
+          style={{
+            backgroundColor: "var(--studio-inner-bg)",
+            border: "1px solid var(--ion-color-primary)",
+            borderRadius: "10px",
+            padding: "12px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            fontSize: "11px",
+            animation: "fadeIn 0.15s ease",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontWeight: 800, color: "var(--ion-text-color)" }}>Video & Stream Settings</span>
+            <button
+              onClick={() => setIsSettingsOpen(false)}
+              style={{ background: "transparent", border: "none", color: "var(--studio-subtext)", cursor: "pointer" }}
+            >
+              <IonIcon icon={closeOutline} style={{ fontSize: "16px" }} />
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            <div>
+              <span style={{ color: "var(--studio-subtext)", fontSize: "10px", display: "block", marginBottom: "4px" }}>
+                Resolution
+              </span>
+              <div style={{ display: "flex", gap: "4px" }}>
+                {(["720p60", "1080p60", "4K HDR"] as const).map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => setStreamQuality(q)}
+                    style={{
+                      padding: "3px 6px",
+                      borderRadius: "4px",
+                      border: streamQuality === q ? "1px solid #7c3aed" : "1px solid var(--studio-panel-border)",
+                      backgroundColor: streamQuality === q ? "rgba(124, 58, 237, 0.3)" : "transparent",
+                      color: streamQuality === q ? "#ffffff" : "var(--studio-subtext)",
+                      fontSize: "9.5px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <span style={{ color: "var(--studio-subtext)", fontSize: "10px", display: "block", marginBottom: "4px" }}>
+                Telemetry Sync
+              </span>
+              <div style={{ display: "flex", gap: "4px" }}>
+                {(["AI 5Hz", "Raw 20Hz"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setInterpolationMode(mode)}
+                    style={{
+                      padding: "3px 6px",
+                      borderRadius: "4px",
+                      border: interpolationMode === mode ? "1px solid #00e5ff" : "1px solid var(--studio-panel-border)",
+                      backgroundColor: interpolationMode === mode ? "rgba(0, 229, 255, 0.2)" : "transparent",
+                      color: interpolationMode === mode ? "#00e5ff" : "var(--studio-subtext)",
+                      fontSize: "9.5px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Interactive Multi-Track Scrubber Timeline */}
       <div
@@ -452,12 +639,19 @@ export const MediaTimelinePanel: React.FC = () => {
           <span style={{ fontSize: "12px", fontWeight: 800, color: "var(--ion-text-color)" }}>
             Match Events Timeline
           </span>
-          <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--studio-subtext)", fontFamily: "monospace" }}>
-            {displayEvents.length} Events Logged
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--studio-subtext)", fontFamily: "monospace" }}>
+              {displayEvents.length} Events Logged
+            </span>
+            <span style={{ fontSize: "9px", fontWeight: 800, color: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.15)", padding: "1px 5px", borderRadius: "4px", fontFamily: "monospace" }}>
+              {displayEvents.filter((e) => (e.timestampMs ? e.timestampMs / 1000 : 0) <= matchClock).length} elapsed ({formatClock(matchClock)})
+            </span>
+          </div>
         </div>
 
         {displayEvents.map((evt) => {
+          const evtSec = evt.timestampMs ? evt.timestampMs / 1000 : 0;
+          const isElapsed = evtSec <= matchClock;
           const isSelected = selectedEventId === evt.id;
           const visuals = getMatchEventVisuals(evt);
           const metricPill = evt.xG !== undefined
@@ -481,16 +675,26 @@ export const MediaTimelinePanel: React.FC = () => {
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "8px 10px",
-                backgroundColor: isSelected ? "rgba(124, 58, 237, 0.18)" : "var(--studio-inner-bg)",
+                backgroundColor: isSelected
+                  ? "rgba(124, 58, 237, 0.18)"
+                  : isElapsed
+                  ? "var(--studio-inner-bg)"
+                  : "rgba(15, 23, 42, 0.4)",
                 borderRadius: "8px",
                 fontSize: "11px",
-                border: isSelected ? "1.5px solid #7c3aed" : "1px solid var(--studio-panel-border)",
+                border: isSelected
+                  ? "1.5px solid #7c3aed"
+                  : isElapsed
+                  ? "1px solid var(--studio-panel-border)"
+                  : "1px dashed rgba(255, 255, 255, 0.08)",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
                 gap: "8px",
+                minWidth: 0,
+                opacity: isElapsed ? 1 : 0.45,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: "1 1 auto" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: "1 1 0%" }}>
                 <span style={{ fontWeight: 800, fontFamily: "monospace", color: isSelected ? "#00e5ff" : "var(--ion-color-primary)", minWidth: "34px", flexShrink: 0 }}>
                   {evt.matchClock}
                 </span>
@@ -525,13 +729,25 @@ export const MediaTimelinePanel: React.FC = () => {
                   {visuals.tag}
                 </span>
 
-                <span style={{ fontWeight: 700, color: "var(--ion-text-color)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span
+                  title={evt.description || `${evt.actorId || 'Player'} ${evt.type}`}
+                  style={{
+                    fontWeight: 700,
+                    color: "var(--ion-text-color)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    flex: "1 1 0%",
+                    minWidth: 0,
+                  }}
+                >
                   {evt.description || `${evt.actorId || 'Player'} ${evt.type}`}
                 </span>
               </div>
 
               {metricPill && (
                 <span
+                  title={String(metricPill)}
                   style={{
                     backgroundColor: evt.type === "goal" ? "rgba(34, 197, 94, 0.2)" : "rgba(255, 255, 255, 0.08)",
                     color: evt.type === "goal" ? "#22c55e" : "#94a3b8",
@@ -541,6 +757,10 @@ export const MediaTimelinePanel: React.FC = () => {
                     fontSize: "9.5px",
                     fontFamily: "monospace",
                     flexShrink: 0,
+                    maxWidth: "90px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                     border: evt.type === "goal" ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid rgba(255, 255, 255, 0.1)",
                   }}
                 >

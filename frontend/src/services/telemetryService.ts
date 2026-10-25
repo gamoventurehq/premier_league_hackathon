@@ -244,6 +244,46 @@ class TelemetryService {
     };
   }
 
+  jumpToSeconds(seconds: number) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "jump_time", seconds }));
+    } else {
+      fetch("/api/playback/jump", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seconds }),
+      }).catch(() => {});
+    }
+  }
+
+  pause() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "pause" }));
+    } else {
+      fetch("/api/playback/pause", { method: "POST" }).catch(() => {});
+    }
+  }
+
+  resume() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "resume" }));
+    } else {
+      fetch("/api/playback/resume", { method: "POST" }).catch(() => {});
+    }
+  }
+
+  setSpeed(speed: number) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "set_speed", speed }));
+    } else {
+      fetch("/api/playback/speed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ speed }),
+      }).catch(() => {});
+    }
+  }
+
   stop() {
     this.isStarted = false;
     if (this.ws) {

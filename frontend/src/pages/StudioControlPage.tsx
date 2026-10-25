@@ -83,6 +83,7 @@ const StudioControlPage: React.FC = () => {
   const activeScenario = useBaseMemory((s) => s.activeScenario);
   const control = useBaseMemory((s) => s.blackboard.control_index);
   const chaos = useBaseMemory((s) => s.blackboard.chaos_index);
+  const agentTraces = useBaseMemory((s) => s.agentTraces);
 
   const formatTime = (secs: number) => {
     const clamped = Math.min(5400, Math.max(0, Math.floor(secs || 0)));
@@ -622,84 +623,96 @@ const StudioControlPage: React.FC = () => {
               >
                 <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
                   <IonIcon icon={gitNetworkOutline} style={{ color: "#a855f7" }} />
-                  Agent Swarm Blackboard
+                  Agent Swarm Blackboard Inspector
                 </IonCardTitle>
-                <IonBadge color="primary" style={{ flexShrink: 0 }}>4 Agents Active</IonBadge>
+                <IonBadge color="primary" style={{ flexShrink: 0 }}>4 Agents Concurrent</IonBadge>
               </div>
             </IonCardHeader>
             <IonCardContent>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <div
-                  style={{
-                    background: "#1e293b",
-                    padding: "8px 12px",
-                    borderRadius: "6px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Telemetry Ingestion Agent</div>
-                  </div>
-                  <IonBadge color="success">[Online • 5Hz]</IonBadge>
-                </div>
-
-                <div
-                  style={{
-                    background: "#1e293b",
-                    padding: "8px 12px",
-                    borderRadius: "6px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Tactical Reasoning Agent</div>
-                  </div>
-                  <IonBadge color="secondary">[Active • Blackboard]</IonBadge>
-                </div>
-
-                <div
-                  style={{
-                    background: "#1e293b",
-                    padding: "8px 12px",
-                    borderRadius: "6px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Broadcast Narrative Agent</div>
-                  </div>
-                  <IonBadge color="tertiary">[Active • 42ms]</IonBadge>
-                </div>
-
-                <div
-                  style={{
-                    background: "#1e293b",
-                    padding: "8px 12px",
-                    borderRadius: "6px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Fan Personalization Agent</div>
-                  </div>
-                  <IonBadge color="primary">Active</IonBadge>
-                </div>
+                {(agentTraces || []).map((agent) => {
+                  const isComplete = agent.status === "complete";
+                  const isFallback = agent.status === "fallback";
+                  const badgeColor = isComplete ? "success" : isFallback ? "warning" : "medium";
+                  const statusLabel = isComplete ? "Complete" : isFallback ? "Fallback Tier" : agent.status;
+                  return (
+                    <div
+                      key={agent.role}
+                      style={{
+                        background: "#1e293b",
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(255, 255, 255, 0.05)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span
+                            style={{
+                              width: "6px",
+                              height: "6px",
+                              borderRadius: "50%",
+                              background: isComplete ? "#22c55e" : "#f59e0b",
+                              boxShadow: `0 0 6px ${isComplete ? "#22c55e" : "#f59e0b"}`,
+                            }}
+                          />
+                          <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#f8fafc" }}>
+                            {agent.label}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span
+                            style={{
+                              fontFamily: "monospace",
+                              fontSize: "11px",
+                              color: "#38bdf8",
+                              fontWeight: 700,
+                              background: "rgba(56, 189, 248, 0.1)",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            {agent.latencyMs.toFixed(1)}ms
+                          </span>
+                          <IonBadge color={badgeColor} style={{ fontSize: "10px", padding: "3px 6px" }}>
+                            {statusLabel}
+                          </IonBadge>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: "11px", color: "#94a3b8", lineHeight: 1.35 }}>
+                        {agent.summary}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "12px",
+                          fontSize: "10px",
+                          color: "#64748b",
+                          fontFamily: "monospace",
+                          borderTop: "1px solid rgba(255, 255, 255, 0.04)",
+                          paddingTop: "4px",
+                        }}
+                      >
+                        <span>Reads: {agent.reads.length} keys</span>
+                        <span>•</span>
+                        <span>Writes: {agent.writes.length} keys</span>
+                        <span>•</span>
+                        <span style={{ color: "#10b981" }}>SLA &lt;400ms</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </IonCardContent>
           </IonCard>

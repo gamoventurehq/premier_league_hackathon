@@ -64,6 +64,7 @@ export interface BaseMemoryState {
   swarmCommentary: SwarmCommentaryItem[];
   activeScenario: string | null;
   matchEvents: MatchEvent[];
+  agentTraces: AgentTrace[];
 }
 
 const initialTacticalInflections: TacticalInflectionItem[] = [
@@ -221,15 +222,42 @@ const initialBlackboard: TacticalBlackboard = {
   },
 };
 
-const initialState: BaseMemoryState = {
-  matchClock: 1458, // 24:18 min
-  score: {
+export interface MatchGoalRecord {
+  id: string;
+  timeSec: number;
+  matchClock: string;
+  team: "home" | "away";
+  scorer: string;
+}
+
+export const MATCH_GOALS: MatchGoalRecord[] = [
+  { id: "g1", timeSec: 2520, matchClock: "42'", team: "home", scorer: "E. Haaland" },
+  { id: "g2", timeSec: 5040, matchClock: "84'", team: "away", scorer: "B. Saka" },
+];
+
+export function getChronologicalScore(sec: number): MatchScore {
+  const home = sec >= 2520 ? 1 : 0;
+  const away = sec >= 5040 ? 1 : 0;
+  let period = "1st Half";
+  if (sec > 5400) {
+    period = "Full Time";
+  } else if (sec > 2760) {
+    period = "2nd Half";
+  } else if (sec >= 2700) {
+    period = "Halftime";
+  }
+  return {
     homeTeam: "MCI",
     awayTeam: "ARS",
-    homeScore: 1,
-    awayScore: 0,
-    period: "1st Half",
-  },
+    homeScore: home,
+    awayScore: away,
+    period,
+  };
+}
+
+const initialState: BaseMemoryState = {
+  matchClock: 1458, // 24:18 min
+  score: getChronologicalScore(1458),
   currentFrame: null,
   blackboard: initialBlackboard,
   selectedPersona: "analyst",
@@ -245,6 +273,44 @@ const initialState: BaseMemoryState = {
   swarmCommentary: initialSwarmCommentary,
   activeScenario: null,
   matchEvents: [],
+  agentTraces: [
+    {
+      role: "telemetry_ingestion",
+      label: "Telemetry Ingestion Agent",
+      status: "complete",
+      latencyMs: 4.2,
+      reads: ["raw_frame_coords", "speed_vectors"],
+      writes: ["canonical_telemetry_frame"],
+      summary: "Ingested 22 player coordinate vectors at 5Hz with zero jitter.",
+    },
+    {
+      role: "tactical_reasoning",
+      label: "Tactical Reasoning Agent",
+      status: "complete",
+      latencyMs: 14.8,
+      reads: ["canonical_telemetry_frame", "pitch_control_surface"],
+      writes: ["control_vs_chaos", "pass_difficulty_rating", "inflection_candidates"],
+      summary: "Evaluated 357-cell Voronoi pitch control and 5-component PDR.",
+    },
+    {
+      role: "broadcast_narrative",
+      label: "Broadcast Narrative Agent",
+      status: "complete",
+      latencyMs: 38.4,
+      reads: ["control_vs_chaos", "pass_difficulty_rating", "tactical_phase"],
+      writes: ["narrative_headline", "multilingual_broadcast_stream", "commentator_cue"],
+      summary: "Generated 5-language broadcast headline with sub-400ms SLA fallback guardrail.",
+    },
+    {
+      role: "fan_personalization",
+      label: "Fan Personalization Agent",
+      status: "complete",
+      latencyMs: 8.6,
+      reads: ["narrative_headline", "tactical_explanation"],
+      writes: ["analyst_context", "casual_context", "player_cam_context", "club_centric_context"],
+      summary: "Synchronously projected moments into dual Analyst & Casual perspectives.",
+    },
+  ],
 };
 
 export function normalizeFrame(raw: unknown): FrameTelemetry {
@@ -368,7 +434,15 @@ export function normalizeFrame(raw: unknown): FrameTelemetry {
   });
 
   const frameId = Number(r.frame_id ?? r.frameId ?? 0);
-  const matchClockSec = Number(r.match_clock_sec ?? r.matchSeconds ?? 0);
+  let matchClockSec = Number(r.match_clock_sec ?? r.matchSeconds ?? 0);
+  if (!matchClockSec && typeof r.matchClock === "string" && r.matchClock.includes(":")) {
+    const parts = r.matchClock.split(":");
+    const min = parseInt(parts[0], 10);
+    const sec = parseInt(parts[1], 10);
+    if (!isNaN(min) && !isNaN(sec)) {
+      matchClockSec = min * 60 + sec;
+    }
+  }
   const gameRhythm = String(
     r.game_rhythm ??
     metrics?.gameRhythm ??
@@ -628,12 +702,17 @@ class BaseMemoryStore {
         .slice(-200);
     }
 
+    const updatedTraces = (frame.agentTrace && frame.agentTrace.length > 0)
+      ? frame.agentTrace
+      : this.state.agentTraces;
+
     this.state = {
       ...this.state,
       currentFrame: frame,
       matchClock: frame.match_clock_sec,
       score: updatedScore,
       matchEvents: updatedEvents,
+      agentTraces: updatedTraces,
       blackboard: {
         ...this.state.blackboard,
         latest_frame_id: frame.frame_id,
@@ -715,9 +794,14 @@ class BaseMemoryStore {
   };
 
   setMatchClock = (sec: number) => {
+    const updatedScore = this.state.serverStatus.isConnected
+      ? this.state.score
+      : getChronologicalScore(sec);
+
     this.state = {
       ...this.state,
       matchClock: sec,
+      score: updatedScore,
     };
     this.notify();
   };

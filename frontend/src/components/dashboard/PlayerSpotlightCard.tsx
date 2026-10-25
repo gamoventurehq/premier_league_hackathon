@@ -11,11 +11,29 @@ import {
 
 export const PlayerSpotlightCard: React.FC = () => {
   const selectedPlayerId = useBaseMemory((s) => s.selectedPlayerId);
+  const matchClock = useBaseMemory((s) => s.matchClock);
 
   // Dynamic player lookup: match selected player or default to Kevin De Bruyne (home_7)
   const player = (selectedPlayerId && ROSTER_SPOTLIGHT[selectedPlayerId])
     ? ROSTER_SPOTLIGHT[selectedPlayerId]
     : ROSTER_SPOTLIGHT.home_7;
+
+  // Chronological match milestones based on matchClock
+  const playerMilestone = (() => {
+    if (player.id === "home_10" && matchClock >= 2520) {
+      return { text: "Goal 42' ⚽", color: "#10b981", bg: "rgba(16, 185, 129, 0.2)" };
+    }
+    if (player.id === "away_8" && matchClock >= 5040) {
+      return { text: "Goal 84' ⚽", color: "#10b981", bg: "rgba(16, 185, 129, 0.2)" };
+    }
+    if (player.id === "home_7" && matchClock >= 2520) {
+      return { text: "Key Pass 42' 🎯", color: "#00e5ff", bg: "rgba(0, 229, 255, 0.2)" };
+    }
+    if (player.id === "away_7" && matchClock >= 5280) {
+      return { text: "Tackle Won 88' 🛡️", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.2)" };
+    }
+    return null;
+  })();
 
   const isHome = player.club === "Manchester City";
   const accentColor = isHome ? "#00e5ff" : "#f43f5e";
@@ -46,6 +64,21 @@ export const PlayerSpotlightCard: React.FC = () => {
             {selectedPlayerId && selectedPlayerId !== "home_7" ? "Player Spotlight" : "Player of the Match"}
           </span>
         </div>
+        {playerMilestone && (
+          <span
+            style={{
+              fontSize: "10px",
+              fontWeight: 800,
+              color: playerMilestone.color,
+              backgroundColor: playerMilestone.bg,
+              padding: "2px 8px",
+              borderRadius: "12px",
+              border: `1px solid ${playerMilestone.color}55`,
+            }}
+          >
+            {playerMilestone.text}
+          </span>
+        )}
       </div>
 
       {/* Key Players Preset Horizontal Scroller */}

@@ -25,6 +25,7 @@ import TacticalPage from "./pages/TacticalPage";
 import PersonaPage from "./pages/PersonaPage";
 import StudioControlPage from "./pages/StudioControlPage";
 import { SidebarNav } from "./components/SidebarNav";
+import { TacticalCopilotDrawer } from "./components/TacticalCopilotDrawer";
 import { telemetryService } from "./services/telemetryService";
 import { useBaseMemory } from "./store/baseMemory";
 
@@ -59,6 +60,7 @@ const AppShell: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const theme = useBaseMemory((s) => s.theme);
 
   useEffect(() => {
@@ -84,7 +86,17 @@ const AppShell: React.FC = () => {
   return (
     <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
       {/* Desktop/Tablet Left Navigation Rail (Matching Reference Design) */}
-      <SidebarNav activeTab={activeTab} onSelectTab={handleSelectTab} />
+      <SidebarNav
+        activeTab={activeTab}
+        onSelectTab={handleSelectTab}
+        onOpenCopilot={() => setIsCopilotOpen(true)}
+      />
+
+      {/* Slide-out Tactical Copilot Drawer */}
+      <TacticalCopilotDrawer
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+      />
 
       {/* Main Workspace Area */}
       <div style={{ flex: 1, minWidth: 0, height: "100%", overflow: "hidden", position: "relative" }}>

@@ -37,6 +37,12 @@ const awayLineup = [
 export const FormationPitchCard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("LINEUP");
   const selectedPlayerId = useBaseMemory((s) => s.selectedPlayerId);
+  const matchClock = useBaseMemory((s) => s.matchClock);
+  const storeInflections = useBaseMemory((s) => s.tacticalInflections);
+  const storeCommentary = useBaseMemory((s) => s.swarmCommentary);
+
+  // Chronological elapsed match proportion (bounded between 5% and 100%)
+  const matchProgress = Math.max(0.05, Math.min(1.0, matchClock / 5400));
 
   return (
     <div
@@ -375,15 +381,45 @@ export const FormationPitchCard: React.FC = () => {
 
           {[
             { label: "Possession", home: "58%", away: "42%", homePct: 58 },
-            { label: "Expected Goals (xG)", home: "2.45", away: "1.12", homePct: 68 },
-            { label: "Total Shots", home: "14", away: "8", homePct: 63 },
-            { label: "Shots on Target", home: "6", away: "3", homePct: 66 },
+            {
+              label: "Expected Goals (xG)",
+              home: (2.45 * matchProgress).toFixed(2),
+              away: (1.12 * matchProgress).toFixed(2),
+              homePct: 68,
+            },
+            {
+              label: "Total Shots",
+              home: String(Math.round(14 * matchProgress)),
+              away: String(Math.round(8 * matchProgress)),
+              homePct: 63,
+            },
+            {
+              label: "Shots on Target",
+              home: String(Math.round(6 * matchProgress)),
+              away: String(Math.round(3 * matchProgress)),
+              homePct: 66,
+            },
             { label: "Pitch Control", home: "61%", away: "39%", homePct: 61 },
             { label: "Control vs. Chaos Index", home: "74%", away: "52%", homePct: 58 },
             { label: "Pass Difficulty Rating", home: "86%", away: "79%", homePct: 52 },
-            { label: "Corner Kicks", home: "5", away: "2", homePct: 71 },
-            { label: "Fouls", home: "7", away: "11", homePct: 39 },
-            { label: "Yellow Cards", home: "1", away: "2", homePct: 33 },
+            {
+              label: "Corner Kicks",
+              home: String(Math.round(5 * matchProgress)),
+              away: String(Math.round(2 * matchProgress)),
+              homePct: 71,
+            },
+            {
+              label: "Fouls",
+              home: String(Math.round(7 * matchProgress)),
+              away: String(Math.round(11 * matchProgress)),
+              homePct: 39,
+            },
+            {
+              label: "Yellow Cards",
+              home: String(matchClock >= 2520 ? 1 : 0),
+              away: String(matchClock >= 5400 ? 2 : matchClock >= 5280 ? 1 : 0),
+              homePct: 33,
+            },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -461,60 +497,68 @@ export const FormationPitchCard: React.FC = () => {
           </div>
 
           {/* Tactical Inflection Points List */}
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--studio-subtext)", textTransform: "uppercase" }}>
-            Tactical Inflection Points
-          </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--studio-subtext)", textTransform: "uppercase" }}>
+              Tactical Inflection Points
+            </span>
+            <span style={{ fontSize: "10px", color: "var(--studio-subtext)", fontFamily: "monospace" }}>
+              {storeInflections.filter((i) => i.timeSec <= matchClock).length} / {storeInflections.length} Active
+            </span>
+          </div>
 
-          {[
-            {
-              time: "42'",
-              title: "Low-Block Breakthrough",
-              detail: "Haaland finished from 11m following a 14-pass sequence. Shot xG: 0.74, Pass Difficulty: 88%.",
-              impact: "Home Momentum +28%",
-            },
-            {
-              time: "69'",
-              title: "Flank Overload Adjustment",
-              detail: "Guardiola introduced Grealish to stretch Arsenal's 4-2-3-1, creating space for De Bruyne's curling strike.",
-              impact: "Control Index 74%",
-            },
-            {
-              time: "84'",
-              title: "Rapid Counter-Transition",
-              detail: "Saka broke City's rest-defense in 4 touches, punishing high line positioning with an equalizer.",
-              impact: "Game Rhythm Shift",
-            },
-          ].map((inflection) => (
-            <div
-              key={inflection.time}
-              style={{
-                backgroundColor: "var(--studio-inner-bg)",
-                borderRadius: "10px",
-                padding: "10px 12px",
-                border: "1px solid var(--studio-panel-border)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: 900, color: "#7c3aed", fontFamily: "monospace" }}>
-                    {inflection.time}
-                  </span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
-                    {inflection.title}
+          {(() => {
+            const elapsedInflections = storeInflections.filter((i) => i.timeSec <= matchClock);
+            if (elapsedInflections.length === 0) {
+              return (
+                <div
+                  style={{
+                    backgroundColor: "var(--studio-inner-bg)",
+                    borderRadius: "10px",
+                    padding: "16px",
+                    border: "1px dashed var(--studio-panel-border)",
+                    textAlign: "center",
+                    color: "var(--studio-subtext)",
+                    fontSize: "11px",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Tactical shape stable • First tactical inflection candidate under AI evaluation
+                </div>
+              );
+            }
+
+            return elapsedInflections.map((inflection) => (
+              <div
+                key={inflection.time}
+                style={{
+                  backgroundColor: "var(--studio-inner-bg)",
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  border: "1px solid var(--studio-panel-border)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 900, color: "#7c3aed", fontFamily: "monospace" }}>
+                      {inflection.time}
+                    </span>
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+                      {inflection.title}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "9px", fontWeight: 800, color: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.15)", padding: "2px 6px", borderRadius: "4px" }}>
+                    {inflection.impact}
                   </span>
                 </div>
-                <span style={{ fontSize: "9px", fontWeight: 800, color: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.15)", padding: "2px 6px", borderRadius: "4px" }}>
-                  {inflection.impact}
-                </span>
+                <p style={{ margin: 0, fontSize: "11px", color: "var(--studio-subtext)", lineHeight: "1.4" }}>
+                  {inflection.detail}
+                </p>
               </div>
-              <p style={{ margin: 0, fontSize: "11px", color: "var(--studio-subtext)", lineHeight: "1.4" }}>
-                {inflection.detail}
-              </p>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
       )}
 
@@ -594,12 +638,28 @@ export const FormationPitchCard: React.FC = () => {
             padding: "8px 4px",
           }}
         >
-          {[
-            { time: "88'", agent: "Tactical Agent", role: "Shape Analyst", text: "Arsenal shifted into a narrow 4-4-2 block to restrict central progression, forcing City wide." },
-            { time: "84'", agent: "Narrative Agent", role: "Story Synthesizer", text: "Saka's clinical counter-attack punctures City's momentum and restores emotional equilibrium." },
-            { time: "69'", agent: "Telemetry Agent", role: "Spatial Tracking", text: "Centroid compression detected: City squeezed Arsenal's defensive line within 18 meters." },
-            { time: "42'", agent: "Personalization Agent", role: "Casual Focus", text: "Haaland's lethal instinct on display! 10th Premier League goal of the campaign in emphatic fashion." },
-          ].map((comment, idx) => (
+          {(() => {
+            const elapsedComments = storeCommentary.filter((c) => c.timeSec <= matchClock);
+            if (elapsedComments.length === 0) {
+              return (
+                <div
+                  style={{
+                    backgroundColor: "var(--studio-inner-bg)",
+                    borderRadius: "10px",
+                    padding: "16px",
+                    border: "1px dashed var(--studio-panel-border)",
+                    textAlign: "center",
+                    color: "var(--studio-subtext)",
+                    fontSize: "11px",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Agents listening • Multi-agent broadcast commentary activates as match events unfold
+                </div>
+              );
+            }
+
+            return elapsedComments.map((comment, idx) => (
             <div
               key={idx}
               style={{
@@ -629,7 +689,8 @@ export const FormationPitchCard: React.FC = () => {
                 {comment.text}
               </p>
             </div>
-          ))}
+            ));
+          })()}
         </div>
       )}
     </div>

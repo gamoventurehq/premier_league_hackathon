@@ -501,3 +501,15 @@ __all__ = [
     "TelemetryFrame",
     "ToolDescriptor",
 ]
+
+class CopilotQueryRequest(_Contract):
+    query: str
+    persona: str = "analyst"
+
+
+class CopilotQueryResponse(_Contract):
+    answer: str
+    source: str
+    model: str | None = None
+    matchClock: str
+    toolUsed: str | None = None

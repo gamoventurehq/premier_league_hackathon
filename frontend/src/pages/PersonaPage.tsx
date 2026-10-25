@@ -22,6 +22,7 @@ import {
   radioOutline,
   timeOutline,
   sparklesOutline,
+  gitCompareOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
 import { PersonaMode, SupportedLanguage } from "../types/telemetry";
@@ -113,6 +114,7 @@ const PersonaPage: React.FC = () => {
 
   // Local state for Club-Centric toggle (City vs Arsenal)
   const [clubAllegiance, setClubAllegiance] = useState<"MCI" | "ARS">("MCI");
+  const [isSplitView, setIsSplitView] = useState(false);
 
   const formatTime = (secs: number) => {
     const clamped = Math.min(5400, Math.max(0, Math.floor(secs || 0)));
@@ -290,11 +292,14 @@ const PersonaPage: React.FC = () => {
               { id: "player_cam", label: "Player Cam", icon: videocamOutline },
               { id: "club_centric", label: "Club-Centric", icon: shieldCheckmarkOutline },
             ].map((p) => {
-              const isSelected = persona === p.id;
+              const isSelected = !isSplitView && persona === p.id;
               return (
                 <button
                   key={p.id}
-                  onClick={() => baseMemory.setPersona(p.id as PersonaMode)}
+                  onClick={() => {
+                    setIsSplitView(false);
+                    baseMemory.setPersona(p.id as PersonaMode);
+                  }}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -321,13 +326,153 @@ const PersonaPage: React.FC = () => {
                 </button>
               );
             })}
+
+            {/* Stage 5: Synchronized Dual-Persona Split View Button */}
+            <button
+              onClick={() => setIsSplitView(!isSplitView)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 14px",
+                borderRadius: "10px",
+                border: isSplitView ? "1.5px solid #00e5ff" : "1px solid rgba(255, 255, 255, 0.08)",
+                backgroundColor: isSplitView ? "rgba(0, 229, 255, 0.25)" : "#0f172a",
+                color: isSplitView ? "#00e5ff" : "#94a3b8",
+                fontSize: "12.5px",
+                fontWeight: isSplitView ? 800 : 600,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                boxShadow: isSplitView ? "0 0 14px rgba(0, 229, 255, 0.4)" : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <IonIcon
+                icon={gitCompareOutline}
+                style={{ fontSize: "15px", color: isSplitView ? "#00e5ff" : "#64748b" }}
+              />
+              <span>Dual Split Stream</span>
+            </button>
           </StudioChipScroller>
         </div>
 
         {/* ======================================================== */}
+        {/* DUAL-PERSONA SYNCHRONIZED SPLIT STREAM (STAGE 5)         */}
+        {/* ======================================================== */}
+        {isSplitView && (
+          <div style={{ marginBottom: "16px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: "14px",
+              }}
+            >
+              {/* Left Column: Analyst Experience */}
+              <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #38bdf8" }}>
+                <IonCardHeader style={{ paddingBottom: "8px", borderBottom: "1px solid rgba(56, 189, 248, 0.2)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <IonIcon icon={analyticsOutline} style={{ color: "#38bdf8", fontSize: "16px" }} />
+                      <IonCardTitle style={{ fontSize: "15px", color: "#f8fafc", margin: 0 }}>
+                        Analyst Experience
+                      </IonCardTitle>
+                    </div>
+                    <IonBadge color="primary" style={{ fontSize: "10px" }}>Metrics &amp; Geometry</IonBadge>
+                  </div>
+                </IonCardHeader>
+                <IonCardContent style={{ paddingTop: "12px" }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "8px",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <div style={{ background: "#1e293b", padding: "8px", borderRadius: "6px" }}>
+                      <div style={{ fontSize: "10px", color: "#94a3b8" }}>Pitch Control Split</div>
+                      <div style={{ fontSize: "15px", fontWeight: 800, color: "#00e5ff", marginTop: "2px" }}>
+                        61% <span style={{ fontSize: "11px", color: "#64748b" }}>vs</span>{" "}
+                        <span style={{ color: "#f43f5e" }}>39%</span>
+                      </div>
+                    </div>
+                    <div style={{ background: "#1e293b", padding: "8px", borderRadius: "6px" }}>
+                      <div style={{ fontSize: "10px", color: "#94a3b8" }}>Pass Difficulty (PDR)</div>
+                      <div style={{ fontSize: "15px", fontWeight: 800, color: "#e2e8f0", marginTop: "2px" }}>
+                        {(pdr ?? 0.42).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      background: "rgba(15, 23, 42, 0.8)",
+                      borderLeft: "3px solid #38bdf8",
+                      padding: "10px 12px",
+                      borderRadius: "0 6px 6px 0",
+                      fontSize: "12px",
+                      color: "#cbd5e1",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {overviews.analyst}
+                  </div>
+                </IonCardContent>
+              </IonCard>
+
+              {/* Right Column: Casual Experience */}
+              <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #c084fc" }}>
+                <IonCardHeader style={{ paddingBottom: "8px", borderBottom: "1px solid rgba(192, 132, 252, 0.2)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <IonIcon icon={peopleOutline} style={{ color: "#c084fc", fontSize: "16px" }} />
+                      <IonCardTitle style={{ fontSize: "15px", color: "#f8fafc", margin: 0 }}>
+                        Casual Experience
+                      </IonCardTitle>
+                    </div>
+                    <IonBadge color="tertiary" style={{ fontSize: "10px" }}>Storytelling &amp; Drama</IonBadge>
+                  </div>
+                </IonCardHeader>
+                <IonCardContent style={{ paddingTop: "12px" }}>
+                  <div style={{ marginBottom: "12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#cbd5e1", marginBottom: "4px" }}>
+                      <span style={{ color: "#00e5ff", fontWeight: 700 }}>City Pressure ({control}%)</span>
+                      <span style={{ color: "#f43f5e", fontWeight: 700 }}>Arsenal Counter ({100 - control}%)</span>
+                    </div>
+                    <IonProgressBar
+                      value={control / 100}
+                      style={{
+                        ["--progress-background" as string]: "#00e5ff",
+                        ["--buffer-background" as string]: "#f43f5e",
+                        height: "8px",
+                        borderRadius: "4px",
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      background: "rgba(192, 132, 252, 0.1)",
+                      borderLeft: "3px solid #c084fc",
+                      padding: "10px 12px",
+                      borderRadius: "0 6px 6px 0",
+                      fontSize: "12px",
+                      color: "#e2e8f0",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {overviews.casual}
+                  </div>
+                </IonCardContent>
+              </IonCard>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
         {/* VIEW 1: ANALYST EXPERIENCE (Data-Dense Tactical Models)  */}
         {/* ======================================================== */}
-        {persona === "analyst" && (
+        {!isSplitView && persona === "analyst" && (
           <div className="studio-two-col-grid" style={{ marginBottom: "16px" }}>
             {/* Probabilistic Surface & Passing Corridors */}
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
@@ -501,7 +646,7 @@ const PersonaPage: React.FC = () => {
         {/* ======================================================== */}
         {/* VIEW 2: CASUAL EXPERIENCE (Storyline, Duels & Milestones) */}
         {/* ======================================================== */}
-        {persona === "casual" && (
+        {!isSplitView && persona === "casual" && (
           <div className="studio-two-col-grid" style={{ marginBottom: "16px" }}>
             {/* Storyline & Emotional Momentum Pendulum */}
             <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
@@ -689,7 +834,7 @@ const PersonaPage: React.FC = () => {
         {/* ======================================================== */}
         {/* VIEW 3: PLAYER CAM FOCUS (Dedicated Individual Telemetry) */}
         {/* ======================================================== */}
-        {persona === "player_cam" && (
+        {!isSplitView && persona === "player_cam" && (
           <div>
             {/* Quick-Pick Key Player Pills Bar with Permanent Scroll Line */}
             <div style={{ marginBottom: "14px" }}>
@@ -948,7 +1093,7 @@ const PersonaPage: React.FC = () => {
         {/* ======================================================== */}
         {/* VIEW 4: CLUB-CENTRIC EXPERIENCE (Framed Club Execution)  */}
         {/* ======================================================== */}
-        {persona === "club_centric" && (
+        {!isSplitView && persona === "club_centric" && (
           <div>
             {/* Club Allegiance Selector */}
             <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>

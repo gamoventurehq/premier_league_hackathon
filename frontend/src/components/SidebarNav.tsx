@@ -10,17 +10,20 @@ import {
   moonOutline,
   personCircleOutline,
   shieldOutline,
+  sparklesOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
 
 interface SidebarNavProps {
   activeTab: string;
   onSelectTab: (tab: string) => void;
+  onOpenCopilot?: () => void;
 }
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({
   activeTab,
   onSelectTab,
+  onOpenCopilot,
 }) => {
   const theme = useBaseMemory((s) => s.theme);
 
@@ -145,6 +148,25 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           >
             <IonIcon icon={settingsOutline} style={{ fontSize: "20px", display: "block" }} />
           </button>
+
+          {onOpenCopilot && (
+            <button
+              onClick={onOpenCopilot}
+              title="Tactical Copilot (Azure MCP)"
+              style={{
+                background: "rgba(0, 229, 255, 0.12)",
+                border: "1px solid rgba(0, 229, 255, 0.3)",
+                borderRadius: "10px",
+                padding: "10px",
+                cursor: "pointer",
+                color: "#00e5ff",
+                boxShadow: "0 0 10px rgba(0, 229, 255, 0.2)",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <IonIcon icon={sparklesOutline} style={{ fontSize: "20px", display: "block" }} />
+            </button>
+          )}
         </nav>
       </div>
 
