@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import {
   FrameTelemetry,
   PlayerTelemetry,
+  PlayerKinematics,
   TacticalBlackboard,
   PersonaMode,
   SupportedLanguage,
@@ -246,7 +247,7 @@ class BaseMemoryStore {
     }
 
     // Map live tracking positions to team lineups
-    const playerMap = new Map<string, PlayerTelemetry>();
+    const playerMap = new Map<string, PlayerKinematics>();
     if (frame.players && Array.isArray(frame.players)) {
       for (const p of frame.players) {
         playerMap.set(p.player_id, p);

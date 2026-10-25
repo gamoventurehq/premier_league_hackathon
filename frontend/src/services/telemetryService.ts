@@ -1,5 +1,5 @@
 import { baseMemory } from "../store/baseMemory";
-import { FrameTelemetry, PlayerTelemetry } from "../types/telemetry";
+import { FrameTelemetry, PlayerTelemetry, PlayerKinematics } from "../types/telemetry";
 
 class TelemetryService {
   private ws: WebSocket | null = null;
@@ -155,7 +155,7 @@ class TelemetryService {
       away_11: [62.0, 34.0],
     };
 
-    const players: PlayerTelemetry[] = [];
+    const players: PlayerKinematics[] = [];
 
     // Home Team Outfield & GK
     state.homeLineup.forEach((p, i) => {

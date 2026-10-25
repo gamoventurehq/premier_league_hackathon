@@ -1,109 +1,89 @@
-import asyncio
-import json
-import math
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+"""FastAPI application factory for the Premier League Studio backend.
+
+The service starts with **zero** Azure credentials: every Azure client is
+created lazily by the modules in ``app/services`` and the synthetic match,
+the Pitch Control surface and the agent swarm all run locally.
+"""
+
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .models.telemetry import FrameTelemetry
-from .engine.simulator import SyntheticMatchSimulator
-from .agents.blackboard import SharedTacticalBlackboard
+from .api.routes import router as rest_router
+from .api.websocket import router as websocket_router
+from .config import Settings, get_settings
+from .runtime import MatchRuntime
 
-app = FastAPI(
-    title="Premier League Studio Insights Engine",
-    description="Synthetic Match Insights Engine with Physics-Based Spatial Telemetry and 4-Agent Swarm",
-    version="0.1.0"
-)
+logger = logging.getLogger(__name__)
 
-# Enable CORS for Next.js frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-simulator = SyntheticMatchSimulator()
-blackboard = SharedTacticalBlackboard()
+def configure_logging(settings: Settings) -> None:
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level, logging.INFO),
+        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+    )
 
-@app.get("/api/health")
-async def health_check():
-    return {
-        "status": "ok",
-        "service": "premier-league-studio-backend",
-        "version": "0.1.0",
-        "timestamp_clock": simulator.match_clock
-    }
 
-@app.get("/api/tactical-state")
-async def get_tactical_state():
-    return blackboard.model_dump()
+def create_app(settings: Settings | None = None) -> FastAPI:
+    """Build the FastAPI application."""
+    settings = settings or get_settings()
+    configure_logging(settings)
 
-@app.get("/api/telemetry/frame", response_model=FrameTelemetry)
-async def get_current_frame():
-    frame = simulator.generate_frame()
-    blackboard.update_state({
-        "latest_frame_id": frame.frame_id,
-        "current_game_rhythm": frame.game_rhythm,
-        "control_index": frame.control_chaos.control,
-        "chaos_index": frame.control_chaos.chaos,
-        "active_tactical_inflection": frame.active_tactical_inflection
-    })
-    return frame
-
-@app.websocket("/ws/telemetry")
-async def websocket_telemetry_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    is_paused = False
-
-    async def receiver():
-        nonlocal is_paused
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        runtime = MatchRuntime(settings)
+        app.state.runtime = runtime
+        runtime.start()
+        logger.info(
+            "%s %s started (Azure: %s).",
+            settings.app_name,
+            settings.service_version,
+            ", ".join(name for name, on in settings.azure_capabilities().items() if on) or "none configured",
+        )
         try:
-            while True:
-                data = await websocket.receive_text()
-                try:
-                    msg = json.loads(data)
-                    cmd = msg.get("command")
-                    if cmd == "pause":
-                        is_paused = True
-                    elif cmd in ("play", "resume"):
-                        is_paused = False
-                    elif cmd == "seek":
-                        target_sec = float(msg.get("time", 0.0))
-                        simulator.match_clock = target_sec
-                    elif cmd == "inject_scenario":
-                        scen = msg.get("scenario")
-                        simulator.set_scenario(scen)
-                    elif cmd == "reset_scenario":
-                        simulator.set_scenario(None)
-                except Exception:
-                    pass
-        except (WebSocketDisconnect, asyncio.CancelledError):
-            pass
+            yield
+        finally:
+            runtime.stop()
 
-    rx_task = asyncio.create_task(receiver())
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.service_version,
+        description=(
+            "Synthetic match telemetry, Pitch Control metrics, the four-agent narrative swarm "
+            "and the Stage 4 Broadcast Overlay for the Microsoft Premier League Hackathon."
+        ),
+        lifespan=lifespan,
+    )
 
-    try:
-        while True:
-            if not is_paused:
-                frame = simulator.generate_frame()
-                pdr_val = round(min(0.95, max(0.15, 0.45 + 0.35 * math.sin(frame.match_clock_sec * 0.35))), 2)
-                blackboard.update_state({
-                    "latest_frame_id": frame.frame_id,
-                    "current_game_rhythm": frame.game_rhythm,
-                    "control_index": frame.control_chaos.control,
-                    "chaos_index": frame.control_chaos.chaos,
-                    "active_tactical_inflection": frame.active_tactical_inflection,
-                    "latest_pdr": pdr_val
-                })
-                payload = {
-                    "frame": frame.model_dump(),
-                    "blackboard": blackboard.model_dump()
-                }
-                await websocket.send_text(json.dumps(payload))
-            # 5Hz downsampled rate per ADR 0003
-            await asyncio.sleep(0.2)
-    except (WebSocketDisconnect, asyncio.CancelledError):
-        pass
-    finally:
-        rx_task.cancel()
+    origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins or ["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.include_router(rest_router)
+    app.include_router(websocket_router)
+
+    @app.get("/", include_in_schema=False)
+    async def index() -> dict[str, str]:
+        return {
+            "service": settings.app_name,
+            "version": settings.service_version,
+            "health": "/health",
+            "websocket": "/ws/telemetry",
+            "docs": "/docs",
+        }
+
+    return app
+
+
+app = create_app()
+
+__all__ = ["app", "create_app"]
