@@ -92,10 +92,10 @@ export const BroadcastOverlay: React.FC<BroadcastOverlayProps> = ({
         away_pct: 100 - pitchControlStat.homePct,
       },
       control_vs_chaos: {
-        control: currentFrame?.control_chaos?.control ?? 68,
-        chaos: currentFrame?.control_chaos?.chaos ?? 32,
+        control: currentFrame?.control_chaos?.control ?? (currentFrame as any)?.metrics?.controlVsChaosIndex ?? 68,
+        chaos: currentFrame?.control_chaos?.chaos ?? (typeof (currentFrame as any)?.metrics?.controlVsChaosIndex === "number" ? 100 - (currentFrame as any).metrics.controlVsChaosIndex : 32),
       },
-      game_rhythm: currentFrame?.game_rhythm ?? "High Tempo Transition",
+      game_rhythm: currentFrame?.game_rhythm ?? (currentFrame as any)?.metrics?.gameRhythm ?? "High Tempo Transition",
       active_sprint: {
         player: maxSpeedPlayer?.name ?? "B. Saka",
         team: maxSpeedPlayer?.team === "home" ? score.homeTeam : score.awayTeam,

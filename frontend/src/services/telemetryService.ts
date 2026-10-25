@@ -43,8 +43,12 @@ class TelemetryService {
           if (payload.blackboard) {
             baseMemory.updateBlackboard(payload.blackboard);
           }
+          const latency = typeof payload.sentAtMs === "number"
+            ? Math.max(1, Math.min(250, Date.now() - payload.sentAtMs))
+            : 0;
           baseMemory.setServerStatus({
             isConnected: true,
+            latencyMs: latency,
             lastSyncTime: Date.now(),
           });
         } catch (err) {
@@ -96,7 +100,19 @@ class TelemetryService {
   sendCommand(cmd: Record<string, unknown>) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
-        this.ws.send(JSON.stringify(cmd));
+        let payload: Record<string, unknown> = { ...cmd };
+        if (cmd.command === "seek") {
+          payload = { type: "jump", seconds: cmd.seconds ?? cmd.time };
+        } else if (cmd.command === "play") {
+          payload = { type: "resume" };
+        } else if (cmd.command === "pause") {
+          payload = { type: "pause" };
+        } else if (cmd.command === "inject_scenario") {
+          payload = { type: "set_scenario", scenario: cmd.scenario };
+        } else if (cmd.command === "reset_scenario") {
+          payload = { type: "set_scenario", scenario: "high_possession" };
+        }
+        this.ws.send(JSON.stringify(payload));
       } catch (err) {
         console.error("Failed to send telemetry command", err);
       }

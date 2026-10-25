@@ -240,22 +240,70 @@ class BaseMemoryStore {
 
   // --- Actions to update Single Base Memory from Server or UI ---
 
-  updateFrame = (frame: FrameTelemetry) => {
+  updateFrame = (rawFrame: FrameTelemetry | Record<string, any>) => {
     // If user paused playback, freeze updates
-    if (!this.state.isPlaying) {
+    if (!this.state.isPlaying || !rawFrame) {
       return;
     }
 
-    // Map live tracking positions to team lineups
+    const normalizePlayerId = (id: string | undefined): string => {
+      if (!id) return "";
+      if (id.startsWith("h") && !id.startsWith("home_")) {
+        const num = id.slice(1);
+        if (!isNaN(Number(num))) return `home_${num}`;
+      }
+      if (id.startsWith("a") && !id.startsWith("away_")) {
+        const num = id.slice(1);
+        if (!isNaN(Number(num))) return `away_${num}`;
+      }
+      return id;
+    };
+
+    // Normalize incoming players to PlayerKinematics
+    const rawPlayers = (rawFrame as any).players || [];
+    const normalizedPlayers: PlayerKinematics[] = [];
     const playerMap = new Map<string, PlayerKinematics>();
-    if (frame.players && Array.isArray(frame.players)) {
-      for (const p of frame.players) {
-        playerMap.set(p.player_id, p);
+
+    if (Array.isArray(rawPlayers)) {
+      for (const rp of rawPlayers) {
+        const rawId = rp.id || rp.player_id || "";
+        const normId = normalizePlayerId(rawId);
+        const shirtNum = rp.number ?? rp.shirt_number ?? 0;
+        const speedKmh = rp.speedKmH ?? rp.speed_kmh ?? (rp.velocity_mps ? rp.velocity_mps * 3.6 : 0);
+        const velMps = rp.velocity_mps ?? (speedKmh ? speedKmh / 3.6 : Math.hypot(rp.vx || 0, rp.vy || 0));
+        const headingDeg = rp.heading_deg ?? (rp.vx || rp.vy ? (Math.atan2(rp.vy || 0, rp.vx || 0) * (180 / Math.PI) + 360) % 360 : 0);
+        const isCarrier = rp.onBall ?? rp.is_ball_carrier ?? false;
+
+        const p: PlayerKinematics = {
+          player_id: normId || rawId,
+          id: rawId,
+          name: rp.name,
+          team: rp.team,
+          shirt_number: shirtNum,
+          number: shirtNum,
+          position: rp.position,
+          x: rp.x,
+          y: rp.y,
+          velocity_mps: Math.round(velMps * 100) / 100,
+          speed_kmh: Math.round(speedKmh * 10) / 10,
+          speedKmH: Math.round(speedKmh * 10) / 10,
+          heading_deg: Math.round(headingDeg),
+          is_ball_carrier: isCarrier,
+          onBall: isCarrier,
+          shortName: rp.shortName,
+          role: rp.role,
+          distanceMeters: rp.distanceMeters,
+          touches: rp.touches,
+        };
+
+        normalizedPlayers.push(p);
+        if (rawId) playerMap.set(rawId, p);
+        if (normId) playerMap.set(normId, p);
       }
     }
 
     const updatedHome = this.state.homeLineup.map((p) => {
-      const live = playerMap.get(p.id);
+      const live = playerMap.get(p.id) || playerMap.get(p.id.replace("home_", "h"));
       if (!live) return p;
       return {
         ...p,
@@ -267,7 +315,7 @@ class BaseMemoryStore {
     });
 
     const updatedAway = this.state.awayLineup.map((p) => {
-      const live = playerMap.get(p.id);
+      const live = playerMap.get(p.id) || playerMap.get(p.id.replace("away_", "a"));
       if (!live) return p;
       return {
         ...p,
@@ -278,14 +326,37 @@ class BaseMemoryStore {
       };
     });
 
-    // If a synthetic scenario is active, preserve its macro tactical values
-    const ctrl = this.state.activeScenario ? this.state.blackboard.control_index : frame.control_chaos.control;
-    const chs = this.state.activeScenario ? this.state.blackboard.chaos_index : frame.control_chaos.chaos;
-    const rhythm = this.state.activeScenario ? this.state.blackboard.current_game_rhythm : frame.game_rhythm;
-    const activeInflection = this.state.activeScenario ? true : frame.active_tactical_inflection;
+    // Normalize ball state
+    const rawBall = (rawFrame as any).ball || { x: 52.5, y: 34.0, z: 0 };
+    const ballSpeed = rawBall.speedKmH ?? rawBall.speed_kmh ?? 0;
+    const normalizedBall: any = {
+      ...rawBall,
+      speed_kmh: ballSpeed,
+      speedKmH: ballSpeed,
+      velocity_mps: rawBall.velocity_mps ?? (ballSpeed ? ballSpeed / 3.6 : 0),
+    };
 
-    const possHome = Math.min(75, Math.max(35, Math.round(ctrl * 0.4 + 35)));
-    const pcHome = Math.min(80, Math.max(30, Math.round(ctrl * 0.5 + 30)));
+    // Tactical metrics (extract from backend MatchMetrics or fallback)
+    const rawMetrics = (rawFrame as any).metrics;
+    const ctrl = this.state.activeScenario
+      ? this.state.blackboard.control_index
+      : Math.round(rawMetrics?.controlVsChaosIndex ?? (rawFrame as any).control_chaos?.control ?? 64);
+    const chs = this.state.activeScenario
+      ? this.state.blackboard.chaos_index
+      : Math.round(100 - (rawMetrics?.controlVsChaosIndex ?? (100 - ((rawFrame as any).control_chaos?.chaos ?? 36))));
+    const rhythm = this.state.activeScenario
+      ? this.state.blackboard.current_game_rhythm
+      : (rawMetrics?.gameRhythm ?? (rawFrame as any).game_rhythm ?? "Structured");
+    const activeInflection = this.state.activeScenario
+      ? true
+      : ((rawFrame as any).latestNarrative?.isTacticalInflectionPoint ?? (rawFrame as any).active_tactical_inflection ?? false);
+    const pdrValue = typeof rawMetrics?.passDifficultyRating === "number"
+      ? rawMetrics.passDifficultyRating / 100.0
+      : (typeof (rawFrame as any).latest_pdr === "number" ? (rawFrame as any).latest_pdr : this.state.blackboard.latest_pdr);
+
+    const possHome = Math.min(75, Math.max(35, Math.round(rawMetrics?.possessionShare?.home ?? (ctrl * 0.4 + 35))));
+    const pcHome = Math.min(80, Math.max(30, Math.round(rawMetrics?.pitchControl?.home ?? (ctrl * 0.5 + 30))));
+    const pdrPct = Math.round(pdrValue * 100);
 
     const updatedStats = this.state.headToHeadStats.map((st) => {
       if (st.label === "Possession") {
@@ -295,31 +366,121 @@ class BaseMemoryStore {
         return { ...st, home: `${pcHome}%`, away: `${100 - pcHome}%`, homePct: pcHome };
       }
       if (st.label === "Control vs. Chaos Index") {
-        return { ...st, home: `${Math.round(ctrl)}%`, away: `${Math.round(chs)}%`, homePct: Math.round(ctrl) };
+        return { ...st, home: `${ctrl}%`, away: `${chs}%`, homePct: ctrl };
+      }
+      if (st.label === "Pass Difficulty Rating") {
+        return { ...st, home: `${pdrPct}%`, away: `${Math.max(20, pdrPct - 8)}%`, homePct: pdrPct };
       }
       return st;
     });
 
-    // In synthetic simulation, frame.match_clock_sec is already the absolute match clock
+    const frameSeconds = (rawFrame as any).matchSeconds ?? (rawFrame as any).match_clock_sec ?? 0;
     const effectiveClock = this.state.serverStatus.isConnected
-      ? Math.max(0, frame.match_clock_sec + this.state.clockOffset)
-      : Math.min(5400, Math.max(0, frame.match_clock_sec));
+      ? Math.max(0, frameSeconds + this.state.clockOffset)
+      : Math.min(5400, Math.max(0, frameSeconds));
+
+    const frameId = (rawFrame as any).frameId ?? (rawFrame as any).frame_id ?? 0;
+
+    const frame: FrameTelemetry = {
+      ...(rawFrame as any),
+      frame_id: frameId,
+      frameId: frameId,
+      match_clock_sec: frameSeconds,
+      matchSeconds: frameSeconds,
+      matchClock: (rawFrame as any).matchClock || `${Math.floor(frameSeconds / 60)}:${Math.floor(frameSeconds % 60).toString().padStart(2, "0")}`,
+      timestamp_ms: (rawFrame as any).timestampMs ?? (rawFrame as any).timestamp_ms ?? Date.now(),
+      ball: normalizedBall,
+      players: normalizedPlayers,
+      control_chaos: { control: ctrl, chaos: chs },
+      game_rhythm: rhythm,
+      active_tactical_inflection: activeInflection,
+    };
+
+    // Synchronize dynamic shots if provided by simulation
+    let updatedShots = this.state.shotMapEvents;
+    if ((rawFrame as any).shots && Array.isArray((rawFrame as any).shots) && (rawFrame as any).shots.length > 0) {
+      updatedShots = (rawFrame as any).shots.map((s: any, idx: number) => ({
+        id: s.id || `s_${idx}`,
+        x: `${Math.round((s.x / 105.0) * 100)}%`,
+        y: `${Math.round((s.y / 68.0) * 100)}%`,
+        size: Math.round(10 + (s.xG || 0.3) * 12),
+        isGoal: s.outcome === "goal",
+        label: s.outcome === "goal" ? "Goal" : (s.outcome === "saved" ? "Saved" : "Miss"),
+        playerId: normalizePlayerId(s.playerId),
+        playerName: s.playerName,
+        minute: s.matchClock || `${Math.floor(s.timestampMs / 60000)}'`,
+        xG: s.xG,
+        xGOT: s.outcome === "goal" ? Math.min(0.99, s.xG + 0.15) : 0,
+        foot: "Right",
+        team: s.team,
+      }));
+    }
+
+    // Synchronize dynamic events if provided by simulation
+    let updatedEvents = this.state.timelineEvents;
+    if ((rawFrame as any).events && Array.isArray((rawFrame as any).events) && (rawFrame as any).events.length > 0) {
+      updatedEvents = (rawFrame as any).events.slice(-15).reverse().map((ev: any, idx: number) => ({
+        id: ev.id || `ev_${idx}`,
+        time: ev.matchClock || `${Math.floor(ev.timestampMs / 60000)}'`,
+        timeSec: Math.floor((ev.timestampMs || 0) / 1000),
+        type: ev.type === "goal" ? "goal" : (ev.type.includes("card") ? "card" : "sub"),
+        player: ev.description?.split(" ")[0] || "Player",
+        playerId: normalizePlayerId(ev.actorId || "home_7"),
+        team: ev.team || "home",
+        detail: ev.description,
+        score: ev.score ? `${ev.score.home} - ${ev.score.away}` : undefined,
+      }));
+    }
+
+    // Synchronize narrative into blackboard
+    let updatedBlackboard = {
+      ...this.state.blackboard,
+      latest_frame_id: frameId,
+      current_game_rhythm: rhythm,
+      control_index: ctrl,
+      chaos_index: chs,
+      active_tactical_inflection: activeInflection,
+      latest_pdr: pdrValue,
+    };
+
+    if ((rawFrame as any).latestNarrative) {
+      const nar = (rawFrame as any).latestNarrative;
+      const lang = this.state.selectedLanguage;
+      const headline = nar.headline?.[lang] || nar.headline?.en || updatedBlackboard.narrative_headline;
+      const explanation = nar.tacticalExplanation?.[lang] || nar.tacticalExplanation?.en || "";
+      updatedBlackboard = {
+        ...updatedBlackboard,
+        narrative_headline: headline,
+        narrative_explanation: explanation,
+        persona_overviews: {
+          analyst: nar.analystContext || updatedBlackboard.persona_overviews.analyst,
+          casual: nar.casualContext || updatedBlackboard.persona_overviews.casual,
+          player_cam: nar.playerCamContext || updatedBlackboard.persona_overviews.player_cam,
+          club_centric: nar.clubCentricContext?.homeFrame || updatedBlackboard.persona_overviews.club_centric,
+        },
+      };
+    }
+
+    const liveScore = (rawFrame as any).score;
+    const updatedScore = liveScore && typeof liveScore.home === "number" && typeof liveScore.away === "number"
+      ? {
+          ...this.state.score,
+          homeScore: liveScore.home,
+          awayScore: liveScore.away,
+        }
+      : this.state.score;
 
     this.state = {
       ...this.state,
       currentFrame: frame,
       matchClock: effectiveClock,
+      score: updatedScore,
       homeLineup: updatedHome,
       awayLineup: updatedAway,
       headToHeadStats: updatedStats,
-      blackboard: {
-        ...this.state.blackboard,
-        latest_frame_id: frame.frame_id,
-        current_game_rhythm: rhythm,
-        control_index: ctrl,
-        chaos_index: chs,
-        active_tactical_inflection: activeInflection,
-      },
+      shotMapEvents: updatedShots,
+      timelineEvents: updatedEvents,
+      blackboard: updatedBlackboard,
     };
     this.notify();
   };
@@ -431,7 +592,18 @@ class BaseMemoryStore {
     };
 
     if (this.scenarioCommandHandler) {
-      this.scenarioCommandHandler({ command: "inject_scenario", scenario: scenarioId });
+      const scenarioMap: Record<string, string> = {
+        low_block_siege: "low_block_siege",
+        rapid_counter: "counter_attack_transition",
+        counter_attack_transition: "counter_attack_transition",
+        red_card_crisis: "low_block_siege",
+        box_scramble: "box_scramble",
+        high_possession: "high_possession",
+      };
+      this.scenarioCommandHandler({
+        type: "set_scenario",
+        scenario: scenarioMap[scenarioId] || scenarioId,
+      });
     }
 
     this.notify();
@@ -448,18 +620,65 @@ class BaseMemoryStore {
     };
 
     if (this.scenarioCommandHandler) {
-      this.scenarioCommandHandler({ command: "reset_scenario" });
+      this.scenarioCommandHandler({ type: "set_scenario", scenario: "high_possession" });
     }
 
     this.notify();
   };
 
-  updateBlackboard = (blackboardUpdates: Partial<TacticalBlackboard>) => {
+  updateBlackboard = (bb: any) => {
+    if (!bb) return;
+    const lang = this.state.selectedLanguage;
+    const headline =
+      bb.narrative?.headline?.[lang] ||
+      bb.narrative?.headline?.en ||
+      bb.narrative_headline ||
+      this.state.blackboard.narrative_headline;
+    const ctrl =
+      typeof bb.control_vs_chaos === "number"
+        ? Math.round(bb.control_vs_chaos)
+        : (bb.control_index ?? this.state.blackboard.control_index);
+    const chs =
+      typeof bb.control_vs_chaos === "number"
+        ? Math.round(100 - bb.control_vs_chaos)
+        : (bb.chaos_index ?? this.state.blackboard.chaos_index);
+    const rhythm =
+      bb.game_rhythm || bb.current_game_rhythm || this.state.blackboard.current_game_rhythm;
+    const pdr =
+      typeof bb.pass_difficulty_rating === "number"
+        ? bb.pass_difficulty_rating / 100.0
+        : (bb.latest_pdr ?? this.state.blackboard.latest_pdr);
+
+    const personaOverviews = {
+      analyst:
+        bb.analyst_context ||
+        bb.persona_overviews?.analyst ||
+        this.state.blackboard.persona_overviews.analyst,
+      casual:
+        bb.casual_context ||
+        bb.persona_overviews?.casual ||
+        this.state.blackboard.persona_overviews.casual,
+      player_cam:
+        bb.player_cam_context ||
+        bb.persona_overviews?.player_cam ||
+        this.state.blackboard.persona_overviews.player_cam,
+      club_centric:
+        bb.club_centric_context?.homeFrame ||
+        bb.persona_overviews?.club_centric ||
+        this.state.blackboard.persona_overviews.club_centric,
+    };
+
     this.state = {
       ...this.state,
       blackboard: {
         ...this.state.blackboard,
-        ...blackboardUpdates,
+        latest_frame_id: bb.latest_frame_id ?? this.state.blackboard.latest_frame_id,
+        current_game_rhythm: rhythm,
+        control_index: ctrl,
+        chaos_index: chs,
+        latest_pdr: pdr,
+        narrative_headline: headline,
+        persona_overviews: personaOverviews,
       },
     };
     this.notify();
@@ -470,6 +689,9 @@ class BaseMemoryStore {
       ...this.state,
       selectedPersona: persona,
     };
+    if (this.scenarioCommandHandler) {
+      this.scenarioCommandHandler({ type: "set_persona", persona });
+    }
     this.notify();
   };
 

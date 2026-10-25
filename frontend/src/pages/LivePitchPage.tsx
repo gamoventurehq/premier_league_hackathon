@@ -110,13 +110,13 @@ const LivePitchPage: React.FC = () => {
 
   // Resolve real-time spatial telemetry from current frame
   const liveTelemetry = currentFrame?.players?.find(
-    (p) => p.player_id === selectedPlayerId
+    (p) => p.player_id === selectedPlayerId || p.id === selectedPlayerId
   );
-  const liveSpeed = liveTelemetry?.speed_kmh ?? profile.speed_kmh ?? 14.2;
+  const liveSpeed = liveTelemetry?.speed_kmh ?? (liveTelemetry as any)?.speedKmH ?? profile.speed_kmh ?? 14.2;
   const liveX = liveTelemetry ? liveTelemetry.x : (profile.x / 100) * 105;
   const liveY = liveTelemetry ? liveTelemetry.y : (profile.y / 100) * 68;
   const heading = liveTelemetry?.heading_deg ?? 90;
-  const isCarrier = liveTelemetry?.is_ball_carrier ?? profile.is_ball_carrier ?? false;
+  const isCarrier = liveTelemetry?.is_ball_carrier ?? (liveTelemetry as any)?.onBall ?? profile.is_ball_carrier ?? false;
 
   // Key quick-pick player presets
   const homePresets = [

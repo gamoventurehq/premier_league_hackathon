@@ -31,9 +31,11 @@ export const PlayerSpotlightCard: React.FC = () => {
   const teamMeta = isHome ? score.homeMeta : score.awayMeta;
 
   // Real-time spatial speed and ball carrier state from 5Hz tracking stream
-  const liveTelemetry = currentFrame?.players?.find((p) => p.player_id === selectedPlayerId);
-  const liveSpeed = liveTelemetry?.speed_kmh ?? player.speed_kmh ?? 14.2;
-  const isCarrier = liveTelemetry?.is_ball_carrier ?? player.is_ball_carrier ?? false;
+  const liveTelemetry = currentFrame?.players?.find(
+    (p) => p.player_id === selectedPlayerId || p.id === selectedPlayerId
+  );
+  const liveSpeed = liveTelemetry?.speed_kmh ?? (liveTelemetry as any)?.speedKmH ?? player.speed_kmh ?? 14.2;
+  const isCarrier = liveTelemetry?.is_ball_carrier ?? (liveTelemetry as any)?.onBall ?? player.is_ball_carrier ?? false;
 
   const { shoot, passing, dribbling, defending, shotAccuracyPct, avgRating } = player.attributes;
 
