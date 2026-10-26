@@ -179,6 +179,14 @@ def test_simulation_clock_auto_rollover_at_5400s(app_client) -> None:
     )
 
     # Narrative state cleanly refreshed to post-rollover anchor clock
+    for _ in range(20):
+        with runtime._lock:
+            latest_narrative = runtime.latest_narrative()
+            latest_frame = runtime.latest_frame()
+        if latest_narrative is not None and latest_frame is not None and latest_narrative.matchClock == latest_frame.matchClock:
+            break
+        time.sleep(0.1)
+
     assert latest_narrative is not None, "Post-rollover narrative was unexpectedly None"
     assert latest_frame is not None, "Post-rollover frame was unexpectedly None"
     assert latest_frame.matchSeconds < 5000.0, f"Frame clock not rolled over: {latest_frame.matchSeconds}"
