@@ -494,6 +494,27 @@ ion-tabs.studio-tabs-root {
   white-space: nowrap !important;
 }
 
+.studio-mobile-agent-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  background-color: rgba(56, 189, 248, 0.14) !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  color: #38bdf8 !important;
+  padding: 3px 8px !important;
+  border-radius: 9999px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.2s ease !important;
+}
+
+.studio-mobile-agent-btn:active {
+  background-color: rgba(56, 189, 248, 0.3) !important;
+  transform: scale(0.96);
+}
+
 .studio-mobile-status-dot {
   display: inline-flex !important;
   align-items: center !important;
@@ -829,11 +850,89 @@ ion-badge {
   box-sizing: border-box !important;
 }
 
-@media (max-width: 640px) {
-  .judge-modal-grid-3 {
-    grid-template-columns: 1fr !important;
+/* Judge Quick Tour Responsive Mobile Optimizations (< 768px) */
+@media (max-width: 768px) {
+  .judge-tour-dialog-backdrop {
+    padding: 0 !important;
+    align-items: flex-end !important;
   }
-  .judge-modal-grid-2 {
+  .judge-tour-modal-shell {
+    max-width: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 16px 16px 0 0 !important;
+    border-bottom: none !important;
+  }
+  .judge-tour-header {
+    padding: 12px 14px 10px !important;
+    gap: 10px !important;
+  }
+  .judge-tour-stepper {
+    gap: 4px !important;
+    padding-bottom: 6px !important;
+  }
+  .judge-tour-step-btn {
+    padding: 4px 1px !important;
+  }
+  .judge-tour-step-label {
+    display: none !important;
+  }
+  .judge-tour-title-text {
+    font-size: 15px !important;
+  }
+  .judge-tour-subtitle-text {
+    font-size: 11px !important;
+  }
+  .judge-tour-rubric-card {
+    margin: 8px 12px 0 !important;
+  }
+  .judge-tour-rubric-summary-text {
+    display: none !important;
+  }
+  .judge-tour-rubric-btn {
+    padding: 7px 10px !important;
+    font-size: 11px !important;
+  }
+  .judge-tour-rubric-details {
+    padding: 10px !important;
     grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .judge-tour-body {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+  .judge-tour-scenarios-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .judge-tour-agents-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .judge-tour-personas-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .judge-tour-pipeline-grid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    padding: 10px !important;
+  }
+  .judge-tour-sla-grid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+  .judge-tour-footer {
+    padding: 10px 14px !important;
+  }
+  .judge-tour-prev-btn {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
+  .judge-tour-next-btn {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
   }
 }

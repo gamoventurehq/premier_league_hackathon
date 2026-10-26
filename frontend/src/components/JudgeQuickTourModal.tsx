@@ -161,6 +161,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="judge-tour-title"
+      className="judge-tour-dialog-backdrop"
       style={{
         position: "fixed",
         inset: 0,
@@ -177,6 +178,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
       onClick={onClose}
     >
       <div
+        className="judge-tour-modal-shell"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
@@ -195,6 +197,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
       >
         {/* HEADER: Clean, understated per media_1793031578727.png */}
         <div
+          className="judge-tour-header"
           style={{
             padding: "18px 24px 14px",
             borderBottom: "1px solid rgba(255, 255, 255, 0.07)",
@@ -250,6 +253,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
 
           {/* Stepper Bar: 4 Equal Segments with Active Underline per media_1793031578727.png */}
           <div
+            className="judge-tour-stepper"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(4, 1fr)",
@@ -266,6 +270,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
                   key={s.num}
                   onClick={() => setCurrentStep(s.num as TourStep)}
                   aria-label={`Step ${s.num}: ${s.label}`}
+                  className="judge-tour-step-btn"
                   style={{
                     background: "transparent",
                     border: "none",
@@ -299,6 +304,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
                       {s.num}
                     </span>
                     <span
+                      className="judge-tour-step-label"
                       style={{
                         fontSize: "12px",
                         fontWeight: isActive ? 700 : 500,
@@ -330,6 +336,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
             <h2
               id="judge-tour-title"
+              className="judge-tour-title-text"
               style={{
                 fontSize: "17px",
                 fontWeight: 700,
@@ -340,7 +347,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
             >
               {activeStepDef.title}
             </h2>
-            <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+            <span className="judge-tour-subtitle-text" style={{ fontSize: "12px", color: "#94a3b8" }}>
               {activeStepDef.subtitle}
             </span>
           </div>
@@ -348,6 +355,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
 
         {/* EXPANDABLE JUDGING RUBRIC: Single card per media_1793031597483.png */}
         <div
+          className="judge-tour-rubric-card"
           style={{
             margin: "12px 24px 0",
             backgroundColor: "#070c18",
@@ -360,6 +368,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
           <button
             onClick={() => setShowRubric(!showRubric)}
             aria-expanded={showRubric}
+            className="judge-tour-rubric-btn"
             style={{
               width: "100%",
               padding: "9px 14px",
@@ -383,13 +392,14 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#94a3b8", fontSize: "11px" }}>
-              <span>5 criteria · 20% each</span>
+              <span className="judge-tour-rubric-summary-text">5 criteria · 20% each</span>
               <IonIcon icon={showRubric ? chevronUpOutline : chevronDownOutline} style={{ fontSize: "13px" }} />
             </div>
           </button>
 
           {showRubric && (
             <div
+              className="judge-tour-rubric-details"
               style={{
                 padding: "12px 14px",
                 borderTop: "1px solid rgba(255, 255, 255, 0.06)",
@@ -448,6 +458,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
 
         {/* STEP CONTENT BODY: Spacious, 980px maxWidth */}
         <div
+          className="judge-tour-body"
           style={{
             padding: "16px 24px",
             overflowY: "auto",
@@ -485,7 +496,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
             </div>
 
             {/* 3 Streamlined Scenario Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+            <div className="judge-tour-scenarios-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
               <button
                 onClick={() => handleTriggerScenario("low_block_siege", "Low Block Siege")}
                 style={{
@@ -660,7 +671,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
             </span>
 
             {/* 2x2 Clean Agent Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="judge-tour-agents-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div style={{ backgroundColor: "rgba(255, 255, 255, 0.02)", padding: "14px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
                 <div style={{ fontWeight: 700, fontSize: "13px", color: "#f1f5f9", marginBottom: "4px" }}>
                   🛰️ Ingestion Agent
@@ -792,7 +803,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
             </span>
 
             {/* Persona Selection Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+            <div className="judge-tour-personas-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <div
                 onClick={() => baseMemory.setPersona("analyst")}
                 style={{
@@ -929,6 +940,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
 
             {/* Connected Horizontal Pipeline: 5 Stages */}
             <div
+              className="judge-tour-pipeline-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(5, 1fr)",
@@ -1037,6 +1049,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
 
         {/* FOOTER: Prev, Step X of 4, Next per media_1793031578727.png */}
         <div
+          className="judge-tour-footer"
           style={{
             padding: "14px 24px",
             borderTop: "1px solid rgba(255, 255, 255, 0.07)",
@@ -1051,6 +1064,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
           <button
             onClick={() => setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as TourStep) : prev))}
             disabled={currentStep === 1}
+            className="judge-tour-prev-btn"
             style={{
               backgroundColor: "transparent",
               border: "1px solid rgba(255, 255, 255, 0.12)",
@@ -1078,6 +1092,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
           {currentStep < 4 ? (
             <button
               onClick={() => setCurrentStep((prev) => ((prev + 1) as TourStep))}
+              className="judge-tour-next-btn"
               style={{
                 backgroundColor: "#00e5ff",
                 border: "none",
@@ -1102,6 +1117,7 @@ export const JudgeQuickTourModal: React.FC<JudgeQuickTourModalProps> = ({
                 onClose();
                 if (onNavigateTab) onNavigateTab("dashboard");
               }}
+              className="judge-tour-next-btn"
               style={{
                 backgroundColor: "#00e5ff",
                 border: "none",

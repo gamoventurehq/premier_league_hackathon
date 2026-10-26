@@ -42,6 +42,7 @@ export interface BaseMemoryState {
   selectedPlayerId: string;
   activeScenario: string | null;
   isJudgeTourOpen: boolean;
+  isCopilotOpen: boolean;
   serverStatus: ServerStatus;
 }
 
@@ -360,6 +361,7 @@ const initialState: BaseMemoryState = {
   selectedPlayerId: "home_8",
   activeScenario: null,
   isJudgeTourOpen: false,
+  isCopilotOpen: false,
   serverStatus: {
     isConnected: false,
     latencyMs: 0,
@@ -945,6 +947,22 @@ class BaseMemoryStore {
 
   closeJudgeTour = () => {
     this.setJudgeTourOpen(false);
+  };
+
+  setCopilotOpen = (isOpen: boolean) => {
+    this.state = {
+      ...this.state,
+      isCopilotOpen: isOpen,
+    };
+    this.notify();
+  };
+
+  openCopilot = () => {
+    this.setCopilotOpen(true);
+  };
+
+  closeCopilot = () => {
+    this.setCopilotOpen(false);
   };
 
   setMatchClock = (sec: number) => {

@@ -1,8 +1,8 @@
 import React from "react";
 import { IonHeader, IonToolbar, IonIcon } from "@ionic/react";
-import { radioOutline, micOutline } from "ionicons/icons";
+import { radioOutline, micOutline, sparklesOutline } from "ionicons/icons";
 import { JudgeQuickTourPill } from "./JudgeQuickTourPill";
-import { useBaseMemory } from "../store/baseMemory";
+import { useBaseMemory, baseMemory } from "../store/baseMemory";
 
 interface StudioTopBarProps {
   title?: string;
@@ -48,6 +48,18 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
                   <span className="studio-mobile-recap-text">Recap</span>
                 </button>
               )}
+
+              {/* ⚡ Mobile Tactical Copilot (MCP Agent Swarm) Entry Point */}
+              <button
+                type="button"
+                onClick={() => baseMemory.openCopilot()}
+                className="studio-mobile-agent-btn"
+                title="Open Tactical Copilot (MCP Agent Swarm)"
+                aria-label="Open Tactical Copilot Agent Swarm"
+              >
+                <IonIcon icon={sparklesOutline} style={{ fontSize: "13px" }} />
+                <span className="studio-mobile-agent-text">Agent</span>
+              </button>
 
               <JudgeQuickTourPill compact={true} />
 

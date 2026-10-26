@@ -61,7 +61,7 @@ const AppShell: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const isCopilotOpen = useBaseMemory((s) => s.isCopilotOpen);
   const isJudgeTourOpen = useBaseMemory((s) => s.isJudgeTourOpen);
 
   useEffect(() => {
@@ -76,7 +76,7 @@ const AppShell: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setIsCopilotOpen((prev) => !prev);
+        baseMemory.setCopilotOpen(!baseMemory.getState().isCopilotOpen);
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
         e.preventDefault();
         baseMemory.setJudgeTourOpen(!baseMemory.getState().isJudgeTourOpen);
@@ -107,14 +107,14 @@ const AppShell: React.FC = () => {
       <SidebarNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        onOpenCopilot={() => setIsCopilotOpen(true)}
+        onOpenCopilot={() => baseMemory.openCopilot()}
         onOpenJudgeTour={() => baseMemory.openJudgeTour()}
       />
 
       {/* Slide-out Tactical Copilot Drawer */}
       <TacticalCopilotDrawer
         isOpen={isCopilotOpen}
-        onClose={() => setIsCopilotOpen(false)}
+        onClose={() => baseMemory.closeCopilot()}
       />
 
       {/* 🏆 Judge Quick Tour & Hero Tech Architecture Modal */}
@@ -122,7 +122,7 @@ const AppShell: React.FC = () => {
         isOpen={isJudgeTourOpen}
         onClose={() => baseMemory.closeJudgeTour()}
         onNavigateTab={handleSelectTab}
-        onOpenCopilot={() => setIsCopilotOpen(true)}
+        onOpenCopilot={() => baseMemory.openCopilot()}
       />
 
       {/* Main Workspace Area */}
