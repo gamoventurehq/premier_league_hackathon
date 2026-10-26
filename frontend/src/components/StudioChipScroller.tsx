@@ -8,6 +8,8 @@ interface StudioChipScrollerProps {
   paddingBottom?: string | number;
   marginTopTrack?: string | number;
   alwaysShowTrack?: boolean;
+  showTrack?: boolean;
+  enableEdgeFade?: boolean;
   thumbColor?: string;
   trackColor?: string;
 }
@@ -15,10 +17,10 @@ interface StudioChipScrollerProps {
 /**
  * StudioChipScroller:
  * Provides an ultra-smooth, horizontally scrollable chip/button container with:
- * 1. Fully draggable & scrubbable scroll track & thumb (pointer drag with generous hit area).
- * 2. Mouse drag-to-scroll support across the chips row in desktop full screen.
- * 3. Horizontal mouse wheel support (roll wheel to scroll left/right).
- * 4. Permanently visible, non-vanishing grey scroll line with ample clearance.
+ * 1. Dynamic two-way edge fade masks (left fade appears when scrolled right, right fade appears when more content can be reached, disappears at ends).
+ * 2. Draggable & scrubbable scroll track & thumb (can be hidden with showTrack=false).
+ * 3. Mouse grab-and-drag support across chips.
+ * 4. Horizontal mouse wheel support.
  */
 export const StudioChipScroller: React.FC<StudioChipScrollerProps> = ({
   children,
@@ -27,9 +29,11 @@ export const StudioChipScroller: React.FC<StudioChipScrollerProps> = ({
   gap = "6px",
   paddingBottom = "2px",
   marginTopTrack = "8px",
-  alwaysShowTrack = true,
-  thumbColor = "#94a3b8", // Clean neutral grey as requested
-  trackColor = "rgba(255, 255, 255, 0.14)", // Subtle grey track
+  alwaysShowTrack = false,
+  showTrack = false,
+  enableEdgeFade = true,
+  thumbColor = "#94a3b8",
+  trackColor = "rgba(255, 255, 255, 0.14)",
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -37,6 +41,8 @@ export const StudioChipScroller: React.FC<StudioChipScrollerProps> = ({
   const [scrollProgress, setScrollProgress] = useState(0);
   const [thumbWidthPercent, setThumbWidthPercent] = useState(30);
   const [isScrollable, setIsScrollable] = useState(alwaysShowTrack);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const [isDraggingThumb, setIsDraggingThumb] = useState(false);
   const [isHoveringTrack, setIsHoveringTrack] = useState(false);
 
@@ -50,12 +56,18 @@ export const StudioChipScroller: React.FC<StudioChipScrollerProps> = ({
     const el = containerRef.current;
     if (!el) return;
 
-    const overflows = el.scrollWidth > el.clientWidth + 1 || el.scrollLeft > 0;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const scrollLeft = el.scrollLeft;
+
+    const overflows = maxScroll > 1 || scrollLeft > 0;
     const shouldShow = overflows || alwaysShowTrack;
     setIsScrollable(shouldShow);
 
-    const maxScroll = el.scrollWidth - el.clientWidth;
-    const ratio = maxScroll > 0 ? Math.min(1, Math.max(0, el.scrollLeft / maxScroll)) : 0;
+    // Dynamic edge-fade detection with 2px tolerance
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(maxScroll - scrollLeft > 2);
+
+    const ratio = maxScroll > 0 ? Math.min(1, Math.max(0, scrollLeft / maxScroll)) : 0;
     setScrollProgress(ratio);
 
     const calculatedThumbWidth = maxScroll > 0
@@ -191,6 +203,23 @@ export const StudioChipScroller: React.FC<StudioChipScrollerProps> = ({
 
   const thumbLeftPercent = scrollProgress * (100 - thumbWidthPercent);
 
+  // Compute dynamic two-way fade mask
+  const getMaskImage = () => {
+    if (!enableEdgeFade) return undefined;
+    if (canScrollLeft && canScrollRight) {
+      return "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)";
+    }
+    if (canScrollLeft && !canScrollRight) {
+      return "linear-gradient(to right, transparent 0%, black 7%, black 100%)";
+    }
+    if (!canScrollLeft && canScrollRight) {
+      return "linear-gradient(to right, black 0%, black 93%, transparent 100%)";
+    }
+    return undefined;
+  };
+
+  const dynamicMask = getMaskImage();
+
   return (
     <div
       style={{
@@ -200,9 +229,10 @@ export const StudioChipScroller: React.FC<StudioChipScrollerProps> = ({
         display: "flex",
         flexDirection: "column",
         userSelect: isDraggingThumb ? "none" : "auto",
+        position: "relative",
       }}
     >
-      {/* Scrollable Content Row with Mouse Grab & Wheel Support */}
+      {/* Scrollable Content Row with Dynamic Fade & Mouse Grab & Wheel Support */}
       <div
         ref={containerRef}
         onScroll={updateScroll}
@@ -225,14 +255,17 @@ export const StudioChipScroller: React.FC<StudioChipScrollerProps> = ({
           scrollbarWidth: "none",
           msOverflowStyle: "none",
           cursor: "grab",
+          maskImage: dynamicMask,
+          WebkitMaskImage: dynamicMask,
+          transition: "mask-image 0.2s ease, -webkit-mask-image 0.2s ease",
           ...style,
         }}
       >
         {children}
       </div>
 
-      {/* Interactive, Draggable Grey Scroll Line with generous hit area */}
-      {isScrollable && (
+      {/* Interactive, Draggable Grey Scroll Line (Only rendered when showTrack is true) */}
+      {showTrack && isScrollable && (
         <div
           ref={trackRef}
           onPointerDown={handlePointerDownTrack}

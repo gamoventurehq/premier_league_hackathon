@@ -152,11 +152,11 @@ class TelemetryService {
       home_4: [52.0, 42.0],
       home_5: [60.0, 54.0],
       home_6: [66.0, 34.0],
-      home_7: [78.0, 22.0],
-      home_8: [78.0, 46.0],
+      home_7: [78.0, 46.0],
+      home_8: [78.0, 22.0],
       home_9: [84.0, 15.0],
-      home_10: [87.0, 34.0],
-      home_11: [84.0, 53.0],
+      home_10: [84.0, 53.0],
+      home_11: [87.0, 34.0],
     };
 
     const AWAY_ANCHORS: Record<string, [number, number]> = {
@@ -167,8 +167,8 @@ class TelemetryService {
       away_5: [88.0, 16.0],
       away_6: [79.0, 41.0],
       away_7: [79.0, 27.0],
-      away_8: [68.0, 52.0],
-      away_9: [73.0, 34.0],
+      away_8: [73.0, 34.0],
+      away_9: [68.0, 52.0],
       away_10: [68.0, 16.0],
       away_11: [62.0, 34.0],
     };
@@ -182,8 +182,8 @@ class TelemetryService {
       let py = baseY;
       let spd = 2.4 + 1.4 * Math.abs(Math.sin(t * 0.6 + i));
 
-      if (scenario === "box_scramble" && (p.id === "home_10" || p.id === "home_7" || p.id === "home_9")) {
-        const offset = p.id === "home_10" ? 1.8 : 3.2;
+      if (scenario === "box_scramble" && (p.id === "home_11" || p.id === "home_8" || p.id === "home_9")) {
+        const offset = p.id === "home_11" ? 1.8 : 3.2;
         px = 96.5 + offset * Math.cos(t * 0.8 + i);
         py = 34.0 + offset * Math.sin(t * 0.8 + i);
         spd = 4.2;
@@ -196,7 +196,7 @@ class TelemetryService {
       }
 
       const dist = Math.hypot(px - bx, py - by);
-      const isCarrier = dist < 4.5 && (p.id === "home_7" || p.id === "home_10" || p.id === "home_9");
+      const isCarrier = dist < 4.5 && (p.id === "home_8" || p.id === "home_11" || p.id === "home_9");
 
       players.push({
         player_id: p.id,

@@ -6,12 +6,13 @@ import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 import { StudioChipScroller } from "../StudioChipScroller";
 
 const KEY_PLAYER_PRESETS = [
-  { id: "home_10", label: "Haaland #9", team: "home" },
-  { id: "home_7", label: "De Bruyne #17", team: "home" },
+  { id: "home_11", label: "Haaland #9", team: "home" },
+  { id: "home_8", label: "De Bruyne #17", team: "home" },
+  { id: "home_7", label: "Bernardo #20", team: "home" },
   { id: "home_9", label: "Foden #47", team: "home" },
   { id: "home_6", label: "Rodri #16", team: "home" },
-  { id: "away_8", label: "Saka #7", team: "away" },
-  { id: "away_9", label: "Odegaard #8", team: "away" },
+  { id: "away_9", label: "Saka #7", team: "away" },
+  { id: "away_8", label: "Ødegaard #8", team: "away" },
   { id: "away_7", label: "Rice #41", team: "away" },
   { id: "away_3", label: "Saliba #2", team: "away" },
 ];
@@ -26,7 +27,7 @@ export const PlayerSpotlightCard: React.FC = () => {
 
   // Dynamically resolve the selected player from Single Core Memory
   const allPlayers = [...homeLineup, ...awayLineup];
-  const player = allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6]; // default to CM
+  const player = allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup.find((p) => p.id === "home_8") || homeLineup[0];
   const isHome = player.team === "home";
   const teamMeta = isHome ? score.homeMeta : score.awayMeta;
 
@@ -84,7 +85,14 @@ export const PlayerSpotlightCard: React.FC = () => {
           </span>
           <span style={{ fontSize: "9px", color: "#64748b" }}>Scroll ⇄</span>
         </div>
-        <StudioChipScroller gap="6px" marginTopTrack={6}>
+        {/* Key Player Preset Pills - Trackless Edge-Fade Scroll */}
+        <StudioChipScroller
+          gap="6px"
+          paddingBottom="2px"
+          showTrack={false}
+          alwaysShowTrack={false}
+          enableEdgeFade={true}
+        >
           {KEY_PLAYER_PRESETS.map((p) => {
             const isSelected = selectedPlayerId === p.id;
             const isHomeP = p.team === "home";
@@ -246,7 +254,6 @@ export const PlayerSpotlightCard: React.FC = () => {
                     height: "100%",
                     backgroundColor: attr.color,
                     borderRadius: "3px",
-                    transition: "width 0.3s ease",
                   }}
                 />
               </div>
@@ -286,7 +293,7 @@ export const PlayerSpotlightCard: React.FC = () => {
             {/* Center target crosshair */}
             <div style={{ width: "100%", height: "1px", backgroundColor: "rgba(255,255,255,0.2)", position: "absolute" }} />
             <div style={{ height: "100%", width: "1px", backgroundColor: "rgba(255,255,255,0.2)", position: "absolute" }} />
-            {/* Ball hit spot position derived from accuracy */}
+            {/* Ball hit spot position derived from accuracy - clamped safely inside circle */}
             <div
               style={{
                 width: "8px",
@@ -294,16 +301,15 @@ export const PlayerSpotlightCard: React.FC = () => {
                 borderRadius: "50%",
                 backgroundColor: teamMeta.color,
                 position: "absolute",
-                top: `${30 - Math.round(shotAccuracyPct * 0.15)}px`,
-                right: `${24 - Math.round(shotAccuracyPct * 0.12)}px`,
+                top: `${Math.max(6, Math.min(34, 30 - Math.round(shotAccuracyPct * 0.15)))}px`,
+                right: `${Math.max(6, Math.min(34, 24 - Math.round(shotAccuracyPct * 0.12)))}px`,
                 boxShadow: `0 0 6px ${teamMeta.color}`,
-                transition: "all 0.3s ease",
               }}
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", width: "100%", marginTop: "6px", fontSize: "9px" }}>
-            <span style={{ color: "var(--studio-subtext)" }}>Acc: <strong>{shotAccuracyPct}%</strong></span>
-            <span style={{ color: "var(--studio-subtext)" }}>Avg: <strong>{avgRating}</strong></span>
+          <div style={{ display: "flex", justifyContent: "space-between", width: "100%", marginTop: "6px", fontSize: "10px" }}>
+            <span style={{ color: "var(--studio-subtext)" }}>Acc: <strong style={{ color: "var(--ion-text-color)" }}>{shotAccuracyPct}%</strong></span>
+            <span style={{ color: "var(--studio-subtext)" }}>Avg: <strong style={{ color: "var(--ion-text-color)" }}>{avgRating}</strong></span>
           </div>
         </div>
       </div>

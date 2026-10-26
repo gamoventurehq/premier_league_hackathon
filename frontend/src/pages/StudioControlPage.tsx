@@ -1,10 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   IonContent,
-  IonHeader,
   IonPage,
-  IonTitle,
-  IonToolbar,
   IonCard,
   IonCardHeader,
   IonCardSubtitle,
@@ -12,79 +9,88 @@ import {
   IonCardContent,
   IonBadge,
   IonIcon,
-  IonButton,
-  IonButtons,
-  IonProgressBar,
 } from "@ionic/react";
 import {
   serverOutline,
   timeOutline,
-  checkmarkCircleOutline,
   alertCircleOutline,
   flashOutline,
   shieldCheckmarkOutline,
   flameOutline,
   refreshOutline,
-  hardwareChipOutline,
-  radioOutline,
-  pulseOutline,
   gitNetworkOutline,
-  speedometerOutline,
+  copyOutline,
+  checkmarkOutline,
+  playOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
-import { JudgeQuickTourPill } from "../components/JudgeQuickTourPill";
+import { StudioTopBar } from "../components/StudioTopBar";
 
-const scenarioDefinitions = [
+interface ScenarioDef {
+  id: string;
+  title: string;
+  category: string;
+  accentColor: string;
+  controlIdx: number;
+  chaosIdx: number;
+  pdr: string;
+  rhythm: string;
+  icon: string;
+  desc: string;
+  impact: string;
+}
+
+const scenarioDefinitions: ScenarioDef[] = [
   {
     id: "low_block_siege",
-    title: "Sustained Low-Block Siege",
+    title: "Low-Block Siege",
     category: "Possession Dominance",
-    badgeColor: "secondary",
+    accentColor: "#38bdf8",
     controlIdx: 82,
     chaosIdx: 18,
     pdr: "0.68",
     rhythm: "Sustained Possession",
     icon: shieldCheckmarkOutline,
-    desc: "Manchester City pin Arsenal into an 18m block depth. Central corridor squeezed to 21.2m with City holding 82% pitch control.",
+    desc: "Manchester City pin Arsenal into an 18m block depth. Central corridor squeezed to 21.2m.",
     impact: "Tests spatial compression & half-space overload models.",
   },
   {
     id: "rapid_counter",
-    title: "Rapid Counter-Transition",
+    title: "Counter-Transition",
     category: "Transition Frenzy",
-    badgeColor: "danger",
+    accentColor: "#f43f5e",
     controlIdx: 26,
     chaosIdx: 74,
     pdr: "0.35",
     rhythm: "Transition Frenzy",
     icon: flashOutline,
-    desc: "Arsenal lightning breakaway! Saka breaks past rest-defense in 3 touches with sprint velocity clocked at 33.2 km/h.",
+    desc: "Arsenal lightning breakaway! Saka breaks past rest-defense in 3 touches at 33.2 km/h.",
     impact: "Tests line-breaking speed analytics & transition volatility.",
   },
   {
     id: "red_card_crisis",
-    title: "Late Red Card Structural Crisis",
+    title: "Red Card Crisis",
     category: "Numerical Asymmetry",
-    badgeColor: "warning",
+    accentColor: "#f59e0b",
     controlIdx: 88,
     chaosIdx: 42,
     pdr: "0.76",
     rhythm: "Numerical Asymmetry",
     icon: alertCircleOutline,
-    desc: "Away side down to 10 men. Arsenal forced into an emergency 5-3-1 bunker while City enjoy 2-man numerical flank overloads.",
+    desc: "Arsenal down to 10 men in an emergency 5-3-1 bunker while City overload the flanks.",
     impact: "Tests structural deformation & pitch control reallocation.",
   },
   {
     id: "box_scramble",
-    title: "Penalty Box Scramble",
+    title: "Penalty Box Chaos",
     category: "Max Chaos Event",
-    badgeColor: "tertiary",
+    accentColor: "#ec4899",
     controlIdx: 15,
     chaosIdx: 85,
     pdr: "0.88",
     rhythm: "Penalty Box Chaos",
     icon: flameOutline,
-    desc: "Total chaos! 6 players contesting rebound in 6-yard box with 0.82 xG goalmouth scramble and emergency sliding blocks.",
+    desc: "Total chaos! 6 players contesting rebound in 6-yard box with 0.82 xG goalmouth scramble.",
     impact: "Tests maximum entropy modeling & rapid turnover detection.",
   },
 ];
@@ -93,13 +99,14 @@ const StudioControlPage: React.FC = () => {
   const serverStatus = useBaseMemory((s) => s.serverStatus);
   const matchClock = useBaseMemory((s) => s.matchClock);
   const frameId = useBaseMemory((s) => s.blackboard.latest_frame_id);
-  const persona = useBaseMemory((s) => s.selectedPersona);
-  const language = useBaseMemory((s) => s.selectedLanguage);
   const score = useBaseMemory((s) => s.score);
   const activeScenario = useBaseMemory((s) => s.activeScenario);
   const control = useBaseMemory((s) => s.blackboard.control_index);
   const chaos = useBaseMemory((s) => s.blackboard.chaos_index);
-  const rhythm = useBaseMemory((s) => s.blackboard.current_game_rhythm);
+
+  // Transient state for UI copy feedback and action toast
+  const [copied, setCopied] = useState<boolean>(false);
+  const [injectedFeedback, setInjectedFeedback] = useState<string | null>(null);
 
   const formatTime = (secs: number) => {
     const clamped = Math.min(5400, Math.max(0, Math.floor(secs || 0)));
@@ -108,167 +115,249 @@ const StudioControlPage: React.FC = () => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const handleCopyEndpoint = async () => {
+    try {
+      await navigator.clipboard.writeText("ws://localhost:8000/ws/telemetry");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleScenarioAction = (sc: ScenarioDef) => {
+    if (activeScenario === sc.id) {
+      baseMemory.resetScenario();
+      setInjectedFeedback(null);
+    } else {
+      baseMemory.injectScenario(sc.id);
+      setInjectedFeedback(sc.title);
+      setTimeout(() => setInjectedFeedback(null), 3000);
+    }
+  };
+
   const currentScenarioObj = scenarioDefinitions.find((s) => s.id === activeScenario);
 
   return (
     <IonPage>
-      <IonHeader mode="ios">
-        <IonToolbar mode="ios">
-          <IonTitle>Gamoventure Studio Diagnostics</IonTitle>
-          <IonButtons slot="end">
-            <JudgeQuickTourPill compact={true} style={{ marginRight: "8px" }} />
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
+      {/* Unified Responsive Studio Top Bar */}
+      <StudioTopBar
+        title="Diagnostics"
+        subtitle="Tactical Scenarios & Memory Bus"
+      />
 
       <IonContent fullscreen className="ion-padding" style={{ ["--background" as string]: "#020617" }}>
-        {/* Scorebug Synchronized Header Bar */}
-        <div className="studio-scoreboard-header" style={{ marginBottom: "16px" }}>
-          <div className="studio-ribbon-row-teams">
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#00e5ff", fontSize: "14px" }}>
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#00e5ff", boxShadow: "0 0 8px #00e5ff", flexShrink: 0 }} />
-              {score.homeTeam}
-            </span>
-            <span
-              style={{
-                background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
-                padding: "3px 10px",
-                borderRadius: "8px",
-                fontWeight: 900,
-                color: "#ffffff",
-                letterSpacing: "1.5px",
-                fontSize: "13px",
-                flexShrink: 0,
-                border: "1px solid rgba(255, 255, 255, 0.12)",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.4)",
-              }}
-            >
-              {score.homeScore} - {score.awayScore}
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#f43f5e", fontSize: "14px" }}>
-              {score.awayTeam}
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f43f5e", boxShadow: "0 0 8px #f43f5e", flexShrink: 0 }} />
-            </span>
-          </div>
-
-          <div className="studio-ribbon-row-meta">
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "5px",
-                background: "rgba(5, 46, 22, 0.7)",
-                border: "1px solid #16a34a",
-                padding: "2px 7px",
-                borderRadius: "6px",
-                fontSize: "10.5px",
-                color: "#4ade80",
-                fontWeight: 700,
-              }}
-            >
+        {/* ======================================================== */}
+        {/* SHARED MAX-WIDTH CONTAINER (Pixel-Perfect Alignment)    */}
+        {/* ======================================================== */}
+        <div
+          style={{
+            maxWidth: "1280px",
+            margin: "0 auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            width: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          {/* ======================================================== */}
+          {/* SCOREBUG SYNCHRONIZED HEADER STRIP                      */}
+          {/* ======================================================== */}
+          <div
+            className="studio-scoreboard-header"
+            style={{
+              margin: 0,
+              background: "#0b1222",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "12px",
+              padding: "10px 16px",
+            }}
+          >
+            <div className="studio-ribbon-row-teams">
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#00e5ff", fontSize: "14px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#00e5ff", flexShrink: 0 }} />
+                {score.homeTeam}
+              </span>
               <span
                 style={{
-                  width: "6px",
-                  height: "6px",
-                  borderRadius: "50%",
-                  background: "#22c55e",
-                  boxShadow: "0 0 6px #22c55e",
+                  background: "#1e293b",
+                  padding: "4px 12px",
+                  borderRadius: "8px",
+                  fontWeight: 900,
+                  color: "#ffffff",
+                  letterSpacing: "1.5px",
+                  fontSize: "13px",
                   flexShrink: 0,
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
                 }}
-              />
-              10Hz / 5Hz Live
+              >
+                {score.homeScore} - {score.awayScore}
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 800, color: "#f43f5e", fontSize: "14px" }}>
+                {score.awayTeam}
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f43f5e", flexShrink: 0 }} />
+              </span>
             </div>
 
-            <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
+            <div className="studio-ribbon-row-meta">
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "rgba(16, 185, 129, 0.12)",
+                  border: "1px solid rgba(16, 185, 129, 0.3)",
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                  fontSize: "11px",
+                  color: "#34d399",
+                  fontWeight: 700,
+                }}
+              >
+                <span
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: "#10b981",
+                    flexShrink: 0,
+                  }}
+                />
+                Simulated 10Hz Feed
+              </div>
 
+              <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  fontSize: "12px",
+                  color: "#e2e8f0",
+                  fontVariantNumeric: "tabular-nums",
+                  fontWeight: 700,
+                }}
+              >
+                <IonIcon icon={timeOutline} style={{ color: "#38bdf8", fontSize: "14px" }} />
+                {formatTime(matchClock)}
+              </div>
+
+              <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
+
+              <span
+                style={{
+                  background: "#1e293b",
+                  border: "1px solid #334155",
+                  color: "#e2e8f0",
+                  fontSize: "10.5px",
+                  fontWeight: 700,
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                {score.period}
+              </span>
+
+              <IonBadge
+                color={activeScenario ? "danger" : "success"}
+                style={{
+                  fontSize: "10.5px",
+                  fontWeight: 700,
+                  maxWidth: "180px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  padding: "4px 8px",
+                  borderRadius: "6px",
+                }}
+              >
+                {activeScenario ? currentScenarioObj?.title.toUpperCase() : "NORMAL FLOW"}
+              </IonBadge>
+            </div>
+          </div>
+
+          {/* ======================================================== */}
+          {/* SYNTHETIC SCENARIO INJECTOR PANEL                        */}
+          {/* ======================================================== */}
+          <div
+            style={{
+              background: "#0f172a",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "12px",
+              padding: "16px 20px",
+            }}
+          >
+            {/* Header: Title, Description, Active Reset */}
             <div
               style={{
                 display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                fontSize: "12px",
-                color: "#e2e8f0",
-                fontVariantNumeric: "tabular-nums",
-                fontWeight: 700,
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: "10px",
+                marginBottom: "16px",
               }}
             >
-              <IonIcon icon={timeOutline} style={{ color: "#38bdf8", fontSize: "13px" }} />
-              {formatTime(matchClock)}
-            </div>
-
-            <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
-
-            <span
-              style={{
-                background: "#1e293b",
-                border: "1px solid #334155",
-                color: "#e2e8f0",
-                fontSize: "10px",
-                fontWeight: 700,
-                padding: "2px 8px",
-                borderRadius: "12px",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-            >
-              {score.period}
-            </span>
-
-            <IonBadge color={activeScenario ? "danger" : "success"} style={{ fontSize: "10px", fontWeight: 700, maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {activeScenario ? currentScenarioObj?.title.toUpperCase() : "NORMAL FLOW"}
-            </IonBadge>
-          </div>
-        </div>
-
-        {/* ======================================================== */}
-        {/* INTERACTIVE SYNTHETIC SCENARIO INJECTOR (CHALLENGE §4.D) */}
-        {/* ======================================================== */}
-        <IonCard mode="ios" style={{ background: "#0f172a", marginBottom: "16px", border: "1px solid #1e293b" }}>
-          <IonCardHeader style={{ paddingBottom: "10px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <div>
-                <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700, letterSpacing: "0.5px" }}>
-                  SYNTHETIC MATCH SCENARIO INJECTOR (CHALLENGE.MD §4.D)
-                </IonCardSubtitle>
-                <IonCardTitle style={{ fontSize: "18px", color: "#f8fafc", marginTop: "2px" }}>
-                  Edge-Case Tactical State Simulator
-                </IonCardTitle>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "16px", fontWeight: 800, color: "#f8fafc" }}>
+                    Synthetic Scenario Injector
+                  </span>
+                  <span
+                    style={{
+                      background: "rgba(56, 189, 248, 0.12)",
+                      color: "#38bdf8",
+                      fontSize: "10.5px",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    4 Scenarios
+                  </span>
+                </div>
+                <div style={{ fontSize: "12.5px", color: "#94a3b8", marginTop: "4px" }}>
+                  Select a tactical scenario to inject deterministic edge-case states into the live simulation.
+                </div>
               </div>
 
               {activeScenario && (
                 <button
                   onClick={() => baseMemory.resetScenario()}
                   style={{
-                    background: "#1e293b",
-                    color: "#f8fafc",
-                    border: "1px solid #334155",
-                    padding: "6px 12px",
-                    borderRadius: "8px",
+                    background: "rgba(244, 63, 94, 0.12)",
+                    color: "#f43f5e",
+                    border: "1px solid rgba(244, 63, 94, 0.3)",
+                    padding: "6px 14px",
+                    borderRadius: "6px",
                     fontSize: "12px",
                     fontWeight: 700,
                     cursor: "pointer",
-                    display: "flex",
+                    display: "inline-flex",
                     alignItems: "center",
                     gap: "6px",
-                    transition: "all 0.2s ease",
                   }}
                 >
                   <IonIcon icon={refreshOutline} />
-                  Reset to Normal Match Flow
+                  Restore Normal Flow
                 </button>
               )}
             </div>
-          </IonCardHeader>
 
-          <IonCardContent>
-            {/* Active Scenario Alert Banner */}
+            {/* Active Simulation Override Alert (Quiet, High Impact) */}
             {activeScenario && currentScenarioObj && (
               <div
                 style={{
-                  background: "rgba(244, 63, 94, 0.12)",
-                  border: "1px solid rgba(244, 63, 94, 0.4)",
-                  padding: "12px 16px",
+                  background: "rgba(244, 63, 94, 0.08)",
+                  border: "1px solid rgba(244, 63, 94, 0.25)",
                   borderRadius: "8px",
+                  padding: "12px 16px",
                   marginBottom: "16px",
                   display: "flex",
                   justifyContent: "space-between",
@@ -285,305 +374,372 @@ const StudioControlPage: React.FC = () => {
                         height: "8px",
                         borderRadius: "50%",
                         background: "#f43f5e",
-                        boxShadow: "0 0 8px #f43f5e",
-                        animation: "pulse 1s infinite",
+                        flexShrink: 0,
                       }}
                     />
-                    <span style={{ fontSize: "13px", fontWeight: 800, color: "#f43f5e" }}>
-                      ACTIVE SIMULATION OVERRIDE: {currentScenarioObj.title.toUpperCase()}
+                    <span style={{ fontSize: "13px", fontWeight: 800, color: "#f8fafc" }}>
+                      Active Simulation Override: {currentScenarioObj.title}
                     </span>
                   </div>
-                  <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
+                  <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "2px" }}>
                     {currentScenarioObj.desc}
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <div style={{ textAlign: "right", fontSize: "11px", color: "#94a3b8" }}>
-                    <div>Control Index: <strong style={{ color: "#00e5ff" }}>{control}%</strong></div>
-                    <div>Chaos Index: <strong style={{ color: "#f43f5e" }}>{chaos}%</strong></div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ fontSize: "11px", color: "#94a3b8" }}>
+                    Control: <strong style={{ color: "#38bdf8" }}>{control}%</strong> · Chaos: <strong style={{ color: "#f43f5e" }}>{chaos}%</strong>
                   </div>
-                  <button
-                    onClick={() => baseMemory.resetScenario()}
-                    style={{
-                      background: "#f43f5e",
-                      color: "#ffffff",
-                      border: "none",
-                      padding: "6px 14px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Restore Normal Flow
-                  </button>
                 </div>
               </div>
             )}
 
-            {/* 4 Scenario Injection Cards Grid */}
+            {/* 4 Scenario Cards Grid (Clean, Unboxed Hierarchy) */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
                 gap: "12px",
-                width: "100%",
-                boxSizing: "border-box",
               }}
             >
               {scenarioDefinitions.map((sc) => {
                 const isActive = activeScenario === sc.id;
+                const justInjected = injectedFeedback === sc.title;
+
                 return (
                   <div
                     key={sc.id}
                     style={{
-                      background: isActive ? "#1e293b" : "#020617",
-                      border: `1px solid ${isActive ? "#38bdf8" : "#1e293b"}`,
+                      background: isActive ? "rgba(30, 41, 59, 0.6)" : "#0b1222",
+                      border: `1px solid ${isActive ? "#38bdf8" : "rgba(255, 255, 255, 0.08)"}`,
                       borderRadius: "10px",
-                      padding: "14px",
+                      padding: "16px",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
-                      transition: "all 0.2s ease",
-                      boxShadow: isActive ? "0 0 15px rgba(56, 189, 248, 0.15)" : "none",
-                      minWidth: 0,
+                      gap: "12px",
                       boxSizing: "border-box",
                     }}
                   >
                     <div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          flexWrap: "wrap",
-                          gap: "6px 8px",
-                          marginBottom: "10px",
-                          width: "100%",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            minWidth: 0,
-                            flex: "1 1 140px",
-                          }}
-                        >
-                          <IonIcon icon={sc.icon} style={{ color: "#38bdf8", fontSize: "18px", flexShrink: 0 }} />
+                      {/* Title & Subtle Category Accent */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <span
                             style={{
-                              fontSize: "14px",
-                              fontWeight: 800,
-                              color: "#f8fafc",
-                              lineHeight: 1.3,
+                              width: "7px",
+                              height: "7px",
+                              borderRadius: "50%",
+                              background: sc.accentColor,
+                              flexShrink: 0,
                             }}
-                          >
+                          />
+                          <span style={{ fontSize: "14px", fontWeight: 800, color: "#f8fafc" }}>
                             {sc.title}
                           </span>
                         </div>
-                        <IonBadge
-                          color={sc.badgeColor as any}
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "4px 10px",
-                            borderRadius: "12px",
-                            whiteSpace: "nowrap",
-                            flexShrink: 0,
-                            letterSpacing: "0.2px",
-                            alignSelf: "flex-start",
-                            overflow: "visible",
-                          }}
-                        >
+                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>
                           {sc.category}
-                        </IonBadge>
+                        </span>
                       </div>
 
-                      <p style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: 1.4, margin: "0 0 10px 0" }}>
+                      {/* Short Description */}
+                      <p style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: 1.45, margin: "0 0 10px 0" }}>
                         {sc.desc}
                       </p>
 
-                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "12px" }}>
-                        <span style={{ background: "#0f172a", border: "1px solid #334155", color: "#00e5ff", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700 }}>
-                          Control: {sc.controlIdx}%
-                        </span>
-                        <span style={{ background: "#0f172a", border: "1px solid #334155", color: "#f43f5e", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700 }}>
-                          Chaos: {sc.chaosIdx}%
-                        </span>
-                        <span style={{ background: "#0f172a", border: "1px solid #334155", color: "#f59e0b", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700 }}>
-                          PDR: {sc.pdr}
-                        </span>
+                      {/* Single Compact Metrics Row (No nested badges) */}
+                      <div
+                        style={{
+                          fontSize: "11.5px",
+                          color: "#94a3b8",
+                          background: "rgba(255, 255, 255, 0.03)",
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        <span>Control <strong style={{ color: "#38bdf8" }}>{sc.controlIdx}%</strong></span>
+                        <span>·</span>
+                        <span>Chaos <strong style={{ color: "#f43f5e" }}>{sc.chaosIdx}%</strong></span>
+                        <span>·</span>
+                        <span>PDR <strong style={{ color: "#f59e0b" }}>{sc.pdr}</strong></span>
                       </div>
                     </div>
 
+                    {/* Action Button: Consistent, Short, Informative */}
                     <button
-                      onClick={() => {
-                        if (isActive) {
-                          baseMemory.resetScenario();
-                        } else {
-                          baseMemory.injectScenario(sc.id);
-                        }
-                      }}
+                      onClick={() => handleScenarioAction(sc)}
                       style={{
                         width: "100%",
-                        background: isActive ? "#ef4444" : "#38bdf8",
-                        color: isActive ? "#ffffff" : "#020617",
-                        border: "none",
-                        padding: "8px",
+                        background: isActive
+                          ? "rgba(244, 63, 94, 0.15)"
+                          : "rgba(56, 189, 248, 0.15)",
+                        color: isActive ? "#f43f5e" : "#38bdf8",
+                        border: `1px solid ${isActive ? "rgba(244, 63, 94, 0.3)" : "rgba(56, 189, 248, 0.3)"}`,
+                        padding: "8px 12px",
                         borderRadius: "6px",
                         fontSize: "12px",
-                        fontWeight: 800,
+                        fontWeight: 700,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "6px",
-                        transition: "all 0.2s ease",
-                        textAlign: "center",
-                        lineHeight: 1.25,
-                        boxSizing: "border-box",
                       }}
                     >
-                      <IonIcon icon={isActive ? refreshOutline : flashOutline} />
-                      {isActive ? "Reset Scenario" : `Inject ${sc.title}`}
+                      <IonIcon
+                        icon={
+                          justInjected
+                            ? checkmarkOutline
+                            : isActive
+                            ? refreshOutline
+                            : playOutline
+                        }
+                        style={{ fontSize: "14px" }}
+                      />
+                      <span>
+                        {justInjected
+                          ? "Injected ✓"
+                          : isActive
+                          ? "Restore flow"
+                          : "Run scenario"}
+                      </span>
                     </button>
                   </div>
                 );
               })}
             </div>
-          </IonCardContent>
-        </IonCard>
+          </div>
 
-        {/* ======================================================== */}
-        {/* TELEMETRY TRANSPORT & CORE MEMORY MONITOR                */}
-        {/* ======================================================== */}
-        <div className="studio-two-col-grid" style={{ marginBottom: "16px" }}>
-          {/* Local Server Connection Status */}
-          <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
-            <IonCardHeader style={{ paddingBottom: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700 }}>
-                  <IonIcon icon={serverOutline} style={{ marginRight: "4px", verticalAlign: "middle" }} />
-                  LOCAL TELEMETRY TRANSPORT
-                </IonCardSubtitle>
-                <IonBadge color={serverStatus.isConnected ? "success" : "warning"} style={{ flexShrink: 0 }}>
-                  {serverStatus.isConnected ? "Connected" : "Simulated Fallback"}
-                </IonBadge>
-              </div>
-              <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
-                FastAPI WebSocket Stream (10Hz Engine • 5Hz Stream)
-              </IonCardTitle>
-            </IonCardHeader>
-            <IonCardContent>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div
-                  style={{
-                    background: "#1e293b",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                  }}
-                >
-                  <div style={{ minWidth: 0, flex: "1 1 200px" }}>
-                    <div style={{ fontSize: "11px", color: "#94a3b8" }}>WebSocket Endpoint</div>
-                    <div
+          {/* ======================================================== */}
+          {/* LOWER DIAGNOSTICS: TELEMETRY TRANSPORT & AGENT ROSTER    */}
+          {/* ======================================================== */}
+          <div className="studio-two-col-grid">
+            {/* Panel 1: Telemetry Transport */}
+            <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+              <IonCardHeader style={{ paddingBottom: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 700, letterSpacing: "0.5px", margin: 0 }}>
+                    TELEMETRY TRANSPORT
+                  </IonCardSubtitle>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span
                       style={{
-                        fontSize: "12.5px",
-                        fontWeight: 700,
-                        color: "#f8fafc",
-                        fontFamily: "monospace",
-                        wordBreak: "break-all",
-                        overflowWrap: "anywhere",
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        background: serverStatus.isConnected ? "#10b981" : "#f59e0b",
+                      }}
+                    />
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: serverStatus.isConnected ? "#34d399" : "#fbbf24" }}>
+                      {serverStatus.isConnected ? "Connected" : "Simulated Fallback"}
+                    </span>
+                  </div>
+                </div>
+                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", marginTop: "4px" }}>
+                  FastAPI WebSocket Stream
+                </IonCardTitle>
+              </IonCardHeader>
+
+              <IonCardContent>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {/* Endpoint Row with Copy Button */}
+                  <div
+                    style={{
+                      background: "#0b1222",
+                      border: "1px solid rgba(255, 255, 255, 0.06)",
+                      borderRadius: "8px",
+                      padding: "10px 14px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+                      <div style={{ fontSize: "10.5px", color: "#94a3b8", textTransform: "uppercase", fontWeight: 600 }}>
+                        Stream Endpoint
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          color: "#f8fafc",
+                          fontFamily: "monospace",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          marginTop: "2px",
+                        }}
+                      >
+                        ws://localhost:8000/ws/telemetry
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleCopyEndpoint}
+                      title="Copy WebSocket URL"
+                      style={{
+                        background: copied ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.06)",
+                        border: `1px solid ${copied ? "rgba(16, 185, 129, 0.3)" : "rgba(255, 255, 255, 0.1)"}`,
+                        color: copied ? "#34d399" : "#cbd5e1",
+                        padding: "4px 8px",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        flexShrink: 0,
                       }}
                     >
-                      ws://localhost:8000/ws/telemetry
+                      <IonIcon icon={copied ? checkmarkOutline : copyOutline} />
+                      <span>{copied ? "Copied" : "Copy"}</span>
+                    </button>
+                  </div>
+
+                  {/* Aligned 2-Column Diagnostic Values */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div
+                      style={{
+                        background: "#0b1222",
+                        border: "1px solid rgba(255, 255, 255, 0.06)",
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div style={{ fontSize: "11px", color: "#94a3b8" }}>Effective Match Clock</div>
+                      <div style={{ fontSize: "18px", fontWeight: 800, color: "#38bdf8", marginTop: "2px", fontVariantNumeric: "tabular-nums" }}>
+                        {formatTime(matchClock)}
+                      </div>
+                      <div style={{ fontSize: "10.5px", color: "#64748b", marginTop: "2px" }}>
+                        {matchClock.toFixed(1)}s elapsed
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: "#0b1222",
+                        border: "1px solid rgba(255, 255, 255, 0.06)",
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div style={{ fontSize: "11px", color: "#94a3b8" }}>Stream Frame ID</div>
+                      <div style={{ fontSize: "18px", fontWeight: 800, color: "#00e5ff", marginTop: "2px", fontVariantNumeric: "tabular-nums" }}>
+                        #{frameId}
+                      </div>
+                      <div style={{ fontSize: "10.5px", color: "#10b981", marginTop: "2px" }}>
+                        5Hz Stream (10Hz Engine)
+                      </div>
                     </div>
                   </div>
-                  <IonBadge color="success" style={{ flexShrink: 0 }}>Bidirectional</IonBadge>
                 </div>
+              </IonCardContent>
+            </IonCard>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <div style={{ background: "#1e293b", padding: "10px", borderRadius: "8px" }}>
-                    <div style={{ fontSize: "11px", color: "#94a3b8" }}>Effective Match Clock</div>
-                    <div style={{ fontSize: "16px", fontWeight: 800, color: "#38bdf8", marginTop: "2px" }}>
-                      {formatTime(matchClock)}
+            {/* Panel 2: Agent Swarm Health Roster (Standardized Rows) */}
+            <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+              <IonCardHeader style={{ paddingBottom: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 700, letterSpacing: "0.5px", margin: 0 }}>
+                    AI AGENT SWARM
+                  </IonCardSubtitle>
+                  <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600 }}>
+                    4 Agents Active
+                  </span>
+                </div>
+                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", marginTop: "4px" }}>
+                  Shared Blackboard State Engine
+                </IonCardTitle>
+              </IonCardHeader>
+
+              <IonCardContent>
+                {/* Flat Rows with Subtle Dividers */}
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {[
+                    {
+                      name: "Telemetry Ingestion Agent",
+                      duty: "Spatial coordinate parsing & kinematic physics",
+                      health: "Online",
+                      secondary: "10Hz / 5Hz",
+                    },
+                    {
+                      name: "Tactical Reasoning Agent",
+                      duty: "Control vs. Chaos volatility & PDR decomposition",
+                      health: "Online",
+                      secondary: "Blackboard IPC",
+                    },
+                    {
+                      name: "Broadcast Narrative Agent",
+                      duty: "Tactical inflection explanation & commentary stream",
+                      health: "Online",
+                      secondary: "42ms Latency",
+                    },
+                    {
+                      name: "Fan Personalization Agent",
+                      duty: "4 Persona streams & 5-language localization",
+                      health: "Online",
+                      secondary: "4 Modes",
+                    },
+                  ].map((agent, idx) => (
+                    <div
+                      key={agent.name}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "10px 0",
+                        borderBottom: idx < 3 ? "1px solid rgba(255, 255, 255, 0.06)" : "none",
+                        gap: "10px",
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+                        <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#f8fafc" }}>
+                          {agent.name}
+                        </div>
+                        <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "1px" }}>
+                          {agent.duty}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                          <span
+                            style={{
+                              width: "6px",
+                              height: "6px",
+                              borderRadius: "50%",
+                              background: "#10b981",
+                            }}
+                          />
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: "#34d399" }}>
+                            {agent.health}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "#64748b",
+                            fontVariantNumeric: "tabular-nums",
+                            minWidth: "75px",
+                            textAlign: "right",
+                          }}
+                        >
+                          {agent.secondary}
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ fontSize: "10px", color: "#64748b" }}>
-                      {matchClock.toFixed(1)}s elapsed
-                    </div>
-                  </div>
-
-                  <div style={{ background: "#1e293b", padding: "10px", borderRadius: "8px" }}>
-                    <div style={{ fontSize: "11px", color: "#94a3b8" }}>Telemetry Frame ID</div>
-                    <div style={{ fontSize: "16px", fontWeight: 800, color: "#00e5ff", marginTop: "2px" }}>
-                      #{frameId}
-                    </div>
-                    <div style={{ fontSize: "10px", color: "#10b981" }}>
-                      10Hz Engine • 5Hz Stream
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              </div>
-            </IonCardContent>
-          </IonCard>
-
-          {/* Gamoventure Swarm Intelligence Agents Topology */}
-          <IonCard mode="ios" style={{ background: "#0f172a", margin: 0, border: "1px solid #1e293b" }}>
-            <IonCardHeader style={{ paddingBottom: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                <IonCardSubtitle style={{ color: "#a855f7", fontWeight: 700 }}>
-                  <IonIcon icon={gitNetworkOutline} style={{ marginRight: "4px", verticalAlign: "middle" }} />
-                  GAMOVENTURE AI AGENT SWARM
-                </IonCardSubtitle>
-                <IonBadge color="primary" style={{ flexShrink: 0 }}>4 Agents Active</IonBadge>
-              </div>
-              <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc" }}>
-                Shared Blackboard State Engine
-              </IonCardTitle>
-            </IonCardHeader>
-            <IonCardContent>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Telemetry Ingestion Agent</div>
-                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>Spatial coordinate parsing &amp; 10Hz kinematic physics</div>
-                  </div>
-                  <IonBadge color="success">[Online • 10Hz/5Hz]</IonBadge>
-                </div>
-
-                <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Tactical Reasoning Agent</div>
-                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>Control vs. Chaos volatility &amp; PDR decomposition</div>
-                  </div>
-                  <IonBadge color="secondary">[Active • Blackboard]</IonBadge>
-                </div>
-
-                <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Broadcast Narrative Agent</div>
-                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>Tactical inflection explanation &amp; commentary feed</div>
-                  </div>
-                  <IonBadge color="tertiary">[Active • 42ms]</IonBadge>
-                </div>
-
-                <div style={{ background: "#1e293b", padding: "8px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>Fan Personalization Agent</div>
-                    <div style={{ fontSize: "10px", color: "#94a3b8" }}>4 Persona streams &amp; 5-language localization</div>
-                  </div>
-                  <IonBadge color="primary">[Active • 4 Modes]</IonBadge>
-                </div>
-              </div>
-            </IonCardContent>
-          </IonCard>
+              </IonCardContent>
+            </IonCard>
+          </div>
         </div>
       </IonContent>
     </IonPage>

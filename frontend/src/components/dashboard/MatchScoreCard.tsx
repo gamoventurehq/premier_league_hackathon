@@ -23,6 +23,7 @@ export const MatchScoreCard: React.FC = () => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  // Premier League club crests (MCI vs ARS)
   const homeGoals = score.goalscorers.filter((g) => g.team === "home");
   const awayGoals = score.goalscorers.filter((g) => g.team === "away");
 
@@ -180,7 +181,7 @@ export const MatchScoreCard: React.FC = () => {
           display: "grid",
           gridTemplateColumns: homeGoals.length === 0 && awayGoals.length === 0 ? "1fr" : "1fr 1fr",
           gap: "8px",
-          fontSize: "10px",
+          fontSize: "11px",
           color: "var(--studio-subtext)",
           padding: "6px 0",
           borderTop: "1px solid var(--studio-panel-border)",
@@ -190,7 +191,7 @@ export const MatchScoreCard: React.FC = () => {
         }}
       >
         {homeGoals.length === 0 && awayGoals.length === 0 ? (
-          <div style={{ textAlign: "center", fontStyle: "italic", opacity: 0.75, padding: "2px 0" }}>
+          <div style={{ textAlign: "center", fontStyle: "italic", opacity: 0.75, padding: "2px 0", fontSize: "11px" }}>
             No goals scored yet in this sequence
           </div>
         ) : (
@@ -198,8 +199,8 @@ export const MatchScoreCard: React.FC = () => {
             <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: "4px", minWidth: 0, overflow: "hidden" }}>
               {homeGoals.map((g, idx) => (
                 <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", minWidth: 0, overflow: "hidden" }}>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.player} {g.minute}</span>
-                  <IonIcon icon={footballOutline} style={{ fontSize: "11px", color: score.homeMeta.color, flexShrink: 0 }} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ion-text-color)" }}>{g.player} {g.minute}</span>
+                  <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: score.homeMeta.color, flexShrink: 0 }} />
                 </div>
               ))}
             </div>
@@ -207,8 +208,8 @@ export const MatchScoreCard: React.FC = () => {
             <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: "4px", minWidth: 0, overflow: "hidden" }}>
               {awayGoals.map((g, idx) => (
                 <div key={idx} style={{ display: "flex", alignItems: "center", gap: "4px", minWidth: 0, overflow: "hidden" }}>
-                  <IonIcon icon={footballOutline} style={{ fontSize: "11px", color: score.awayMeta.color, flexShrink: 0 }} />
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.player} {g.minute}</span>
+                  <IonIcon icon={footballOutline} style={{ fontSize: "12px", color: score.awayMeta.color, flexShrink: 0 }} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ion-text-color)" }}>{g.player} {g.minute}</span>
                 </div>
               ))}
             </div>
@@ -223,22 +224,22 @@ export const MatchScoreCard: React.FC = () => {
           alignItems: "center",
           justifyContent: "center",
           flexWrap: "wrap",
-          gap: "6px 10px",
-          fontSize: "10.5px",
+          gap: "6px 12px",
+          fontSize: "11px",
           color: "var(--studio-subtext)",
           textAlign: "center",
         }}
       >
         <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-          <IonIcon icon={calendarOutline} style={{ color: "#38bdf8" }} />
+          <IonIcon icon={calendarOutline} style={{ color: "var(--studio-subtext)" }} />
           <span>{score.date}</span>
         </div>
         <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-          <IonIcon icon={trophyOutline} style={{ color: "#ffd600" }} />
+          <IonIcon icon={trophyOutline} style={{ color: "var(--studio-subtext)" }} />
           <span>{score.competition}</span>
         </div>
         <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-          <IonIcon icon={locationOutline} style={{ color: "#10b981" }} />
+          <IonIcon icon={locationOutline} style={{ color: "var(--studio-subtext)" }} />
           <span>{score.venue}</span>
         </div>
       </div>

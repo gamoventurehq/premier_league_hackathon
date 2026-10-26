@@ -26,9 +26,9 @@ export const ShootMapCard: React.FC = () => {
   const handleTeamSelect = (targetTeam: "home" | "away") => {
     setTeam(targetTeam);
     if (targetTeam === "away") {
-      baseMemory.setSelectedPlayer("away_8"); // Saka
+      baseMemory.setSelectedPlayer("away_9"); // Saka
     } else {
-      baseMemory.setSelectedPlayer("home_10"); // Haaland
+      baseMemory.setSelectedPlayer("home_11"); // Haaland
     }
   };
 

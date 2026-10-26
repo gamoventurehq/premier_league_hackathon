@@ -9,6 +9,8 @@ import {
   personCircleOutline,
   shieldOutline,
   sparklesOutline,
+  sunnyOutline,
+  moonOutline,
 } from "ionicons/icons";
 
 interface SidebarNavProps {
@@ -22,7 +24,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   activeTab,
   onSelectTab,
   onOpenCopilot,
-  onOpenJudgeTour,
 }) => {
   return (
     <aside
@@ -37,165 +38,195 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         alignItems: "center",
         justifyContent: "space-between",
         padding: "16px 0",
-        backgroundColor: "var(--studio-panel-bg)",
-        borderRight: "1px solid var(--studio-panel-border)",
+        backgroundColor: "#070c18",
+        borderRight: "1px solid rgba(255, 255, 255, 0.08)",
         userSelect: "none",
         zIndex: 999,
         position: "relative",
       }}
     >
-      {/* Top Studio Brand Icon */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
+      {/* Top Section: Brand Icon & Core Destination Navigation */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", width: "100%" }}>
+        {/* Brand Crest */}
         <div
           title="Gamoventure • Premier League Studio"
+          aria-label="Gamoventure Premier League Studio"
           style={{
-            width: "38px",
-            height: "38px",
+            width: "36px",
+            height: "36px",
             borderRadius: "10px",
-            background: "linear-gradient(135deg, #7c3aed, #00e5ff)",
+            background: "#7c3aed",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             color: "#ffffff",
-            boxShadow: "0 4px 12px rgba(124, 58, 237, 0.4)",
             cursor: "pointer",
+            marginBottom: "8px",
           }}
           onClick={() => onSelectTab("dashboard")}
         >
-          <IonIcon icon={shieldOutline} style={{ fontSize: "22px" }} />
+          <IonIcon icon={shieldOutline} style={{ fontSize: "20px" }} />
         </div>
 
-        {/* Navigation Items */}
-        <nav style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {/* Core Navigation Items (Consistent neutral inactive, single clear active accent) */}
+        <nav style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", width: "100%" }}>
           <button
             onClick={() => onSelectTab("dashboard")}
             title="Dashboard Overview"
+            aria-label="Dashboard Overview"
             style={{
-              background: activeTab === "dashboard" ? "rgba(124, 58, 237, 0.18)" : "transparent",
-              border: "none",
-              borderRadius: "10px",
-              padding: "10px",
+              background: activeTab === "dashboard" ? "rgba(56, 189, 248, 0.12)" : "transparent",
+              border: activeTab === "dashboard" ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid transparent",
+              borderRadius: "8px",
+              width: "40px",
+              height: "40px",
               cursor: "pointer",
-              color: activeTab === "dashboard" ? "var(--ion-color-primary)" : "var(--studio-subtext)",
-              transition: "all 0.2s ease",
+              color: activeTab === "dashboard" ? "#38bdf8" : "#94a3b8",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
             }}
           >
-            <IonIcon icon={homeOutline} style={{ fontSize: "20px", display: "block" }} />
+            <IonIcon icon={homeOutline} style={{ fontSize: "20px" }} />
           </button>
 
           <button
             onClick={() => onSelectTab("pitch")}
             title="Live Pitch Radar"
+            aria-label="Live Pitch Radar"
             style={{
-              background: activeTab === "pitch" ? "rgba(124, 58, 237, 0.18)" : "transparent",
-              border: "none",
-              borderRadius: "10px",
-              padding: "10px",
+              background: activeTab === "pitch" ? "rgba(56, 189, 248, 0.12)" : "transparent",
+              border: activeTab === "pitch" ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid transparent",
+              borderRadius: "8px",
+              width: "40px",
+              height: "40px",
               cursor: "pointer",
-              color: activeTab === "pitch" ? "var(--ion-color-primary)" : "var(--studio-subtext)",
-              transition: "all 0.2s ease",
+              color: activeTab === "pitch" ? "#38bdf8" : "#94a3b8",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
             }}
           >
-            <IonIcon icon={footballOutline} style={{ fontSize: "20px", display: "block" }} />
+            <IonIcon icon={footballOutline} style={{ fontSize: "20px" }} />
           </button>
 
           <button
             onClick={() => onSelectTab("tactical")}
             title="Tactical Intelligence"
+            aria-label="Tactical Intelligence"
             style={{
-              background: activeTab === "tactical" ? "rgba(124, 58, 237, 0.18)" : "transparent",
-              border: "none",
-              borderRadius: "10px",
-              padding: "10px",
+              background: activeTab === "tactical" ? "rgba(56, 189, 248, 0.12)" : "transparent",
+              border: activeTab === "tactical" ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid transparent",
+              borderRadius: "8px",
+              width: "40px",
+              height: "40px",
               cursor: "pointer",
-              color: activeTab === "tactical" ? "var(--ion-color-primary)" : "var(--studio-subtext)",
-              transition: "all 0.2s ease",
+              color: activeTab === "tactical" ? "#38bdf8" : "#94a3b8",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
             }}
           >
-            <IonIcon icon={analyticsOutline} style={{ fontSize: "20px", display: "block" }} />
+            <IonIcon icon={analyticsOutline} style={{ fontSize: "20px" }} />
           </button>
 
           <button
             onClick={() => onSelectTab("personas")}
             title="Multi-Persona Stream"
+            aria-label="Multi-Persona Stream"
             style={{
-              background: activeTab === "personas" ? "rgba(124, 58, 237, 0.18)" : "transparent",
-              border: "none",
-              borderRadius: "10px",
-              padding: "10px",
+              background: activeTab === "personas" ? "rgba(56, 189, 248, 0.12)" : "transparent",
+              border: activeTab === "personas" ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid transparent",
+              borderRadius: "8px",
+              width: "40px",
+              height: "40px",
               cursor: "pointer",
-              color: activeTab === "personas" ? "var(--ion-color-primary)" : "var(--studio-subtext)",
-              transition: "all 0.2s ease",
+              color: activeTab === "personas" ? "#38bdf8" : "#94a3b8",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
             }}
           >
-            <IonIcon icon={peopleOutline} style={{ fontSize: "20px", display: "block" }} />
+            <IonIcon icon={peopleOutline} style={{ fontSize: "20px" }} />
           </button>
 
           <button
             onClick={() => onSelectTab("diagnostics")}
             title="Studio Diagnostics"
+            aria-label="Studio Diagnostics"
             style={{
-              background: activeTab === "diagnostics" ? "rgba(124, 58, 237, 0.18)" : "transparent",
-              border: "none",
-              borderRadius: "10px",
-              padding: "10px",
+              background: activeTab === "diagnostics" ? "rgba(56, 189, 248, 0.12)" : "transparent",
+              border: activeTab === "diagnostics" ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid transparent",
+              borderRadius: "8px",
+              width: "40px",
+              height: "40px",
               cursor: "pointer",
-              color: activeTab === "diagnostics" ? "var(--ion-color-primary)" : "var(--studio-subtext)",
-              transition: "all 0.2s ease",
+              color: activeTab === "diagnostics" ? "#38bdf8" : "#94a3b8",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
             }}
           >
-            <IonIcon icon={settingsOutline} style={{ fontSize: "20px", display: "block" }} />
+            <IonIcon icon={settingsOutline} style={{ fontSize: "20px" }} />
           </button>
 
+          {/* Divider between core navigation and tools */}
+          <div
+            style={{
+              width: "28px",
+              height: "1px",
+              backgroundColor: "rgba(255, 255, 255, 0.08)",
+              margin: "4px 0",
+            }}
+          />
+
+          {/* Tactical Copilot Tool */}
           {onOpenCopilot && (
             <button
               onClick={onOpenCopilot}
               title="Tactical Copilot (Azure MCP) [Cmd+K]"
+              aria-label="Tactical Copilot"
               style={{
-                background: "rgba(0, 229, 255, 0.12)",
-                border: "1px solid rgba(0, 229, 255, 0.3)",
-                borderRadius: "10px",
-                padding: "10px",
+                background: "transparent",
+                border: "1px solid transparent",
+                borderRadius: "8px",
+                width: "40px",
+                height: "40px",
                 cursor: "pointer",
-                color: "#00e5ff",
-                boxShadow: "0 0 10px rgba(0, 229, 255, 0.2)",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <IonIcon icon={sparklesOutline} style={{ fontSize: "20px", display: "block" }} />
-            </button>
-          )}
-
-          {onOpenJudgeTour && (
-            <button
-              onClick={onOpenJudgeTour}
-              title="🏆 Judge Quick Tour • Hero Tech Stack [Cmd+J]"
-              style={{
-                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.3) 100%)",
-                border: "1px solid rgba(245, 158, 11, 0.65)",
-                borderRadius: "10px",
-                padding: "8px",
-                cursor: "pointer",
-                color: "#fbbf24",
-                boxShadow: "0 0 14px rgba(245, 158, 11, 0.35)",
-                transition: "all 0.2s ease",
+                color: "#94a3b8",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "16px",
-                lineHeight: 1,
+                padding: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "#38bdf8";
+                e.currentTarget.style.backgroundColor = "rgba(56, 189, 248, 0.08)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "#94a3b8";
+                e.currentTarget.style.backgroundColor = "transparent";
               }}
             >
-              <span role="img" aria-label="Judge Quick Tour">🏆</span>
+              <IonIcon icon={sparklesOutline} style={{ fontSize: "19px" }} />
             </button>
           )}
         </nav>
       </div>
 
       {/* Bottom Section: Profile */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-        <div style={{ color: "var(--studio-subtext)", cursor: "pointer" }} title="Broadcaster Profile">
-          <IonIcon icon={personCircleOutline} style={{ fontSize: "28px" }} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div
+          style={{ color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          title="Broadcaster Profile"
+          aria-label="Broadcaster Profile"
+        >
+          <IonIcon icon={personCircleOutline} style={{ fontSize: "26px" }} />
         </div>
       </div>
     </aside>

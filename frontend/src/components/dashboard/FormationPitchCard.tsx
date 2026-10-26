@@ -8,6 +8,7 @@ import {
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 import { telemetryService } from "../../services/telemetryService";
+import { StudioChipScroller } from "../StudioChipScroller";
 
 function getPositionCategory(pos: string): "Forwards" | "Midfielders" | "Defenders" | "Goalkeeper" {
   const p = (pos || "").toUpperCase();
@@ -27,16 +28,6 @@ const positionCategories = [
 export const FormationPitchCard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("LINEUP");
   const [playerTeamFilter, setPlayerTeamFilter] = useState<"all" | "home" | "away">("all");
-  const tabScrollRef = useRef<HTMLDivElement>(null);
-
-  const scrollTabs = (direction: "left" | "right") => {
-    if (tabScrollRef.current) {
-      tabScrollRef.current.scrollBy({
-        left: direction === "left" ? -100 : 100,
-        behavior: "smooth",
-      });
-    }
-  };
 
   const handleTabClick = (tab: string, e: React.MouseEvent<HTMLButtonElement>) => {
     setActiveTab(tab);
@@ -82,46 +73,30 @@ export const FormationPitchCard: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      {/* Sticky Centered Tab Switcher Bar */}
+      {/* Sticky Segmented Tab Switcher Bar - Trackless Edge-Fade Scroll */}
       <div
         style={{
           position: "sticky",
           top: 0,
           zIndex: 15,
           backgroundColor: "var(--studio-panel-bg)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
           width: "100%",
           paddingBottom: "8px",
           borderBottom: "1px solid var(--studio-panel-border)",
           boxSizing: "border-box",
         }}
       >
-        <div
-          ref={tabScrollRef}
-          className="studio-chip-scroll"
-          onWheel={(e) => {
-            if (e.deltaY !== 0) {
-              e.currentTarget.scrollLeft += e.deltaY;
-            }
-          }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-            overflowX: "auto",
-            scrollBehavior: "smooth",
-            WebkitOverflowScrolling: "touch",
-            padding: "2px 0",
-            maxWidth: "100%",
-          }}
+        <StudioChipScroller
+          gap="8px"
+          paddingBottom="2px"
+          showTrack={false}
+          alwaysShowTrack={false}
+          enableEdgeFade={true}
         >
           {[
+            { id: "LINEUP", label: "lineups" },
             { id: "SUMMARY", label: "summary" },
             { id: "STATISTICS", label: "statistics" },
-            { id: "LINEUP", label: "lineups" },
             { id: "PLAYERS", label: "players" },
             { id: "COMMENTS", label: "comments" },
           ].map((tab) => (
@@ -148,7 +123,7 @@ export const FormationPitchCard: React.FC = () => {
               {tab.label}
             </button>
           ))}
-        </div>
+        </StudioChipScroller>
       </div>
 
       {/* Tab 1: Tactical Lineup & Pitch */}
@@ -452,6 +427,35 @@ export const FormationPitchCard: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Integrated AI Tactical Insight for Current State */}
+          <div
+            style={{
+              backgroundColor: "var(--studio-inner-bg)",
+              borderRadius: "10px",
+              padding: "10px 12px",
+              border: "1px solid var(--studio-panel-border)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "11px", fontWeight: 800, color: "#10b981", letterSpacing: "0.2px" }}>
+                AI Tactical Insight • {narrativeHeadline || "Match Narrative"}
+              </span>
+              {tacticalInflections.length > 0 && (
+                <span style={{ fontSize: "10px", color: "var(--studio-subtext)", fontFamily: "monospace" }}>
+                  {tacticalInflections[0].time} • {tacticalInflections[0].title}
+                </span>
+              )}
+            </div>
+            <p style={{ margin: 0, fontSize: "11px", lineHeight: "1.4", color: "var(--studio-subtext)" }}>
+              {narrativeExplanation || personaOverview || (
+                `${score.homeMeta.name} sustained dominant Pitch Control with structured position play, while ${score.awayMeta.name} sought rapid transition corridors.`
+              )}
+            </p>
+          </div>
         </>
       )}
 
@@ -459,9 +463,6 @@ export const FormationPitchCard: React.FC = () => {
       {activeTab === "STATISTICS" && (
         <div
           style={{
-            minHeight: "470px",
-            maxHeight: "470px",
-            overflowY: "auto",
             display: "flex",
             flexDirection: "column",
             gap: "12px",
@@ -498,8 +499,8 @@ export const FormationPitchCard: React.FC = () => {
               </div>
               {/* Dual Proportional Bar */}
               <div style={{ display: "flex", height: "6px", borderRadius: "3px", overflow: "hidden", backgroundColor: "rgba(255,255,255,0.06)" }}>
-                <div style={{ width: `${stat.homePct}%`, backgroundColor: score.homeMeta.color, transition: "width 0.3s ease" }} />
-                <div style={{ width: `${100 - stat.homePct}%`, backgroundColor: score.awayMeta.color, transition: "width 0.3s ease" }} />
+                <div style={{ width: `${stat.homePct}%`, backgroundColor: score.homeMeta.color }} />
+                <div style={{ width: `${100 - stat.homePct}%`, backgroundColor: score.awayMeta.color }} />
               </div>
             </div>
           ))}
@@ -510,9 +511,6 @@ export const FormationPitchCard: React.FC = () => {
       {activeTab === "SUMMARY" && (
         <div
           style={{
-            minHeight: "470px",
-            maxHeight: "470px",
-            overflowY: "auto",
             display: "flex",
             flexDirection: "column",
             gap: "12px",
@@ -610,9 +608,6 @@ export const FormationPitchCard: React.FC = () => {
       {activeTab === "PLAYERS" && (
         <div
           style={{
-            minHeight: "470px",
-            maxHeight: "470px",
-            overflowY: "auto",
             display: "flex",
             flexDirection: "column",
             gap: "8px",
@@ -712,13 +707,23 @@ export const FormationPitchCard: React.FC = () => {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      padding: "4px 8px",
+                      padding: "6px 10px",
                       borderRadius: "6px",
                       backgroundColor: "rgba(255, 255, 255, 0.02)",
-                      borderLeft: `3px solid ${cat.accentColor}`,
+                      border: "1px solid var(--studio-panel-border)",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "50%",
+                          backgroundColor: cat.accentColor,
+                          display: "inline-block",
+                          flexShrink: 0,
+                        }}
+                      />
                       <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--ion-text-color)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                         {cat.label}
                       </span>
@@ -862,9 +867,6 @@ export const FormationPitchCard: React.FC = () => {
       {activeTab === "COMMENTS" && (
         <div
           style={{
-            minHeight: "470px",
-            maxHeight: "470px",
-            overflowY: "auto",
             display: "flex",
             flexDirection: "column",
             gap: "10px",

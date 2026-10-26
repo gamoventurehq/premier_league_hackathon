@@ -21,9 +21,9 @@ export const AttackingShapeCard: React.FC = () => {
   const handleSelectTeam = (team: "home" | "away") => {
     setSelectedTeam(team);
     if (team === "away") {
-      baseMemory.setSelectedPlayer("away_8"); // Saka (Arsenal)
+      baseMemory.setSelectedPlayer("away_9"); // Saka (Arsenal)
     } else {
-      baseMemory.setSelectedPlayer("home_10"); // Haaland (Man City)
+      baseMemory.setSelectedPlayer("home_11"); // Haaland (Man City)
     }
   };
 

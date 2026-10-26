@@ -46,6 +46,7 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
     lastTime: 0,
     fps: 60,
   });
+  const hoveredPlayerIdRef = useRef<string | null>(null);
 
   const drawFrame = useCallback(
     (time: number) => {
@@ -55,7 +56,7 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
       const ctx = canvas.getContext("2d", { alpha: false });
       if (!ctx) return;
 
-      // Ensure canvas bounding box is valid and visible (prevents negative dimension exceptions when hidden)
+      // Ensure canvas bounding box is valid and visible
       const rect = canvas.getBoundingClientRect();
       if (!rect || rect.width < 10 || rect.height < 10) {
         return;
@@ -89,7 +90,7 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
       const pitchDrawW = w - padX * 2;
       const pitchDrawH = h - padY * 2;
 
-      // Abort drawing if pitch drawing area is too constrained (e.g., during layout transition)
+      // Abort drawing if pitch drawing area is too constrained
       if (pitchDrawW < 20 || pitchDrawH < 20) {
         return;
       }
@@ -171,7 +172,7 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
       const selectedPlayerId = memory.selectedPlayerId;
 
       if (frame) {
-        // Dynamic Zonal Pitch Control (Stage 2: Positional State & Pitch Control Zones)
+        // Dynamic Zonal Pitch Control (Stage 2)
         if (showPitchControl) {
           if (frame.pitchControlCells && frame.pitchControlCells.length > 0) {
             const cellW = pitchDrawW / 21;
@@ -228,7 +229,7 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
           }
         }
 
-        // Passing lanes (Stage 3 & 5: Pass Difficulty Rating 5-Factor Corridor Model)
+        // Passing lanes
         if (showPassingLanes) {
           if (frame.passingLanes && frame.passingLanes.length > 0) {
             ctx.lineWidth = 1.2 * dpr;
@@ -261,7 +262,26 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
           }
         }
 
-        // Draw players
+        // Draw players with clean, un-cluttered dot proportions
+        let selectedPlayerData: {
+          p: any;
+          px: number;
+          py: number;
+          isHome: boolean;
+          radius: number;
+          shirtNum: number;
+          speed: number;
+        } | null = null;
+
+        let hoveredPlayerData: {
+          p: any;
+          px: number;
+          py: number;
+          isHome: boolean;
+          radius: number;
+          shirtNum: number;
+        } | null = null;
+
         for (const p of frame.players) {
           const px = scaleX(p.x);
           const py = scaleY(p.y);
@@ -270,90 +290,151 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
           const pid = p.player_id || p.id || "";
           const isHome = p.team === "home";
           const isSelected = selectedPlayerId === pid || selectedPlayerId === p.id || selectedPlayerId === p.player_id;
-          const radius = Math.max(1, (isSelected ? 8.5 : 6.5) * dpr);
+          const isHovered = !isSelected && hoveredPlayerIdRef.current === pid;
+          // Refined dot sizes: normal 4.8dpr, selected 6.2dpr
+          const radius = Math.max(1, (isSelected ? 6.2 : 4.8) * dpr);
           const shirtNum = p.shirt_number ?? (p as any).number ?? 0;
           const speed = p.speed_kmh ?? (p as any).speedKmH ?? ((p as any).velocity_mps ? (p as any).velocity_mps * 3.6 : 14.2);
           const vel = p.velocity_mps ?? (speed ? speed / 3.6 : 0);
           const heading = p.heading_deg ?? 0;
 
           if (isSelected) {
+            selectedPlayerData = { p, px, py, isHome, radius, shirtNum, speed };
+            // Team accent aura + crisp outer white rim (ZERO yellow on players)
             ctx.beginPath();
-            ctx.arc(px, py, radius + 4 * dpr, 0, Math.PI * 2);
-            ctx.strokeStyle = "#ffd600";
-            ctx.lineWidth = 2 * dpr;
-            ctx.stroke();
-
-            // Floating player name & live speed callout
-            const nameTag = `${p.name} (#${shirtNum}) • ${speed.toFixed(1)} km/h`;
-            ctx.font = `bold ${Math.round(8 * dpr)}px sans-serif`;
-            const textMetrics = ctx.measureText(nameTag);
-            const tagW = textMetrics.width + 12 * dpr;
-            const tagH = 16 * dpr;
-            const tagX = Math.max(padX, Math.min(padX + pitchDrawW - tagW, px - tagW / 2));
-            const tagY = Math.max(padY + 2 * dpr, py - radius - 20 * dpr);
-
-            ctx.fillStyle = "rgba(15, 23, 42, 0.94)";
+            ctx.arc(px, py, radius + 3.2 * dpr, 0, Math.PI * 2);
             ctx.strokeStyle = isHome ? "#00e5ff" : "#f43f5e";
-            ctx.lineWidth = 1 * dpr;
-            ctx.beginPath();
-            safeRoundRect(ctx, tagX, tagY, tagW, tagH, 4 * dpr);
-            ctx.fill();
+            ctx.lineWidth = 1.8 * dpr;
             ctx.stroke();
 
-            ctx.fillStyle = "#ffffff";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(nameTag, tagX + tagW / 2, tagY + tagH / 2);
+            ctx.beginPath();
+            ctx.arc(px, py, radius + 5.0 * dpr, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+            ctx.lineWidth = 0.9 * dpr;
+            ctx.stroke();
+          } else if (isHovered) {
+            hoveredPlayerData = { p, px, py, isHome, radius, shirtNum };
+            // Subtle temporary hover ring
+            ctx.beginPath();
+            ctx.arc(px, py, radius + 2.8 * dpr, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+            ctx.lineWidth = 1.2 * dpr;
+            ctx.stroke();
           }
 
+          // Player dot body
           ctx.beginPath();
           ctx.arc(px, py, radius, 0, Math.PI * 2);
           ctx.fillStyle = isHome ? "#00e5ff" : "#f43f5e";
-          ctx.shadowColor = isHome ? "rgba(0, 229, 255, 0.5)" : "rgba(244, 63, 94, 0.5)";
-          ctx.shadowBlur = 6 * dpr;
+          ctx.shadowColor = isHome ? "rgba(0, 229, 255, 0.4)" : "rgba(244, 63, 94, 0.4)";
+          ctx.shadowBlur = 4 * dpr;
           ctx.fill();
           ctx.shadowBlur = 0;
 
           ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 1 * dpr;
+          ctx.lineWidth = 0.9 * dpr;
           ctx.stroke();
 
-          // Shirt number
+          // Shirt number (crisp & legible inside dot)
           ctx.fillStyle = "#ffffff";
-          ctx.font = `bold ${Math.round(6.5 * dpr)}px sans-serif`;
+          ctx.font = `900 ${Math.round(5.5 * dpr)}px sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(`${shirtNum}`, px, py);
 
-          // Velocity vector
+          // Velocity vector line
           if (showVelocityVectors && vel > 0.5) {
             const rad = (heading * Math.PI) / 180;
-            const vecLen = Math.min(18, vel * 2.8) * dpr;
+            const vecLen = Math.min(14, vel * 2.2) * dpr;
             ctx.beginPath();
             ctx.moveTo(px, py);
             ctx.lineTo(px + Math.cos(rad) * vecLen, py + Math.sin(rad) * vecLen);
-            ctx.strokeStyle = isHome ? "rgba(0, 229, 255, 0.7)" : "rgba(244, 63, 94, 0.7)";
-            ctx.lineWidth = 1.2 * dpr;
+            ctx.strokeStyle = isHome ? "rgba(0, 229, 255, 0.65)" : "rgba(244, 63, 94, 0.65)";
+            ctx.lineWidth = 1.1 * dpr;
             ctx.stroke();
           }
         }
 
-        // Ball
+        // Draw temporary hovered player tooltip (if hovered and not selected)
+        if (hoveredPlayerData) {
+          const { p, px, py, radius, shirtNum } = hoveredPlayerData;
+          const hoverTag = `${p.name} (#${shirtNum})`;
+          ctx.font = `600 ${Math.round(6.8 * dpr)}px sans-serif`;
+          const textMetrics = ctx.measureText(hoverTag);
+          const tagW = textMetrics.width + 10 * dpr;
+          const tagH = 13 * dpr;
+          const placeBelow = py - padY < 28 * dpr;
+          const tagX = Math.max(padX + 2 * dpr, Math.min(padX + pitchDrawW - tagW - 2 * dpr, px - tagW / 2));
+          const tagY = placeBelow ? py + radius + 5 * dpr : py - radius - tagH - 5 * dpr;
+
+          ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+          ctx.lineWidth = 0.8 * dpr;
+          ctx.beginPath();
+          safeRoundRect(ctx, tagX, tagY, tagW, tagH, 3 * dpr);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = "#ffffff";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(hoverTag, tagX + tagW / 2, tagY + tagH / 2);
+        }
+
+        // Draw selected player floating tag LAST (on top of all players so it never gets clipped, with smart orientation)
+        if (selectedPlayerData) {
+          const { p, px, py, isHome, radius, shirtNum, speed } = selectedPlayerData;
+          const nameTag = `${p.name} (#${shirtNum}) • ${speed.toFixed(1)} km/h`;
+          ctx.font = `bold ${Math.round(7.5 * dpr)}px sans-serif`;
+          const textMetrics = ctx.measureText(nameTag);
+          const tagW = textMetrics.width + 12 * dpr;
+          const tagH = 15 * dpr;
+
+          // Smart placement: if player is near top of pitch, place tag BELOW the dot to prevent overlapping/clipping
+          const placeBelow = py - padY < 32 * dpr;
+          const tagX = Math.max(padX + 2 * dpr, Math.min(padX + pitchDrawW - tagW - 2 * dpr, px - tagW / 2));
+          const tagY = placeBelow ? py + radius + 7 * dpr : py - radius - tagH - 7 * dpr;
+
+          // Pointer tick line connecting dot to tag
+          ctx.beginPath();
+          ctx.moveTo(px, placeBelow ? py + radius + 1 * dpr : py - radius - 1 * dpr);
+          ctx.lineTo(px, placeBelow ? tagY : tagY + tagH);
+          ctx.strokeStyle = isHome ? "#00e5ff" : "#f43f5e";
+          ctx.lineWidth = 1 * dpr;
+          ctx.stroke();
+
+          // Tag Pill
+          ctx.fillStyle = "rgba(11, 18, 32, 0.95)";
+          ctx.strokeStyle = isHome ? "#00e5ff" : "#f43f5e";
+          ctx.lineWidth = 1 * dpr;
+          ctx.beginPath();
+          safeRoundRect(ctx, tagX, tagY, tagW, tagH, 4 * dpr);
+          ctx.fill();
+          ctx.stroke();
+
+          // Tag Text
+          ctx.fillStyle = "#ffffff";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(nameTag, tagX + tagW / 2, tagY + tagH / 2);
+        }
+
+        // Ball - Gold `#ffd600` strictly reserved for the ball
         if (frame.ball) {
           const bx = scaleX(frame.ball.x);
           const by = scaleY(frame.ball.y);
           if (Number.isFinite(bx) && Number.isFinite(by)) {
             ctx.beginPath();
-            ctx.arc(bx, by, Math.max(1, 7 * dpr), 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(255, 214, 0, 0.3)";
+            ctx.arc(bx, by, Math.max(1, 6 * dpr), 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 214, 0, 0.25)";
             ctx.fill();
 
             ctx.beginPath();
-            ctx.arc(bx, by, Math.max(1, 4.5 * dpr), 0, Math.PI * 2);
+            ctx.arc(bx, by, Math.max(1, 3.8 * dpr), 0, Math.PI * 2);
             ctx.fillStyle = "#ffd600";
             ctx.fill();
             ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = 1.2 * dpr;
+            ctx.lineWidth = 1 * dpr;
             ctx.stroke();
           }
         }
@@ -361,20 +442,90 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
 
       ctx.restore();
 
-      // Top-Left: FPS & Sensor Stream Rate Badge
-      const badgeText = `${fpsRef.current.fps} FPS • 10Hz Engine • 5Hz Stream`;
-      ctx.font = `bold ${Math.round(9 * dpr)}px monospace`;
-      const textMetrics = ctx.measureText(badgeText);
-      const fpsW = Math.max(90 * dpr, textMetrics.width + 16 * dpr);
-      const fpsH = 20 * dpr;
-      const fpsX = padX + 6 * dpr;
-      const fpsY = padY + 6 * dpr;
+      // Pitch Legend: Compact, high-clarity telemetry strip at bottom center
+      const legW = Math.min(pitchDrawW - 16 * dpr, 350 * dpr);
+      const legH = 17 * dpr;
+      const legX = padX + (pitchDrawW - legW) / 2;
+      const legY = padY + pitchDrawH - legH - 4 * dpr;
 
-      ctx.fillStyle = "rgba(10, 16, 28, 0.88)";
+      ctx.fillStyle = "rgba(7, 12, 20, 0.88)";
+      ctx.beginPath();
+      safeRoundRect(ctx, legX, legY, legW, legH, 4 * dpr);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.lineWidth = 0.8 * dpr;
+      ctx.stroke();
+
+      ctx.font = `600 ${Math.round(6.5 * dpr)}px sans-serif`;
+      ctx.textBaseline = "middle";
+      const itemY = legY + legH / 2;
+
+      let curX = legX + 8 * dpr;
+      // 1. Man City control
+      ctx.fillStyle = "rgba(0, 229, 255, 0.75)";
+      ctx.fillRect(curX, itemY - 3 * dpr, 6 * dpr, 6 * dpr);
+      curX += 8 * dpr;
+      ctx.fillStyle = "#cbd5e1";
+      ctx.textAlign = "left";
+      ctx.fillText("MCI Dominance", curX, itemY);
+      curX += 60 * dpr;
+
+      // 2. Arsenal control
+      ctx.fillStyle = "rgba(244, 63, 94, 0.75)";
+      ctx.fillRect(curX, itemY - 3 * dpr, 6 * dpr, 6 * dpr);
+      curX += 8 * dpr;
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText("ARS Dominance", curX, itemY);
+      curX += 60 * dpr;
+
+      // 3. Movement Vector
+      ctx.strokeStyle = "rgba(0, 229, 255, 0.85)";
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(curX, itemY);
+      ctx.lineTo(curX + 10 * dpr, itemY);
+      ctx.stroke();
+      curX += 13 * dpr;
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText("Movement", curX, itemY);
+      curX += 48 * dpr;
+
+      // 4. Passing Lane
+      ctx.strokeStyle = "rgba(0, 229, 255, 0.6)";
+      ctx.setLineDash([2 * dpr, 2 * dpr]);
+      ctx.beginPath();
+      ctx.moveTo(curX, itemY);
+      ctx.lineTo(curX + 10 * dpr, itemY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      curX += 13 * dpr;
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText("Passing Lane", curX, itemY);
+      curX += 54 * dpr;
+
+      // 5. Ball
+      ctx.fillStyle = "#ffd600";
+      ctx.beginPath();
+      ctx.arc(curX + 3 * dpr, itemY, 2.5 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+      curX += 8 * dpr;
+      ctx.fillStyle = "#ffd600";
+      ctx.fillText("Ball", curX, itemY);
+
+      // Top-Left: Render FPS Badge (Single dedicated role)
+      const badgeText = `Renderer: ${fpsRef.current.fps} FPS`;
+      ctx.font = `bold ${Math.round(8 * dpr)}px monospace`;
+      const textMetrics = ctx.measureText(badgeText);
+      const fpsW = textMetrics.width + 12 * dpr;
+      const fpsH = 17 * dpr;
+      const fpsX = padX + 5 * dpr;
+      const fpsY = padY + 5 * dpr;
+
+      ctx.fillStyle = "rgba(7, 12, 20, 0.88)";
       ctx.beginPath();
       safeRoundRect(ctx, fpsX, fpsY, fpsW, fpsH, 4 * dpr);
       ctx.fill();
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
       ctx.lineWidth = 1 * dpr;
       ctx.stroke();
 
@@ -382,34 +533,6 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(badgeText, fpsX + fpsW / 2, fpsY + fpsH / 2);
-
-      // Lower-Left: Pitch Control Dominance Badge
-      const ctrl =
-        frame?.control_chaos?.control ??
-        (frame as any)?.metrics?.controlVsChaosIndex ??
-        memory.blackboard.control_index;
-      if (ctrl !== undefined) {
-        const pcText = `Pitch Control: MCI ${Math.round(ctrl)}% • ARS ${Math.round(100 - ctrl)}%`;
-        ctx.font = `bold ${Math.round(9 * dpr)}px monospace`;
-        const pcTextWidth = ctx.measureText(pcText).width;
-        const pcW = Math.min(pitchDrawW - 12 * dpr, pcTextWidth + 16 * dpr);
-        const pcH = 20 * dpr;
-        const pcX = padX + 6 * dpr;
-        const pcY = padY + pitchDrawH - pcH - 6 * dpr;
-
-        ctx.fillStyle = "rgba(10, 16, 28, 0.88)";
-        ctx.beginPath();
-        safeRoundRect(ctx, pcX, pcY, pcW, pcH, 4 * dpr);
-        ctx.fill();
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.28)";
-        ctx.lineWidth = 1 * dpr;
-        ctx.stroke();
-
-        ctx.fillStyle = "#38bdf8";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(pcText, pcX + pcW / 2, pcY + pcH / 2);
-      }
     },
     [showVelocityVectors, showPassingLanes, showPitchControl, cameraAngle]
   );
@@ -430,17 +553,14 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
       } catch (err) {
         console.warn("PitchRadarCanvas render error:", err);
       } finally {
-        // Essential: Keep the animation loop alive so screen switches never kill the RAF thread
         if (!isCancelled) {
           animId = requestAnimationFrame(render);
         }
       }
     };
 
-    // Start render loop
     animId = requestAnimationFrame(render);
 
-    // ResizeObserver watches for layout restoration when navigating between screens
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(() => {
@@ -478,7 +598,6 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Wake up canvas frame if dormant
     drawFrame(performance.now());
 
     const rect = canvas.getBoundingClientRect();
@@ -529,7 +648,66 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
 
     if (closest && closest.id) {
       baseMemory.setSelectedPlayer(closest.id);
+      hoveredPlayerIdRef.current = null;
     }
+  };
+
+  const handleCanvasPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const moveX = e.clientX - rect.left;
+    const moveY = e.clientY - rect.top;
+
+    const padX = 28;
+    const padY = 20;
+    const pitchDrawW = rect.width - padX * 2;
+    const pitchDrawH = rect.height - padY * 2;
+    if (pitchDrawW <= 0 || pitchDrawH <= 0) return;
+
+    let viewMinX = 0;
+    let viewMaxX = PITCH_LENGTH_METERS;
+    let viewMinY = 0;
+    let viewMaxY = PITCH_WIDTH_METERS;
+
+    if (cameraAngle === "pressing") {
+      viewMinX = 26;
+      viewMaxX = 78;
+      viewMinY = 4;
+      viewMaxY = 64;
+    } else if (cameraAngle === "attacking") {
+      viewMinX = 58;
+      viewMaxX = 105;
+      viewMinY = 6;
+      viewMaxY = 62;
+    }
+
+    const viewW = Math.max(1, viewMaxX - viewMinX);
+    const viewH = Math.max(1, viewMaxY - viewMinY);
+    const pitchX = viewMinX + ((moveX - padX) / pitchDrawW) * viewW;
+    const pitchY = viewMinY + ((moveY - padY) / pitchDrawH) * viewH;
+
+    const frame = baseMemory.getState().currentFrame;
+    if (!frame || !frame.players) {
+      hoveredPlayerIdRef.current = null;
+      return;
+    }
+
+    let closestId: string | null = null;
+    let closestDist = 3.6;
+    for (const p of frame.players) {
+      const d = Math.hypot(p.x - pitchX, p.y - pitchY);
+      if (d < closestDist) {
+        closestDist = d;
+        closestId = p.player_id || p.id || "";
+      }
+    }
+    hoveredPlayerIdRef.current = closestId;
+  };
+
+  const handleCanvasPointerLeave = () => {
+    hoveredPlayerIdRef.current = null;
   };
 
   return (
@@ -537,6 +715,8 @@ export const PitchRadarCanvas: React.FC<PitchRadarCanvasProps> = ({
       <canvas
         ref={canvasRef}
         onClick={handleCanvasClick}
+        onPointerMove={handleCanvasPointerMove}
+        onPointerLeave={handleCanvasPointerLeave}
         style={{ width: "100%", height: "100%", display: "block", cursor: "pointer", touchAction: "pan-y" }}
         title="Click on any player to spotlight across studio"
       />

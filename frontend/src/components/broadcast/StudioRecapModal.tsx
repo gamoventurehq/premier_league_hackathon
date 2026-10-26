@@ -7,17 +7,14 @@ import {
   documentTextOutline,
   playOutline,
   pauseOutline,
-  reloadOutline,
   copyOutline,
-  downloadOutline,
-  closeCircleOutline,
-  timeOutline,
-  analyticsOutline,
-  speedometerOutline,
-  checkmarkCircleOutline,
+  checkmarkOutline,
+  playSkipBackOutline,
+  playSkipForwardOutline,
+  radioOutline,
+  arrowForwardOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
-import { StudioChipScroller } from "../StudioChipScroller";
 
 interface StudioRecapModalProps {
   isOpen: boolean;
@@ -29,91 +26,106 @@ interface ChapterMarker {
   timeSec: number;
   title: string;
   summary: string;
-  metric: string;
-  category: "goal" | "tactical" | "physical" | "whistle";
+  metric?: string;
 }
 
 const CHAPTER_MARKERS: ChapterMarker[] = [
   {
     timeLabel: "00:00",
     timeSec: 0,
-    title: "Kick-Off & Formation Setup",
-    summary: "Man City establish 3-2-4-1 build-up shape against Arsenal's mid-block 4-4-2.",
-    metric: "Initial Shape 4-3-3 vs 4-2-3-1",
-    category: "tactical",
+    title: "Kick-off & formation setup",
+    summary: "City establish their build-up shape against Arsenal's mid-block.",
   },
   {
     timeLabel: "14:20",
     timeSec: 860,
-    title: "Low-Block Compression & Rodri Line-Break",
-    summary: "Rodri threads high-difficulty diagonal pass between Rice and Partey into half-space.",
-    metric: "Pass Difficulty: 78%",
-    category: "tactical",
+    title: "Low-block compression",
+    summary: "Rodri finds high-difficulty diagonal passing lanes.",
   },
   {
     timeLabel: "28:45",
     timeSec: 1725,
-    title: "Saliba Critical Box Clearance",
-    summary: "Saliba denies Haaland tap-in with sliding interception inside the 6-yard area.",
-    metric: "xT Prevented: 0.34",
-    category: "tactical",
+    title: "Critical box clearance",
+    summary: "Saliba denies a dangerous attacking opportunity.",
   },
   {
     timeLabel: "42:10",
     timeSec: 2530,
-    title: "Goal: Erling Haaland Opener",
-    summary: "Haaland latches onto De Bruyne cutback, powering shot into the top-right corner.",
-    metric: "108.4 km/h • 0.78 xG",
-    category: "goal",
+    title: "Haaland opens the scoring",
+    summary: "A rapid build-up sequence ends in a goal.",
+    metric: "0.78 xG",
   },
   {
     timeLabel: "44:55",
     timeSec: 2695,
-    title: "Goal: Bukayo Saka Equalizer",
-    summary: "Saka bursts down right flank in counter-transition, finishing past Ederson.",
-    metric: "33.8 km/h • 4 Touches",
-    category: "goal",
+    title: "Saka equalizes",
+    summary: "Arsenal counter quickly before half-time.",
+    metric: "33.8 km/h",
   },
   {
-    timeLabel: "45'+2",
+    timeLabel: "45+2'",
     timeSec: 2700,
-    title: "Half-Time Whistle & Tactical Evaluation",
-    summary: "Interval reached with parity; City dominate possession while Arsenal strike on break.",
-    metric: "Pitch Control: MCI 61% - ARS 39%",
-    category: "whistle",
+    title: "Half-time tactical review",
+    summary: "Review territorial control and the contrasting approaches.",
   },
 ];
 
-const TELEPROMPTER_SCRIPT = [
+interface CueScript {
+  id: string;
+  badge: string;
+  headline: string;
+  text: string;
+  nextTeaser?: string;
+  speaker: string;
+}
+
+const TELEPROMPTER_SCRIPT: CueScript[] = [
   {
-    cue: "00:00 - ANCHOR STUDIO INTRO",
+    id: "cue_1",
+    badge: "ANCHOR INTRO",
+    headline: "Welcome back to Premier League Studio, powered by Gamoventure.",
+    text: "At half-time, Manchester City and Arsenal are level at 1-1 after an intensely tactical opening period at the Etihad Stadium.",
+    nextTeaser: "Tactical analysis",
     speaker: "Studio Anchor",
-    text: "Welcome back to Premier League Studio powered by Gamoventure. At the interval here at Etihad Stadium, Manchester City and Arsenal are locked at 1-1 following an intensely tactical opening forty-five minutes of premier championship football.",
   },
   {
-    cue: "00:30 - TACTICAL MACRO-ARC: LOW-BLOCK SIEGE",
+    id: "cue_2",
+    badge: "TACTICAL MACRO-ARC",
+    headline: "A textbook low-block siege across the opening forty-five minutes.",
+    text: "Manchester City held sixty-one percent pitch control, continuously recycling possession across the final third and squeezing Arsenal's defensive block into an eighteen-meter corridor. Arsenal maintained tactical discipline under relentless territorial pressure.",
+    nextTeaser: "Haaland opening goal",
     speaker: "Lead Tactical Analyst",
-    text: "The first half unfolded as a textbook low-block siege. Manchester City held sixty-one percent pitch control, continuously recycling possession across the final third and squeezing Arsenal's defensive block into an eighteen-meter corridor. Arsenal maintained tactical discipline under relentless territorial pressure.",
   },
   {
-    cue: "01:05 - THE BREAKTHROUGH: E. HAALAND 42'",
+    id: "cue_3",
+    badge: "THE BREAKTHROUGH: 42'",
+    headline: "The deadlock broken: Haaland converts from close range.",
+    text: "A patient fourteen-pass sequence saw Kevin De Bruyne slip a pinpoint delivery to Erling Haaland, who unleashed a ferocious one-hundred-and-eight kilometer per hour strike. With an expected goals value of zero-point-seven-eight, it was clinical finishing of the highest order.",
+    nextTeaser: "Saka counter equalizer",
     speaker: "Studio Anchor & Analyst",
-    text: "The breakthrough came in the forty-second minute. A patient fourteen-pass sequence saw Kevin De Bruyne slip a pinpoint delivery to Erling Haaland, who unleashed a ferocious one-hundred-and-eight kilometer per hour strike. With an expected goals value of zero-point-seven-eight, it was clinical finishing of the highest order.",
   },
   {
-    cue: "01:40 - THE EQUALIZER: B. SAKA 45+1'",
+    id: "cue_4",
+    badge: "EQUALIZER: 45+1'",
+    headline: "Arsenal strike back with devastating transition pace.",
+    text: "Yet Arsenal responded with lightning speed right before the whistle. In a rapid four-touch transition from their defensive box, Bukayo Saka clocked the match's top sprint velocity at thirty-three-point-eight kilometers per hour, beating Ederson across goal to restore equilibrium.",
+    nextTeaser: "Second-half tactical outlook",
     speaker: "Studio Anchor",
-    text: "Yet Arsenal responded with devastating speed right before the whistle. In a rapid four-touch transition from their defensive box, Bukayo Saka clocked the match's top sprint velocity at thirty-three-point-eight kilometers per hour, beating Ederson across goal to restore emotional and tactical equilibrium.",
   },
   {
-    cue: "02:15 - SECOND-HALF KEYS: RECOVERY & HIGH PRESS EXHAUSTION",
+    id: "cue_5",
+    badge: "SECOND-HALF KEYS",
+    headline: "Physical endurance and press intensity will decide the fixture.",
+    text: "As we look ahead to the second half, the central question will be physical endurance. Can Mikel Arteta's side maintain their ninety-four percent pressing intensity without suffering high-press exhaustion, or will City's control over tempo gradually wear down the Gunners' resistance?",
+    nextTeaser: "Re-join coverage",
     speaker: "Lead Tactical Analyst",
-    text: "As we look ahead to the second half, the central tactical question will be physical endurance. Can Mikel Arteta's side maintain their ninety-four percent pressing intensity without suffering high-press exhaustion, or will City's control over tempo gradually wear down the Gunners' resistance?",
   },
   {
-    cue: "02:50 - TACTICAL VERDICT & RE-JOIN",
+    id: "cue_6",
+    badge: "STUDIO SIGN-OFF",
+    headline: "A blockbuster second half awaits at the Etihad.",
+    text: "Stay tuned to Gamoventure Premier League Studio for continuous live spatial tracking and tactical intelligence as both teams return to the pitch.",
     speaker: "Studio Anchor",
-    text: "A blockbuster second half awaits. Stay tuned to Gamoventure Premier League Studio for continuous live spatial tracking and tactical intelligence as the teams return to the pitch.",
   },
 ];
 
@@ -122,37 +134,16 @@ export const StudioRecapModal: React.FC<StudioRecapModalProps> = ({ isOpen, onCl
   const matchClock = useBaseMemory((s) => s.matchClock);
 
   const [activeTab, setActiveTab] = useState<"teleprompter" | "chapters" | "article">("teleprompter");
-  const [isPrompterScrolling, setIsPrompterScrolling] = useState(false);
-  const [prompterSpeed, setPrompterSpeed] = useState<number>(1.0);
-  const [fontSize, setFontSize] = useState<"standard" | "large" | "prompter">("large");
-  const [copiedNotification, setCopiedNotification] = useState(false);
+  const [activeCueIndex, setActiveCueIndex] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [fontSizePx, setFontSizePx] = useState<number>(18);
+  const [scrollSpeed, setScrollSpeed] = useState<number>(1.0);
+  const [showMarkdownSource, setShowMarkdownSource] = useState<boolean>(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  const prompterContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Teleprompter Auto-Scroll Loop
-  useEffect(() => {
-    let animId: number;
-    if (isPrompterScrolling && activeTab === "teleprompter") {
-      const scrollStep = () => {
-        if (prompterContainerRef.current) {
-          prompterContainerRef.current.scrollTop += 0.6 * prompterSpeed;
-          // Loop back to top if reached bottom
-          if (
-            prompterContainerRef.current.scrollTop + prompterContainerRef.current.clientHeight >=
-            prompterContainerRef.current.scrollHeight - 5
-          ) {
-            prompterContainerRef.current.scrollTop = 0;
-          }
-        }
-        animId = requestAnimationFrame(scrollStep);
-      };
-      animId = requestAnimationFrame(scrollStep);
-    }
-
-    return () => cancelAnimationFrame(animId);
-  }, [isPrompterScrolling, prompterSpeed, activeTab]);
-
-  // Keyboard Escape listener to dismiss modal
+  // Keyboard Escape listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -163,172 +154,172 @@ export const StudioRecapModal: React.FC<StudioRecapModalProps> = ({ isOpen, onCl
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Smooth auto-scroll loop for presenter mode
+  useEffect(() => {
+    let animId: number;
+    if (isPlaying && activeTab === "teleprompter") {
+      const step = () => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop += 0.5 * scrollSpeed;
+          const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+          if (scrollTop + clientHeight >= scrollHeight - 4) {
+            scrollContainerRef.current.scrollTop = 0;
+          }
+        }
+        animId = requestAnimationFrame(step);
+      };
+      animId = requestAnimationFrame(step);
+    }
+    return () => cancelAnimationFrame(animId);
+  }, [isPlaying, scrollSpeed, activeTab]);
+
   if (!isOpen) return null;
+
+  const activeCue = TELEPROMPTER_SCRIPT[activeCueIndex] || TELEPROMPTER_SCRIPT[0];
+
+  const handleNextCue = () => {
+    if (activeCueIndex < TELEPROMPTER_SCRIPT.length - 1) {
+      setActiveCueIndex(activeCueIndex + 1);
+    }
+  };
+
+  const handlePrevCue = () => {
+    if (activeCueIndex > 0) {
+      setActiveCueIndex(activeCueIndex - 1);
+    }
+  };
 
   const handleSeekChapter = (sec: number) => {
     baseMemory.setMatchClock(sec);
   };
 
-  const handleCopyPrompter = () => {
-    const textToCopy = TELEPROMPTER_SCRIPT.map(
-      (c) => `=== ${c.cue} (${c.speaker}) ===\n${c.text}\n`
-    ).join("\n");
-    navigator.clipboard.writeText(textToCopy);
-    setCopiedNotification(true);
-    setTimeout(() => setCopiedNotification(false), 2000);
+  const handleCopyReport = async () => {
+    const reportText = `Half-Time Match Report: ${score.homeTeam} 1-1 ${score.awayTeam} · 45+2'\n\nFIRST-HALF SUMMARY\nA tactical battle ends level at the break.\nManchester City dominated territorial possession, while Arsenal exploited quick transitions to equalize before half-time.\n\nKEY MOMENTS:\n- 42' Haaland opens the scoring: A rapid build-up sequence ends in a close-range finish.\n- 45+1' Saka equalizes: Arsenal counter quickly before half-time.\n\nTACTICAL METRICS:\n- Pitch Control: MCI 61% - ARS 39%\n- Pass Difficulty Rating: 0.35\n- High Press Work Rate: 94%`;
+    await navigator.clipboard.writeText(reportText);
+    setCopyFeedback("Copied report ✓");
+    setTimeout(() => setCopyFeedback(null), 2000);
   };
 
-  const digitalArticleMarkdown = `# Manchester City 1 - 1 Arsenal: Half-Time Tactical Breakdown
-**Etihad Stadium | Premier League Matchweek | Gamoventure Studio Intelligence**
-
-### First-Half Summary
-At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlocked at 1-1 after a masterclass in tactical contrast. Pep Guardiola's Manchester City dominated early territorial possession (61% Pitch Control), attempting to dismantle Arsenal's compact 4-4-2 low block.
-
-### Key Moments:
-- **42' - E. Haaland (Man City)**: A 14-pass build-up sequence was converted with an emphatic 108.4 km/h strike (0.78 xG, Post-Shot xG 0.94).
-- **45+1' - B. Saka (Arsenal)**: A lightning 4-touch counter-transition reached a match-high velocity of 33.8 km/h to slip past Ederson and equalize.
-
-### Tactical Metrics:
-- **Pitch Control Dominance**: Man City 61% • Arsenal 39%
-- **Pass Difficulty Rating (PDR)**: 86% vs 79%
-- **High Press Intensity**: Arsenal 94% work rate sustained over first 45 minutes
-
-*Report generated synthetically by Gamoventure Premier League Studio Insights Engine.*`;
+  const handleCopyMarkdown = async () => {
+    const rawMarkdown = `# ${score.homeTeam} 1 - 1 ${score.awayTeam}: Half-Time Tactical Report\n**Etihad Stadium | Premier League | Gamoventure Studio Intelligence**\n\n### First-Half Summary\nA tactical battle ends level at the break. Manchester City held 61% pitch control while Arsenal maintained a resilient low block and countered effectively.\n\n### Key Moments\n- **42' - E. Haaland (Man City)**: 14-pass sequence culminating in 108.4 km/h strike (0.78 xG).\n- **45+1' - B. Saka (Arsenal)**: 4-touch counter-transition sprint clocked at 33.8 km/h.\n\n### Tactical Metrics\n- Pitch Control: Man City 61% • Arsenal 39%\n- Pass Difficulty Rating (PDR): 0.35\n- High Press Intensity: 94% work rate`;
+    await navigator.clipboard.writeText(rawMarkdown);
+    setCopyFeedback("Copied Markdown ✓");
+    setTimeout(() => setCopyFeedback(null), 2000);
+  };
 
   const modalContent = (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(2, 6, 23, 0.92)",
-        backdropFilter: "blur(14px)",
-        WebkitBackdropFilter: "blur(14px)",
+        backgroundColor: "rgba(2, 6, 23, 0.88)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 9999999,
-        padding: "max(12px, env(safe-area-inset-top, 12px)) 12px max(12px, env(safe-area-inset-bottom, 12px)) 12px",
+        padding: "16px",
       }}
       onClick={onClose}
     >
       <div
         style={{
           width: "100%",
-          maxWidth: "1050px",
-          maxHeight: "calc(100dvh - 24px)",
-          height: "92dvh",
-          backgroundColor: "var(--studio-panel-bg)",
-          border: "1px solid var(--studio-panel-border)",
+          maxWidth: activeTab === "teleprompter" ? "920px" : "780px",
+          maxHeight: "88dvh",
+          backgroundColor: "#0b1222",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
           borderRadius: "16px",
-          boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.95), 0 0 30px rgba(124, 58, 237, 0.4)",
+          boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.95), 0 0 24px rgba(124, 58, 237, 0.2)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          position: "relative",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Sticky Header Bar with High-Visibility Red/White Close Button */}
+        {/* ======================================================== */}
+        {/* MODAL HEADER: Title, Match Context, Close Button        */}
+        {/* ======================================================== */}
         <div
           style={{
-            padding: "10px 14px",
-            borderBottom: "1px solid var(--studio-panel-border)",
+            padding: "16px 20px 12px 20px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "rgba(15, 23, 42, 0.98)",
-            flexWrap: "nowrap",
-            gap: "10px",
-            position: "sticky",
-            top: 0,
-            zIndex: 100,
+            backgroundColor: "#0b1222",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "3px", minWidth: 0, flex: "1 1 auto" }}>
-            <span
+          <div>
+            <div
               style={{
-                backgroundColor: "#7c3aed",
-                color: "#ffffff",
-                fontSize: "9px",
+                fontSize: "10px",
                 fontWeight: 900,
-                letterSpacing: "0.5px",
-                padding: "2px 7px",
-                borderRadius: "5px",
+                color: "#c084fc",
+                letterSpacing: "0.8px",
                 textTransform: "uppercase",
-                display: "inline-block",
-                flexShrink: 0,
               }}
             >
-              Gamoventure
-            </span>
-            <div style={{ minWidth: 0, width: "100%" }}>
-              <div style={{ fontSize: "12.5px", fontWeight: 900, color: "var(--ion-text-color)", lineHeight: "1.25", whiteSpace: "normal" }}>
-                Half-Time Studio Teleprompter
-              </div>
-              <div style={{ fontSize: "9.5px", color: "var(--studio-subtext)", marginTop: "2px", lineHeight: "1.2", whiteSpace: "normal" }}>
-                {score.homeTeam} 1 - 1 {score.awayTeam} • Interval (45'+2')
-              </div>
+              GAMOVENTURE STUDIO
+            </div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "#f8fafc", marginTop: "2px" }}>
+              {activeTab === "teleprompter"
+                ? "Half-Time Teleprompter"
+                : activeTab === "chapters"
+                ? "Match Chapters"
+                : "Half-Time Match Report"}
+            </div>
+            <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>
+              {score.homeTeam} 1-1 {score.awayTeam} · Half-time · 45+2'
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-            {copiedNotification && (
-              <span style={{ fontSize: "10px", color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: "3px" }}>
-                <IonIcon icon={checkmarkCircleOutline} />
-                Copied!
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {copyFeedback && (
+              <span style={{ fontSize: "11px", color: "#34d399", fontWeight: 700 }}>
+                {copyFeedback}
               </span>
             )}
-            <button
-              onClick={handleCopyPrompter}
-              style={{
-                backgroundColor: "var(--studio-inner-bg)",
-                border: "1px solid var(--studio-panel-border)",
-                borderRadius: "6px",
-                padding: "5px 8px",
-                color: "var(--ion-text-color)",
-                fontSize: "11px",
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-              title="Copy Teleprompter Script"
-            >
-              <IonIcon icon={copyOutline} />
-              <span style={{ fontSize: "10px" }}>Copy</span>
-            </button>
 
-            {/* Clean top-right close '✕' button */}
+            {/* Mode 3 header copy button */}
+            {activeTab === "article" && !showMarkdownSource && (
+              <button
+                onClick={handleCopyReport}
+                style={{
+                  background: "#7c3aed",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "6px 14px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <IonIcon icon={copyOutline} />
+                Copy report
+              </button>
+            )}
+
             <button
               onClick={onClose}
               aria-label="Close"
               style={{
-                width: "30px",
-                height: "30px",
+                width: "28px",
+                height: "28px",
                 borderRadius: "50%",
-                backgroundColor: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.16)",
-                color: "#f8fafc",
+                backgroundColor: "rgba(255, 255, 255, 0.06)",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                color: "#cbd5e1",
                 fontSize: "14px",
-                fontWeight: 700,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                transition: "all 0.15s ease",
-                flexShrink: 0,
-                marginLeft: "4px",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#ef4444";
-                e.currentTarget.style.borderColor = "#ef4444";
-                e.currentTarget.style.color = "#ffffff";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.16)";
-                e.currentTarget.style.color = "#f8fafc";
               }}
               title="Close (Esc)"
             >
@@ -337,395 +328,641 @@ At the interval at the Etihad Stadium, Manchester City and Arsenal remain deadlo
           </div>
         </div>
 
-        {/* Tab Navigation Navigation Controls with Permanent Grey Scroll Line */}
+        {/* ======================================================== */}
+        {/* MODE NAVIGATION TABS                                     */}
+        {/* ======================================================== */}
         <div
           style={{
-            padding: "8px 14px",
-            backgroundColor: "var(--studio-inner-bg)",
-            borderBottom: "1px solid var(--studio-panel-border)",
+            padding: "8px 20px",
+            backgroundColor: "#020617",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
             display: "flex",
-            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
             gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-            <div style={{ flex: "1 1 320px", maxWidth: "100%", minWidth: 0 }}>
-              <StudioChipScroller gap="8px" marginTopTrack={6} alwaysShowTrack={true}>
-                <button
-                  onClick={() => setActiveTab("teleprompter")}
-                  style={{
-                    backgroundColor: activeTab === "teleprompter" ? "var(--ion-color-primary)" : "transparent",
-                    border: activeTab === "teleprompter" ? "1px solid var(--ion-color-primary)" : "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: "6px",
-                    padding: "6px 14px",
-                    color: activeTab === "teleprompter" ? "#ffffff" : "var(--studio-subtext)",
-                    fontSize: "11px",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    flexShrink: 0,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <IonIcon icon={micOutline} />
-                  <span>Teleprompter</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab("chapters")}
-                  style={{
-                    backgroundColor: activeTab === "chapters" ? "var(--ion-color-primary)" : "transparent",
-                    border: activeTab === "chapters" ? "1px solid var(--ion-color-primary)" : "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: "6px",
-                    padding: "6px 14px",
-                    color: activeTab === "chapters" ? "#ffffff" : "var(--studio-subtext)",
-                    fontSize: "11px",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    flexShrink: 0,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <IonIcon icon={bookmarkOutline} />
-                  <span>Chapters</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab("article")}
-                  style={{
-                    backgroundColor: activeTab === "article" ? "var(--ion-color-primary)" : "transparent",
-                    border: activeTab === "article" ? "1px solid var(--ion-color-primary)" : "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: "6px",
-                    padding: "6px 14px",
-                    color: activeTab === "article" ? "#ffffff" : "var(--studio-subtext)",
-                    fontSize: "11px",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    flexShrink: 0,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <IonIcon icon={documentTextOutline} />
-                  <span>Publication</span>
-                </button>
-              </StudioChipScroller>
-            </div>
-
-            {/* Teleprompter Playback & Font Size Controls (Shown when on prompter tab) */}
-            {activeTab === "teleprompter" && (
-              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                {/* Font Size Pills */}
-                <div style={{ display: "flex", alignItems: "center", gap: "3px", backgroundColor: "rgba(255,255,255,0.05)", padding: "2px", borderRadius: "6px" }}>
-                  <button
-                    onClick={() => setFontSize("standard")}
-                    style={{
-                      background: fontSize === "standard" ? "var(--ion-color-primary)" : "transparent",
-                      border: "none",
-                      borderRadius: "4px",
-                      color: fontSize === "standard" ? "#ffffff" : "#94a3b8",
-                      padding: "3px 7px",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Standard
-                  </button>
-                  <button
-                    onClick={() => setFontSize("large")}
-                    style={{
-                      background: fontSize === "large" ? "var(--ion-color-primary)" : "transparent",
-                      border: "none",
-                      borderRadius: "4px",
-                      color: fontSize === "large" ? "#ffffff" : "#94a3b8",
-                      padding: "3px 7px",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Large
-                  </button>
-                  <button
-                    onClick={() => setFontSize("prompter")}
-                    style={{
-                      background: fontSize === "prompter" ? "var(--ion-color-primary)" : "transparent",
-                      border: "none",
-                      borderRadius: "4px",
-                      color: fontSize === "prompter" ? "#ffffff" : "#94a3b8",
-                      padding: "3px 7px",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    24px
-                  </button>
-                </div>
-
-                {/* Speed Pills */}
-                <div style={{ display: "flex", alignItems: "center", gap: "3px", backgroundColor: "rgba(255,255,255,0.05)", padding: "2px", borderRadius: "6px" }}>
-                  {[0.5, 1.0, 1.5, 2.0].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setPrompterSpeed(s)}
-                      style={{
-                        background: prompterSpeed === s ? "#38bdf8" : "transparent",
-                        border: "none",
-                        borderRadius: "4px",
-                        color: prompterSpeed === s ? "#020617" : "#94a3b8",
-                        padding: "3px 6px",
-                        fontSize: "9px",
-                        fontWeight: 800,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {s}x
-                    </button>
-                  ))}
-                </div>
-
-                {/* Scroll Auto Play/Pause */}
-                <button
-                  onClick={() => setIsPrompterScrolling(!isPrompterScrolling)}
-                  style={{
-                    backgroundColor: isPrompterScrolling ? "#ef4444" : "#10b981",
-                    border: "none",
-                    borderRadius: "6px",
-                    padding: "4px 9px",
-                    color: "#ffffff",
-                    fontSize: "10px",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <IonIcon icon={isPrompterScrolling ? pauseOutline : playOutline} />
-                  <span>{isPrompterScrolling ? "Pause" : "Auto-Scroll"}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Modal Main Body: Exactly ONE visible grey scroll line per screen */}
-        <div
-          className={`studio-recap-modal-body ${activeTab !== "teleprompter" ? "studio-visible-scrollbar" : ""}`}
-          style={{
-            padding: "16px 14px",
-            overflowY: activeTab !== "teleprompter" ? "auto" : "hidden",
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {/* TAB 1: Studio Teleprompter */}
-          {activeTab === "teleprompter" && (
-            <div
-              ref={prompterContainerRef}
-              className="studio-visible-scrollbar"
+          {/* Tab Selector */}
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button
+              onClick={() => {
+                setActiveTab("teleprompter");
+                setIsPlaying(false);
+              }}
               style={{
-                flex: 1,
-                height: "100%",
-                maxHeight: "58dvh",
-                minHeight: "260px",
-                overflowY: "auto",
-                padding: "16px 16px 16px 14px",
-                backgroundColor: "#020617",
-                borderRadius: "12px",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "20px",
+                background: activeTab === "teleprompter" ? "#7c3aed" : "transparent",
+                color: activeTab === "teleprompter" ? "#ffffff" : "#94a3b8",
+                border: `1px solid ${activeTab === "teleprompter" ? "#7c3aed" : "rgba(255, 255, 255, 0.08)"}`,
+                borderRadius: "6px",
+                padding: "5px 12px",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
               }}
             >
-              {TELEPROMPTER_SCRIPT.map((segment, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    borderLeft: "3px solid #7c3aed",
-                    paddingLeft: "14px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span
-                      style={{
-                        backgroundColor: "rgba(124, 58, 237, 0.25)",
-                        color: "#c084fc",
-                        fontSize: "9px",
-                        fontWeight: 900,
-                        fontFamily: "monospace",
-                        padding: "2px 6px",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      {segment.cue}
-                    </span>
-                    <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 700 }}>
-                      Speaker: {segment.speaker}
-                    </span>
-                  </div>
-                  <p
-                    style={{
-                      margin: 0,
-                      color: "#f8fafc",
-                      lineHeight: "1.65",
-                      fontWeight: 600,
-                      fontSize:
-                        fontSize === "prompter"
-                          ? "22px"
-                          : fontSize === "large"
-                          ? "17px"
-                          : "14px",
-                      letterSpacing: "0.2px",
-                    }}
-                  >
-                    {segment.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+              <IonIcon icon={micOutline} />
+              Presenter
+            </button>
 
-          {/* TAB 2: Streaming Video Chapter Markers */}
-          {activeTab === "chapters" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                <div style={{ fontSize: "12px", color: "var(--studio-subtext)" }}>
-                  Click any chapter to seek the match clock and synchronize the studio video timeline.
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
-                {CHAPTER_MARKERS.map((ch, idx) => {
-                  const isCurrent = Math.abs(matchClock - ch.timeSec) < 300;
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => handleSeekChapter(ch.timeSec)}
-                      style={{
-                        backgroundColor: isCurrent ? "rgba(124, 58, 237, 0.2)" : "var(--studio-inner-bg)",
-                        border: isCurrent ? "1.5px solid var(--ion-color-primary)" : "1px solid var(--studio-panel-border)",
-                        borderRadius: "10px",
-                        padding: "12px 14px",
-                        cursor: "pointer",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "6px",
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            fontWeight: 900,
-                            fontFamily: "monospace",
-                            color: "var(--ion-color-primary)",
-                          }}
-                        >
-                          {ch.timeLabel}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "9px",
-                            fontWeight: 800,
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            backgroundColor:
-                              ch.category === "goal"
-                                ? "rgba(255, 214, 0, 0.2)"
-                                : ch.category === "tactical"
-                                ? "rgba(0, 229, 255, 0.2)"
-                                : "rgba(255, 255, 255, 0.1)",
-                            color:
-                              ch.category === "goal"
-                                ? "#ffd600"
-                                : ch.category === "tactical"
-                                ? "#00e5ff"
-                                : "#ffffff",
-                          }}
-                        >
-                          {ch.metric}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--ion-text-color)" }}>
-                        {ch.title}
-                      </div>
-                      <div style={{ fontSize: "10px", color: "var(--studio-subtext)", lineHeight: "1.4" }}>
-                        {ch.summary}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            <button
+              onClick={() => {
+                setActiveTab("chapters");
+                setIsPlaying(false);
+              }}
+              style={{
+                background: activeTab === "chapters" ? "#7c3aed" : "transparent",
+                color: activeTab === "chapters" ? "#ffffff" : "#94a3b8",
+                border: `1px solid ${activeTab === "chapters" ? "#7c3aed" : "rgba(255, 255, 255, 0.08)"}`,
+                borderRadius: "6px",
+                padding: "5px 12px",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <IonIcon icon={bookmarkOutline} />
+              Chapters
+            </button>
 
-          {/* TAB 3: Instant Digital Publication */}
-          {activeTab === "article" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                <span style={{ fontSize: "12px", color: "var(--studio-subtext)", minWidth: "180px", flex: "1 1 auto" }}>
-                  Ready-to-publish digital match report formatted under Premier League editorial guidelines.
-                </span>
+            <button
+              onClick={() => {
+                setActiveTab("article");
+                setIsPlaying(false);
+              }}
+              style={{
+                background: activeTab === "article" ? "#7c3aed" : "transparent",
+                color: activeTab === "article" ? "#ffffff" : "#94a3b8",
+                border: `1px solid ${activeTab === "article" ? "#7c3aed" : "rgba(255, 255, 255, 0.08)"}`,
+                borderRadius: "6px",
+                padding: "5px 12px",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <IonIcon icon={documentTextOutline} />
+              Publication
+            </button>
+          </div>
+
+          {/* Compact Reading Controls (Only on Presenter Tab) */}
+          {activeTab === "teleprompter" && (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {/* Font Size A- / A+ */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  borderRadius: "6px",
+                  padding: "2px 4px",
+                  gap: "2px",
+                }}
+              >
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(digitalArticleMarkdown);
-                    setCopiedNotification(true);
-                    setTimeout(() => setCopiedNotification(false), 2000);
-                  }}
+                  onClick={() => setFontSizePx(Math.max(14, fontSizePx - 2))}
+                  title="Smaller font"
                   style={{
-                    backgroundColor: "var(--ion-color-primary)",
+                    background: "transparent",
                     border: "none",
-                    borderRadius: "6px",
-                    padding: "6px 12px",
-                    color: "#ffffff",
-                    fontSize: "10px",
+                    color: "#cbd5e1",
+                    padding: "3px 6px",
+                    fontSize: "11px",
                     fontWeight: 800,
                     cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    flexShrink: 0,
                   }}
                 >
-                  <IonIcon icon={copyOutline} />
-                  <span>Copy Markdown</span>
+                  A-
+                </button>
+                <button
+                  onClick={() => setFontSizePx(Math.min(26, fontSizePx + 2))}
+                  title="Larger font"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#cbd5e1",
+                    padding: "3px 6px",
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  A+
                 </button>
               </div>
 
+              {/* Speed 1x / 1.5x / 2x */}
               <div
                 style={{
-                  backgroundColor: "#020617",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: "10px",
-                  padding: "16px",
-                  color: "#e2e8f0",
-                  fontSize: "12px",
-                  lineHeight: "1.7",
-                  whiteSpace: "pre-wrap",
-                  fontFamily: "monospace",
+                  display: "flex",
+                  alignItems: "center",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  borderRadius: "6px",
+                  padding: "2px 4px",
+                  gap: "2px",
                 }}
               >
-                {digitalArticleMarkdown}
+                {[1.0, 1.5, 2.0].map((spd) => (
+                  <button
+                    key={spd}
+                    onClick={() => setScrollSpeed(spd)}
+                    style={{
+                      background: scrollSpeed === spd ? "#7c3aed" : "transparent",
+                      border: "none",
+                      borderRadius: "4px",
+                      color: scrollSpeed === spd ? "#ffffff" : "#94a3b8",
+                      padding: "2px 6px",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {spd}x
+                  </button>
+                ))}
               </div>
             </div>
           )}
         </div>
+
+        {/* ======================================================== */}
+        {/* TAB 1: PRESENTER MODE (Matching media_1793030946395.png) */}
+        {/* ======================================================== */}
+        {activeTab === "teleprompter" && (
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              padding: "20px 24px 16px 24px",
+              overflow: "hidden",
+            }}
+          >
+            {/* Top Cue Meta Strip */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span
+                  style={{
+                    backgroundColor: "rgba(124, 58, 237, 0.25)",
+                    color: "#c084fc",
+                    fontSize: "10px",
+                    fontWeight: 900,
+                    letterSpacing: "0.5px",
+                    padding: "3px 8px",
+                    borderRadius: "6px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {activeCue.badge}
+                </span>
+                <span style={{ fontSize: "11px", color: "#64748b" }}>
+                  Speaker: {activeCue.speaker}
+                </span>
+              </div>
+
+              <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700 }}>
+                Cue {activeCueIndex + 1} of {TELEPROMPTER_SCRIPT.length}
+              </span>
+            </div>
+
+            {/* Main Reading Workspace (Constrained Width for Comfortable Reading) */}
+            <div
+              ref={scrollContainerRef}
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                maxWidth: "720px",
+                margin: "0 auto",
+                width: "100%",
+                padding: "16px 0",
+              }}
+            >
+              {/* Spoken Headline */}
+              <div
+                style={{
+                  fontSize: `${fontSizePx + 4}px`,
+                  fontWeight: 800,
+                  color: "#f8fafc",
+                  lineHeight: 1.4,
+                  marginBottom: "14px",
+                }}
+              >
+                {activeCue.headline}
+              </div>
+
+              {/* Spoken Body Text */}
+              <div
+                style={{
+                  fontSize: `${fontSizePx}px`,
+                  color: "#cbd5e1",
+                  lineHeight: 1.65,
+                  fontWeight: 500,
+                }}
+              >
+                {activeCue.text}
+              </div>
+
+              {/* Next Cue Teaser Peek */}
+              {activeCue.nextTeaser && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginTop: "24px",
+                    fontSize: "12px",
+                    color: "#94a3b8",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      backgroundColor: "#7c3aed",
+                    }}
+                  />
+                  <span>Next: {activeCue.nextTeaser}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Presenter Footer Bar */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingTop: "14px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                marginTop: "12px",
+              }}
+            >
+              {/* Skip and Playback Controls */}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  onClick={handlePrevCue}
+                  disabled={activeCueIndex === 0}
+                  title="Previous cue"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.06)",
+                    border: "none",
+                    borderRadius: "6px",
+                    color: activeCueIndex === 0 ? "#475569" : "#cbd5e1",
+                    padding: "6px 10px",
+                    cursor: activeCueIndex === 0 ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <IonIcon icon={playSkipBackOutline} />
+                </button>
+
+                <button
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  title={isPlaying ? "Pause auto-scroll" : "Start auto-scroll"}
+                  style={{
+                    background: isPlaying ? "#ef4444" : "#10b981",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: "36px",
+                    height: "36px",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    fontSize: "16px",
+                  }}
+                >
+                  <IonIcon icon={isPlaying ? pauseOutline : playOutline} />
+                </button>
+
+                <button
+                  onClick={handleNextCue}
+                  disabled={activeCueIndex === TELEPROMPTER_SCRIPT.length - 1}
+                  title="Next cue"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.06)",
+                    border: "none",
+                    borderRadius: "6px",
+                    color: activeCueIndex === TELEPROMPTER_SCRIPT.length - 1 ? "#475569" : "#cbd5e1",
+                    padding: "6px 10px",
+                    cursor: activeCueIndex === TELEPROMPTER_SCRIPT.length - 1 ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <IonIcon icon={playSkipForwardOutline} />
+                </button>
+              </div>
+
+              {/* Status */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "#34d399", fontWeight: 700 }}>
+                <IonIcon icon={radioOutline} />
+                <span>Presenter controls active</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 2: CHAPTERS TIMELINE (Matching media_1793030982347)  */}
+        {/* ======================================================== */}
+        {activeTab === "chapters" && (
+          <div
+            style={{
+              padding: "16px 20px",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* Header info */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "12px",
+                paddingBottom: "8px",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+              }}
+            >
+              <span style={{ fontSize: "14px", fontWeight: 800, color: "#f8fafc" }}>
+                Match chapters
+              </span>
+              <span style={{ fontSize: "11px", color: "#94a3b8" }}>
+                {CHAPTER_MARKERS.length} moments
+              </span>
+            </div>
+
+            {/* Chronological List of Chapters */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {CHAPTER_MARKERS.map((ch, idx) => {
+                const isCurrent = Math.abs(matchClock - ch.timeSec) < 180;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => handleSeekChapter(ch.timeSec)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 14px",
+                      borderRadius: "8px",
+                      backgroundColor: isCurrent ? "rgba(124, 58, 237, 0.15)" : "transparent",
+                      borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+                      cursor: "pointer",
+                      transition: "background 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", minWidth: 0 }}>
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          fontWeight: 800,
+                          color: isCurrent ? "#c084fc" : "#94a3b8",
+                          fontVariantNumeric: "tabular-nums",
+                          minWidth: "45px",
+                          marginTop: "2px",
+                        }}
+                      >
+                        {ch.timeLabel}
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#f8fafc" }}>
+                            {ch.title}
+                          </span>
+                          {ch.metric && (
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                color: "#00e5ff",
+                                background: "rgba(0, 229, 255, 0.1)",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {ch.metric}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: "11.5px", color: "#94a3b8", marginTop: "2px", lineHeight: 1.4 }}>
+                          {ch.summary}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      title="Seek to chapter"
+                      style={{
+                        background: "rgba(255, 255, 255, 0.06)",
+                        border: "none",
+                        borderRadius: "50%",
+                        width: "28px",
+                        height: "28px",
+                        color: isCurrent ? "#c084fc" : "#cbd5e1",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginLeft: "12px",
+                      }}
+                    >
+                      <IonIcon icon={playOutline} style={{ fontSize: "13px" }} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 3: PUBLICATION PREVIEW (Matching media_1793031046962)*/}
+        {/* ======================================================== */}
+        {activeTab === "article" && (
+          <div
+            style={{
+              padding: "16px 20px",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {!showMarkdownSource ? (
+              /* Rendered Report Preview (Default) */
+              <div>
+                {/* Header Summary */}
+                <div style={{ marginBottom: "16px" }}>
+                  <div style={{ fontSize: "10.5px", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
+                    FIRST-HALF SUMMARY
+                  </div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "#f8fafc", marginTop: "4px", marginBottom: "8px" }}>
+                    A tactical battle ends level at the break
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#cbd5e1", lineHeight: 1.6 }}>
+                    Manchester City dominated territorial possession, while Arsenal exploited quick transitions to equalize before half-time.
+                  </div>
+                </div>
+
+                {/* Key Moments */}
+                <div style={{ marginBottom: "16px" }}>
+                  <div style={{ fontSize: "10.5px", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px", marginBottom: "10px" }}>
+                    KEY MOMENTS
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", paddingBottom: "10px", borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 800, color: "#00e5ff", minWidth: "26px" }}>42'</span>
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc" }}>
+                          Haaland opens the scoring
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "2px" }}>
+                          A sustained 14-pass build-up culminates in an emphatic finish from close range.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 800, color: "#f43f5e", minWidth: "26px" }}>45+1'</span>
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc" }}>
+                          Saka restores parity
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "2px" }}>
+                          Arsenal respond with a swift 4-touch counter-attack before the interval.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tactical Key Evaluation */}
+                <div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.03)",
+                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    fontSize: "12px",
+                    color: "#cbd5e1",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                  }}
+                >
+                  <span>Pitch Control: <strong style={{ color: "#00e5ff" }}>MCI 61%</strong> vs <strong style={{ color: "#f43f5e" }}>ARS 39%</strong></span>
+                  <span>Pass Difficulty: <strong style={{ color: "#f59e0b" }}>0.35</strong></span>
+                  <span>Press Work Rate: <strong style={{ color: "#10b981" }}>94%</strong></span>
+                </div>
+              </div>
+            ) : (
+              /* Raw Markdown Source View (On-Demand) */
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "11px", color: "#94a3b8" }}>Markdown Source View</span>
+                  <button
+                    onClick={handleCopyMarkdown}
+                    style={{
+                      background: "#7c3aed",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "4px 10px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <IonIcon icon={copyOutline} />
+                    Copy Markdown
+                  </button>
+                </div>
+                <div
+                  style={{
+                    backgroundColor: "#020617",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    borderRadius: "8px",
+                    padding: "14px",
+                    color: "#94a3b8",
+                    fontFamily: "monospace",
+                    fontSize: "12px",
+                    lineHeight: 1.6,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {`# Manchester City 1 - 1 Arsenal: Half-Time Tactical Report\n**Etihad Stadium | Premier League | Gamoventure Studio Intelligence**\n\n### First-Half Summary\nA tactical battle ends level at the break. Manchester City held 61% pitch control while Arsenal maintained a resilient low block and countered effectively.\n\n### Key Moments\n- **42' - E. Haaland (Man City)**: 14-pass sequence culminating in 108.4 km/h strike (0.78 xG).\n- **45+1' - B. Saka (Arsenal)**: 4-touch counter-transition sprint clocked at 33.8 km/h.\n\n### Tactical Metrics\n- Pitch Control: Man City 61% • Arsenal 39%\n- Pass Difficulty Rating (PDR): 0.35\n- High Press Intensity: 94% work rate`}
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Footer Switcher */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: "16px",
+                paddingTop: "12px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              <span style={{ fontSize: "11px", color: "#64748b" }}>
+                {showMarkdownSource ? "Viewing raw Markdown" : "Formatted for publication"}
+              </span>
+
+              <button
+                onClick={() => setShowMarkdownSource(!showMarkdownSource)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#c084fc",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: 0,
+                }}
+              >
+                <span>{showMarkdownSource ? "← Back to Report Preview" : "View Markdown source"}</span>
+                <IonIcon icon={arrowForwardOutline} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

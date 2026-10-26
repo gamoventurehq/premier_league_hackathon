@@ -33,11 +33,11 @@ import {
   videocamOutline,
   timeOutline,
   layersOutline,
+  locateOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
 import { PitchRadarCanvas, CameraAngle } from "../components/PitchRadarCanvas";
-import { StudioChipScroller } from "../components/StudioChipScroller";
-import { JudgeQuickTourPill } from "../components/JudgeQuickTourPill";
+import { StudioTopBar } from "../components/StudioTopBar";
 
 const LivePitchPage: React.FC = () => {
   const [cameraAngle, setCameraAngle] = useState<CameraAngle>("overhead");
@@ -88,7 +88,7 @@ const LivePitchPage: React.FC = () => {
   // Resolve currently spotlighted player from Single Core Memory with robust fallbacks
   const allLineupPlayers = [...homeLineup, ...awayLineup];
   const defaultPlayer = {
-    id: "home_7",
+    id: "home_8",
     number: 17,
     name: "K. De Bruyne",
     pos: "CM",
@@ -102,7 +102,7 @@ const LivePitchPage: React.FC = () => {
   };
   const profile =
     allLineupPlayers.find((p) => p.id === selectedPlayerId) ||
-    homeLineup[6] ||
+    homeLineup.find((p) => p.id === "home_8") ||
     homeLineup[0] ||
     defaultPlayer;
   const isHome = profile.team === "home";
@@ -121,30 +121,31 @@ const LivePitchPage: React.FC = () => {
 
   // Key quick-pick player presets
   const homePresets = [
-    { id: "home_10", label: "Haaland #9" },
-    { id: "home_7", label: "De Bruyne #17" },
+    { id: "home_11", label: "Haaland #9" },
+    { id: "home_8", label: "De Bruyne #17" },
+    { id: "home_7", label: "Bernardo #20" },
     { id: "home_9", label: "Foden #47" },
   ];
 
   const awayPresets = [
-    { id: "away_8", label: "Saka #7" },
+    { id: "away_9", label: "Saka #7" },
+    { id: "away_8", label: "Ødegaard #8" },
     { id: "away_11", label: "Havertz #29" },
-    { id: "away_9", label: "Ødegaard #8" },
   ];
+
+  const cameraOptions = [
+    { id: "overhead", label: "Full 105m", desc: "Overhead" },
+    { id: "pressing", label: "Midfield", desc: "Pressing" },
+    { id: "attacking", label: "Penalty Box", desc: "Attacking" },
+  ] as const;
 
   return (
     <IonPage>
-      <IonHeader mode="ios">
-        <IonToolbar mode="ios">
-          <IonTitle>Live Pitch Radar</IonTitle>
-          <IonButtons slot="end">
-            <JudgeQuickTourPill compact={true} style={{ marginRight: "8px" }} />
-            <IonBadge color={serverStatus.isConnected ? "success" : "warning"}>
-              {serverStatus.isConnected ? "10Hz / 5Hz" : "Synthetic"}
-            </IonBadge>
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
+      {/* Unified Responsive Studio Top Bar */}
+      <StudioTopBar
+        title="Live Pitch"
+        subtitle="10Hz Spatial Kinematics"
+      />
 
       <IonContent fullscreen className="ion-padding">
         {/* iOS Broadcast Scoreboard Header */}
@@ -184,7 +185,7 @@ const LivePitchPage: React.FC = () => {
                 style={{ animation: "pulse 1.5s infinite", fontSize: "13px" }}
               />
               <span style={{ fontSize: "11px", fontWeight: 700, color: "#f43f5e", letterSpacing: "0.5px" }}>
-                LIVE 10Hz / 5Hz
+                LIVE MATCH SIMULATION
               </span>
             </div>
             <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
@@ -275,11 +276,12 @@ const LivePitchPage: React.FC = () => {
             alignItems: "start",
           }}
         >
-          {/* Left Column: 60FPS Pitch Radar Canvas & Controls */}
+          {/* Left Column: 60FPS Pitch Radar Canvas & Clean Segmented Controls */}
           <div
             className={mobileTab !== "all" && mobileTab !== "pitch" ? "ion-hide-md-down" : ""}
             style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0 }}
           >
+            {/* Radar Canvas with live interactive touch & player clicks */}
             <PitchRadarCanvas
               showVelocityVectors={showVectors}
               showPassingLanes={showLanes}
@@ -288,134 +290,159 @@ const LivePitchPage: React.FC = () => {
               viewEpoch={viewEpoch}
             />
 
-            {/* Viewport & Layer Visibility Controls */}
+            {/* Clean Floating Control Deck (Zero Sliders - Instant Segmented Switchers) */}
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: "8px",
+                gap: "10px",
                 background: "#0f172a",
-                padding: "10px 14px",
-                borderRadius: "10px",
+                padding: "12px 14px",
+                borderRadius: "12px",
                 border: "1px solid rgba(255, 255, 255, 0.08)",
+                boxShadow: "0 4px 14px rgba(0, 0, 0, 0.35)",
               }}
             >
-              {/* Camera Angle Selector */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+              {/* Row 1: Camera Angle Segmented Control */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <IonIcon icon={videocamOutline} style={{ color: "#38bdf8", fontSize: "14px" }} />
-                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    Camera Angle
+                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Camera Perspective
                   </span>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <StudioChipScroller marginTopTrack={6} gap="6px">
-                    {(
-                      [
-                        { id: "overhead", label: "Overhead (105m)" },
-                        { id: "pressing", label: "Pressing Zone" },
-                        { id: "attacking", label: "Attacking Box" },
-                      ] as const
-                    ).map((cam) => {
-                      const isActive = cameraAngle === cam.id;
-                      return (
-                        <button
-                          key={cam.id}
-                          onClick={() => setCameraAngle(cam.id)}
-                          style={{
-                            background: isActive ? "#0284c7" : "rgba(255, 255, 255, 0.05)",
-                            color: isActive ? "#ffffff" : "#94a3b8",
-                            border: isActive ? "1px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
-                            borderRadius: "6px",
-                            padding: "4px 10px",
-                            fontSize: "11px",
-                            fontWeight: isActive ? 700 : 500,
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                            flexShrink: 0,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {cam.label}
-                        </button>
-                      );
-                    })}
-                  </StudioChipScroller>
+
+                {/* Cupertino-style Segmented Segment */}
+                <div
+                  style={{
+                    display: "inline-flex",
+                    background: "rgba(2, 6, 23, 0.8)",
+                    padding: "3px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    gap: "3px",
+                  }}
+                >
+                  {cameraOptions.map((cam) => {
+                    const isActive = cameraAngle === cam.id;
+                    return (
+                      <button
+                        key={cam.id}
+                        onClick={() => setCameraAngle(cam.id)}
+                        style={{
+                          background: isActive
+                            ? "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)"
+                            : "transparent",
+                          color: isActive ? "#ffffff" : "#94a3b8",
+                          border: isActive ? "1px solid rgba(56, 189, 248, 0.4)" : "1px solid transparent",
+                          borderRadius: "6px",
+                          padding: "5px 12px",
+                          fontSize: "11px",
+                          fontWeight: isActive ? 800 : 600,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          boxShadow: isActive ? "0 2px 8px rgba(2, 132, 199, 0.35)" : "none",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {cam.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Layer Visibility Toggles with Permanent Non-Vanishing Scroll Line */}
-              <div style={{ borderTop: "1px solid rgba(255, 255, 255, 0.05)", paddingTop: "6px" }}>
-                <StudioChipScroller marginTopTrack={6} gap="8px">
+              {/* Row 2: Tactical Layer Toggles (Crisp Pill Chips) */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+                  paddingTop: "9px",
+                }}
+              >
+                <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                  Active Tactical Layers:
+                </span>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                  {/* Pitch Control Toggle */}
                   <button
                     onClick={() => setShowPitchControl(!showPitchControl)}
                     style={{
-                      display: "flex",
+                      display: "inline-flex",
                       alignItems: "center",
                       gap: "5px",
-                      padding: "6px 10px",
-                      borderRadius: "8px",
-                      border: showPitchControl ? "1.5px solid #10b981" : "1px solid rgba(255, 255, 255, 0.12)",
-                      backgroundColor: showPitchControl ? "rgba(16, 185, 129, 0.22)" : "rgba(255, 255, 255, 0.04)",
+                      padding: "5px 10px",
+                      borderRadius: "7px",
+                      border: showPitchControl ? "1px solid rgba(16, 185, 129, 0.6)" : "1px solid rgba(255, 255, 255, 0.1)",
+                      backgroundColor: showPitchControl ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.03)",
                       color: showPitchControl ? "#34d399" : "#94a3b8",
                       fontSize: "11px",
-                      fontWeight: 700,
+                      fontWeight: showPitchControl ? 800 : 500,
                       cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
                       transition: "all 0.15s ease",
                     }}
                   >
-                    <IonIcon icon={mapOutline} style={{ fontSize: "13px" }} />
-                    <span>Pitch Control Zones</span>
+                    <IonIcon icon={mapOutline} style={{ fontSize: "12px" }} />
+                    <span>Pitch Zones</span>
                   </button>
 
+                  {/* Velocity Vectors Toggle */}
                   <button
                     onClick={() => setShowVectors(!showVectors)}
                     style={{
-                      display: "flex",
+                      display: "inline-flex",
                       alignItems: "center",
                       gap: "5px",
-                      padding: "6px 10px",
-                      borderRadius: "8px",
-                      border: showVectors ? "1.5px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.12)",
-                      backgroundColor: showVectors ? "rgba(56, 189, 248, 0.22)" : "rgba(255, 255, 255, 0.04)",
+                      padding: "5px 10px",
+                      borderRadius: "7px",
+                      border: showVectors ? "1px solid rgba(56, 189, 248, 0.6)" : "1px solid rgba(255, 255, 255, 0.1)",
+                      backgroundColor: showVectors ? "rgba(56, 189, 248, 0.2)" : "rgba(255, 255, 255, 0.03)",
                       color: showVectors ? "#38bdf8" : "#94a3b8",
                       fontSize: "11px",
-                      fontWeight: 700,
+                      fontWeight: showVectors ? 800 : 500,
                       cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
                       transition: "all 0.15s ease",
                     }}
                   >
-                    <IonIcon icon={eyeOutline} style={{ fontSize: "13px" }} />
-                    <span>Velocity Vectors</span>
+                    <IonIcon icon={eyeOutline} style={{ fontSize: "12px" }} />
+                    <span>Vectors</span>
                   </button>
 
+                  {/* Passing Lanes Toggle */}
                   <button
                     onClick={() => setShowLanes(!showLanes)}
                     style={{
-                      display: "flex",
+                      display: "inline-flex",
                       alignItems: "center",
                       gap: "5px",
-                      padding: "6px 10px",
-                      borderRadius: "8px",
-                      border: showLanes ? "1.5px solid var(--ion-color-primary)" : "1px solid rgba(255, 255, 255, 0.12)",
-                      backgroundColor: showLanes ? "rgba(124, 58, 237, 0.25)" : "rgba(255, 255, 255, 0.04)",
+                      padding: "5px 10px",
+                      borderRadius: "7px",
+                      border: showLanes ? "1px solid rgba(168, 85, 247, 0.6)" : "1px solid rgba(255, 255, 255, 0.1)",
+                      backgroundColor: showLanes ? "rgba(168, 85, 247, 0.2)" : "rgba(255, 255, 255, 0.03)",
                       color: showLanes ? "#c084fc" : "#94a3b8",
                       fontSize: "11px",
-                      fontWeight: 700,
+                      fontWeight: showLanes ? 800 : 500,
                       cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
                       transition: "all 0.15s ease",
                     }}
                   >
-                    <IonIcon icon={gitNetworkOutline} style={{ fontSize: "13px" }} />
+                    <IonIcon icon={gitNetworkOutline} style={{ fontSize: "12px" }} />
                     <span>Passing Lanes</span>
                   </button>
-                </StudioChipScroller>
+                </div>
               </div>
             </div>
           </div>
@@ -425,80 +452,88 @@ const LivePitchPage: React.FC = () => {
             className={mobileTab !== "all" && mobileTab !== "player" ? "ion-hide-md-down" : ""}
             style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box" }}
           >
-            {/* Quick Player Spotlight Switcher */}
+            {/* Quick Player Spotlight Selector (Clean, 2-group buttons without endless sliders) */}
             <div
               style={{
                 background: "#0f172a",
-                padding: "10px 12px",
+                padding: "12px 14px",
                 borderRadius: "12px",
                 border: "1px solid rgba(255, 255, 255, 0.08)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "8px",
                 width: "100%",
-                maxWidth: "100%",
                 boxSizing: "border-box",
-                overflow: "hidden",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase" }}>
+                <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                   Spotlight Key Players
                 </span>
-                <span style={{ fontSize: "10px", color: "#64748b" }}>Swipe ⇄</span>
+                <span style={{ fontSize: "10px", color: "#64748b" }}>Click or tap dot on pitch</span>
               </div>
-              <StudioChipScroller gap="6px" marginTopTrack={6}>
-                {homePresets.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => baseMemory.setSelectedPlayer(p.id)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      padding: "5px 9px",
-                      borderRadius: "6px",
-                      border: selectedPlayerId === p.id ? "1.5px solid #00e5ff" : "1px solid rgba(255,255,255,0.1)",
-                      backgroundColor: selectedPlayerId === p.id ? "rgba(0, 229, 255, 0.2)" : "#1e293b",
-                      color: selectedPlayerId === p.id ? "#00e5ff" : "#cbd5e1",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                      flexShrink: 0,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#00e5ff", flexShrink: 0 }} />
-                    {p.label}
-                  </button>
-                ))}
-                {awayPresets.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => baseMemory.setSelectedPlayer(p.id)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      padding: "5px 9px",
-                      borderRadius: "6px",
-                      border: selectedPlayerId === p.id ? "1.5px solid #f43f5e" : "1px solid rgba(255,255,255,0.1)",
-                      backgroundColor: selectedPlayerId === p.id ? "rgba(244, 63, 94, 0.2)" : "#1e293b",
-                      color: selectedPlayerId === p.id ? "#f43f5e" : "#cbd5e1",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                      flexShrink: 0,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#f43f5e", flexShrink: 0 }} />
-                    {p.label}
-                  </button>
-                ))}
-              </StudioChipScroller>
+
+              {/* Home Team Key Picks */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "10px", fontWeight: 800, color: "#00e5ff", width: "32px" }}>MCI:</span>
+                {homePresets.map((p) => {
+                  const isSelected = selectedPlayerId === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => baseMemory.setSelectedPlayer(p.id)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 10px",
+                        borderRadius: "6px",
+                        border: isSelected ? "1.5px solid #00e5ff" : "1px solid rgba(255,255,255,0.08)",
+                        backgroundColor: isSelected ? "rgba(0, 229, 255, 0.2)" : "#1e293b",
+                        color: isSelected ? "#00e5ff" : "#cbd5e1",
+                        fontSize: "11px",
+                        fontWeight: isSelected ? 800 : 600,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#00e5ff", flexShrink: 0 }} />
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Away Team Key Picks */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "10px", fontWeight: 800, color: "#f43f5e", width: "32px" }}>ARS:</span>
+                {awayPresets.map((p) => {
+                  const isSelected = selectedPlayerId === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => baseMemory.setSelectedPlayer(p.id)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 10px",
+                        borderRadius: "6px",
+                        border: isSelected ? "1.5px solid #f43f5e" : "1px solid rgba(255,255,255,0.08)",
+                        backgroundColor: isSelected ? "rgba(244, 63, 94, 0.2)" : "#1e293b",
+                        color: isSelected ? "#f43f5e" : "#cbd5e1",
+                        fontSize: "11px",
+                        fontWeight: isSelected ? 800 : 600,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#f43f5e", flexShrink: 0 }} />
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Selected Player Spatial Telemetry Inspector */}
@@ -612,13 +647,13 @@ const LivePitchPage: React.FC = () => {
               </IonCardContent>
             </IonCard>
 
-            {/* Tactical Dominance & Rhythm Card */}
+            {/* Tactical Control & Territorial Dominance Card */}
             <IonCard mode="ios" style={{ margin: "0", background: "#0f172a" }}>
               <IonCardHeader style={{ paddingBottom: "8px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
                   <IonCardSubtitle style={{ color: "#38bdf8", fontWeight: 800, margin: 0 }}>
                     <IonIcon icon={pulseOutline} style={{ marginRight: "4px" }} />
-                    Tactical Dominance
+                    Tactical Control & Territorial Dominance
                   </IonCardSubtitle>
                   {activeInflection && (
                     <IonBadge color="danger" style={{ fontWeight: 800, flexShrink: 0 }}>
@@ -626,15 +661,18 @@ const LivePitchPage: React.FC = () => {
                     </IonBadge>
                   )}
                 </div>
-                <IonCardTitle style={{ fontSize: "16px", color: "#f8fafc", marginTop: "2px", textTransform: "capitalize" }}>
-                  {rhythm.replace(/_/g, " ")}
+                <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>
+                  Rolling 5-min spatial pitch control (Voronoi & kinematic projection)
+                </div>
+                <IonCardTitle style={{ fontSize: "15px", color: "#f8fafc", marginTop: "4px", textTransform: "capitalize" }}>
+                  Phase: {rhythm.replace(/_/g, " ")}
                 </IonCardTitle>
               </IonCardHeader>
               <IonCardContent>
                 {/* Pitch Control Dual Axis Bar */}
                 <div style={{ marginBottom: "10px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: 800, marginBottom: "4px" }}>
-                    <span style={{ color: "#00e5ff" }}>City: {Math.round(controlIndex)}%</span>
+                    <span style={{ color: "#00e5ff" }}>Man City: {Math.round(controlIndex)}%</span>
                     <span style={{ color: "#f43f5e" }}>Arsenal: {Math.round(chaosIndex)}%</span>
                   </div>
                   <div
@@ -651,14 +689,12 @@ const LivePitchPage: React.FC = () => {
                       style={{
                         width: `${controlIndex}%`,
                         background: "linear-gradient(90deg, #00e5ff, #3b82f6)",
-                        transition: "width 0.3s ease",
                       }}
                     />
                     <div
                       style={{
                         width: `${chaosIndex}%`,
                         background: "linear-gradient(90deg, #f59e0b, #f43f5e)",
-                        transition: "width 0.3s ease",
                       }}
                     />
                   </div>
@@ -674,7 +710,7 @@ const LivePitchPage: React.FC = () => {
                     lineHeight: "1.4",
                   }}
                 >
-                  <strong style={{ color: "#00e5ff" }}>Core Memory Linked:</strong> Clicking any player on the canvas or selecting pills updates Spotlight across the entire studio in real time.
+                  <strong style={{ color: "#00e5ff" }}>Territory Breakdown:</strong> Measures the active share of pitch space controlled by kinematic sprint cones. Values over 55% indicate sustained territorial pinning.
                 </div>
               </IonCardContent>
             </IonCard>

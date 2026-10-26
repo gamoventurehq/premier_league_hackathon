@@ -87,12 +87,78 @@ body.ios {
 /* Dashboard 3-Column Grid */
 .studio-dashboard-grid {
   display: grid;
-  grid-template-columns: 320px 1fr 340px;
+  grid-template-columns: 350px minmax(500px, 1.25fr) 380px;
   gap: 16px;
   min-height: calc(100vh - 60px);
   width: 100%;
   max-width: 1600px;
   box-sizing: border-box;
+}
+
+/* Studio Button and Badge Affordance Hierarchy */
+.studio-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #38003c;
+  color: #00ff85;
+  border: 1px solid rgba(0, 255, 133, 0.4);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.studio-btn-primary:hover {
+  background: #4c0052;
+  border-color: #00ff85;
+  transform: translateY(-1px);
+}
+
+.studio-btn-primary:active {
+  transform: translateY(0);
+}
+
+.studio-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.studio-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.studio-badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  color: #94a3b8;
+  cursor: default;
+  user-select: none;
 }
 
 .studio-maps-grid {
@@ -333,6 +399,158 @@ ion-tabs.studio-tabs-root {
 
 .studio-header-bar {
   transition: all 0.2s ease;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto 16px auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background-color: var(--studio-panel-bg);
+  border: 1px solid var(--studio-panel-border);
+  border-radius: 14px;
+  box-sizing: border-box;
+}
+
+/* Studio Mobile Unified Top Toolbar (< 768px) */
+.studio-mobile-header-root {
+  background: rgba(8, 13, 22, 0.96) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+.studio-mobile-toolbar {
+  --background: transparent !important;
+  --min-height: 48px !important;
+  --padding-top: 0px !important;
+  --padding-bottom: 0px !important;
+  --padding-start: 10px !important;
+  --padding-end: 10px !important;
+}
+
+.studio-mobile-toolbar-inner {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  gap: 8px !important;
+  padding: 4px 0 !important;
+  box-sizing: border-box !important;
+}
+
+.studio-mobile-nav-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.studio-brand-badge {
+  background-color: #7c3aed !important;
+  color: #ffffff !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-size: 8.5px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  flex-shrink: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.studio-mobile-nav-title {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  letter-spacing: -0.01em !important;
+  min-width: 0 !important;
+}
+
+.studio-mobile-nav-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+.studio-mobile-recap-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  background-color: rgba(124, 58, 237, 0.18) !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
+  color: #c084fc !important;
+  padding: 3px 8px !important;
+  border-radius: 9999px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+.studio-mobile-status-dot {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 3px 8px !important;
+  border-radius: 9999px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.studio-mobile-status-dot.live {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #10b981 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.studio-mobile-status-dot.sync {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #f59e0b !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.studio-status-pulse {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background-color: currentColor !important;
+  box-shadow: 0 0 6px currentColor !important;
+  animation: pulse 1.5s infinite !important;
+}
+
+/* Responsive collapsing for Judge Tour Pill and buttons */
+@media (max-width: 520px) {
+  .judge-pill-text {
+    font-size: 10px !important;
+  }
+  .judge-quick-tour-pill {
+    padding: 3px 8px !important;
+    gap: 4px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .studio-brand-badge {
+    display: none !important; /* Hide tiny brand badge on ultra-narrow phones so title remains prominent */
+  }
+  .studio-mobile-nav-title {
+    font-size: 12px !important;
+  }
+  .studio-status-label {
+    display: none !important; /* Keep only pulsing dot indicator on screens under 380px */
+  }
+  .studio-mobile-status-dot {
+    padding: 4px 6px !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -597,7 +815,25 @@ ion-badge {
   .studio-panel-box {
     padding: 10px !important;
   }
+}/* Judge Quick Tour Modal Polish & Layout Hygiene */
+.judge-modal-card {
+  box-sizing: border-box !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
 }
 
+.judge-modal-card h3,
+.judge-modal-card h4,
+.judge-modal-card p,
+.judge-modal-card span {
+  box-sizing: border-box !important;
+}
 
-
+@media (max-width: 640px) {
+  .judge-modal-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .judge-modal-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+}

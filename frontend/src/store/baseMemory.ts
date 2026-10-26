@@ -54,11 +54,11 @@ const initialHomeLineup: PlayerProfile[] = [
   { id: "home_4", number: 25, name: "M. Akanji", pos: "CB", rating: 7.0, x: 19, y: 62, team: "home", attributes: { shoot: 42, passing: 80, dribbling: 68, defending: 84, shotAccuracyPct: 52, avgRating: 7.0 } },
   { id: "home_5", number: 24, name: "J. Gvardiol", pos: "LB", rating: 7.2, x: 22, y: 84, team: "home", attributes: { shoot: 62, passing: 84, dribbling: 79, defending: 81, shotAccuracyPct: 65, avgRating: 7.2 } },
   { id: "home_6", number: 16, name: "Rodri", pos: "DM", rating: 8.3, x: 32, y: 50, team: "home", attributes: { shoot: 78, passing: 93, dribbling: 82, defending: 88, shotAccuracyPct: 75, avgRating: 8.3 } },
-  { id: "home_7", number: 17, name: "K. De Bruyne", pos: "CM", rating: 8.8, x: 38, y: 30, team: "home", attributes: { shoot: 86, passing: 96, dribbling: 87, defending: 64, shotAccuracyPct: 82, avgRating: 8.8 } },
-  { id: "home_8", number: 20, name: "B. Silva", pos: "CM", rating: 7.9, x: 38, y: 70, team: "home", attributes: { shoot: 74, passing: 89, dribbling: 91, defending: 72, shotAccuracyPct: 70, avgRating: 7.9 } },
+  { id: "home_7", number: 20, name: "B. Silva", pos: "CM", rating: 7.9, x: 38, y: 70, team: "home", attributes: { shoot: 74, passing: 89, dribbling: 91, defending: 72, shotAccuracyPct: 70, avgRating: 7.9 } },
+  { id: "home_8", number: 17, name: "K. De Bruyne", pos: "CM", rating: 8.8, x: 38, y: 30, team: "home", attributes: { shoot: 86, passing: 96, dribbling: 87, defending: 64, shotAccuracyPct: 82, avgRating: 8.8 } },
   { id: "home_9", number: 47, name: "P. Foden", pos: "RW", rating: 8.2, x: 45, y: 18, team: "home", attributes: { shoot: 84, passing: 86, dribbling: 89, defending: 58, shotAccuracyPct: 80, avgRating: 8.2 } },
-  { id: "home_10", number: 9, name: "E. Haaland", pos: "ST", rating: 8.5, x: 44, y: 50, team: "home", attributes: { shoot: 94, passing: 68, dribbling: 80, defending: 45, shotAccuracyPct: 88, avgRating: 8.5 } },
-  { id: "home_11", number: 10, name: "J. Grealish", pos: "LW", rating: 7.5, x: 45, y: 82, team: "home", attributes: { shoot: 72, passing: 83, dribbling: 88, defending: 52, shotAccuracyPct: 68, avgRating: 7.5 } },
+  { id: "home_10", number: 10, name: "J. Grealish", pos: "LW", rating: 7.5, x: 45, y: 82, team: "home", attributes: { shoot: 72, passing: 83, dribbling: 88, defending: 52, shotAccuracyPct: 68, avgRating: 7.5 } },
+  { id: "home_11", number: 9, name: "E. Haaland", pos: "ST", rating: 8.5, x: 44, y: 50, team: "home", attributes: { shoot: 94, passing: 68, dribbling: 80, defending: 45, shotAccuracyPct: 88, avgRating: 8.5 } },
 ];
 
 const initialAwayLineup: PlayerProfile[] = [
@@ -69,8 +69,8 @@ const initialAwayLineup: PlayerProfile[] = [
   { id: "away_5", number: 12, name: "J. Timber", pos: "LB", rating: 6.9, x: 78, y: 16, team: "away", attributes: { shoot: 54, passing: 81, dribbling: 78, defending: 80, shotAccuracyPct: 58, avgRating: 6.9 } },
   { id: "away_6", number: 5, name: "T. Partey", pos: "DM", rating: 7.0, x: 68, y: 65, team: "away", attributes: { shoot: 68, passing: 84, dribbling: 79, defending: 83, shotAccuracyPct: 62, avgRating: 7.0 } },
   { id: "away_7", number: 41, name: "D. Rice", pos: "DM", rating: 7.6, x: 68, y: 35, team: "away", attributes: { shoot: 72, passing: 86, dribbling: 80, defending: 87, shotAccuracyPct: 70, avgRating: 7.6 } },
-  { id: "away_8", number: 7, name: "B. Saka", pos: "RW", rating: 8.0, x: 56, y: 82, team: "away", attributes: { shoot: 85, passing: 85, dribbling: 89, defending: 62, shotAccuracyPct: 81, avgRating: 8.0 } },
-  { id: "away_9", number: 8, name: "M. Ødegaard", pos: "AM", rating: 7.7, x: 62, y: 50, team: "away", attributes: { shoot: 80, passing: 91, dribbling: 86, defending: 64, shotAccuracyPct: 77, avgRating: 7.7 } },
+  { id: "away_8", number: 8, name: "M. Ødegaard", pos: "AM", rating: 7.7, x: 62, y: 50, team: "away", attributes: { shoot: 80, passing: 91, dribbling: 86, defending: 64, shotAccuracyPct: 77, avgRating: 7.7 } },
+  { id: "away_9", number: 7, name: "B. Saka", pos: "RW", rating: 8.0, x: 56, y: 82, team: "away", attributes: { shoot: 85, passing: 85, dribbling: 89, defending: 62, shotAccuracyPct: 81, avgRating: 8.0 } },
   { id: "away_10", number: 11, name: "G. Martinelli", pos: "LW", rating: 7.2, x: 56, y: 18, team: "away", attributes: { shoot: 78, passing: 76, dribbling: 87, defending: 55, shotAccuracyPct: 72, avgRating: 7.2 } },
   { id: "away_11", number: 29, name: "K. Havertz", pos: "ST", rating: 7.1, x: 54, y: 50, team: "away", attributes: { shoot: 79, passing: 79, dribbling: 78, defending: 60, shotAccuracyPct: 71, avgRating: 7.1 } },
 ];
@@ -236,10 +236,10 @@ const initialShotMapEvents: ShotMapItem[] = [];
 const initialTacticalInflections: TacticalInflectionItem[] = [];
 
 const initialSwarmCommentary: SwarmCommentaryItem[] = [
-  { time: "88'", timeSec: 5280, agent: "Tactical Agent", role: "Shape Analyst", text: "Arsenal shifted into a narrow 4-4-2 block to restrict central progression, forcing City wide." },
-  { time: "84'", timeSec: 5040, agent: "Narrative Agent", role: "Story Synthesizer", text: "Saka's clinical counter-attack punctures City's momentum and restores emotional equilibrium." },
-  { time: "69'", timeSec: 4140, agent: "Telemetry Agent", role: "Spatial Tracking", text: "Centroid compression detected: City squeezed Arsenal's defensive line within 18 meters." },
-  { time: "42'", timeSec: 2520, agent: "Personalization Agent", role: "Casual Focus", text: "Haaland's lethal instinct on display! 10th Premier League goal of the campaign in emphatic fashion." },
+  { time: "22'", timeSec: 1320, agent: "Tactical Agent", role: "Shape Analyst", text: "City overloading right half-space; De Bruyne slips Haaland through central defensive seam." },
+  { time: "17'", timeSec: 1020, agent: "Tactical Agent", role: "Shape Analyst", text: "Arsenal compact 4-4-2 block maintaining 26.4m width, successfully forcing City circulation wide." },
+  { time: "11'", timeSec: 660, agent: "Telemetry Agent", role: "Spatial Tracking", text: "High press turnover registered by Rodri (x=66.2m), denying Arsenal transition outlet." },
+  { time: "4'", timeSec: 240, agent: "Narrative Agent", role: "Story Synthesizer", text: "Opening phase characterized by sustained City possession, establishing 64% pitch control." },
 ];
 
 const initialBlackboard: TacticalBlackboard = {
@@ -357,7 +357,7 @@ const initialState: BaseMemoryState = {
   blackboard: initialBlackboard,
   selectedPersona: "analyst",
   selectedLanguage: "en",
-  selectedPlayerId: "home_7",
+  selectedPlayerId: "home_8",
   activeScenario: null,
   isJudgeTourOpen: false,
   serverStatus: {
@@ -1015,7 +1015,7 @@ class BaseMemoryStore {
   getSelectedPlayerProfile = (): PlayerProfile => {
     const all = [...this.state.homeLineup, ...this.state.awayLineup];
     const found = all.find((p) => p.id === this.state.selectedPlayerId);
-    return found || this.state.homeLineup[6]; // Default to K. De Bruyne (home_7) if not found
+    return found || this.state.homeLineup.find((p) => p.id === "home_8") || this.state.homeLineup[0]; // Default to K. De Bruyne (home_8) if not found
   };
 }
 

@@ -31,6 +31,7 @@ export const MediaTimelinePanel: React.FC = () => {
   const [selectedEventId, setSelectedEventId] = useState<string>("e3");
   const [isOverlayVisible, setIsOverlayVisible] = useState(true);
   const [overlayMode, setOverlayMode] = useState<BroadcastOverlayMode>("auto");
+  const [showPipFeeds, setShowPipFeeds] = useState(false);
   const [isRecapModalOpen, setIsRecapModalOpen] = useState(false);
   const timelineTrackRef = useRef<HTMLDivElement | null>(null);
 
@@ -283,138 +284,6 @@ export const MediaTimelinePanel: React.FC = () => {
             );
           })()}
 
-          {/* Corner PIP 1: Tactical Radar (22 Live Tracking Dots + Ball) */}
-          <div
-            style={{
-              position: "absolute",
-              top: "38px",
-              left: "8px",
-              width: "75px",
-              height: "46px",
-              backgroundColor: "rgba(5, 46, 22, 0.9)",
-              borderRadius: "6px",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              overflow: "hidden",
-              zIndex: 7,
-            }}
-            title="Mini Radar Feed"
-          >
-            <div style={{ position: "relative", width: "100%", height: "100%" }}>
-              {homeLineup.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    position: "absolute",
-                    left: `${p.x}%`,
-                    top: `${p.y}%`,
-                    transform: "translate(-50%, -50%)",
-                    width: "3px",
-                    height: "3px",
-                    borderRadius: "50%",
-                    backgroundColor: score.homeMeta.color,
-                    transition: "left 0.2s linear, top 0.2s linear",
-                  }}
-                />
-              ))}
-              {awayLineup.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    position: "absolute",
-                    left: `${p.x}%`,
-                    top: `${p.y}%`,
-                    transform: "translate(-50%, -50%)",
-                    width: "3px",
-                    height: "3px",
-                    borderRadius: "50%",
-                    backgroundColor: score.awayMeta.color,
-                    transition: "left 0.2s linear, top 0.2s linear",
-                  }}
-                />
-              ))}
-              {currentFrame?.ball && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: `${(currentFrame.ball.x / 105.0) * 100}%`,
-                    top: `${(currentFrame.ball.y / 68.0) * 100}%`,
-                    transform: "translate(-50%, -50%)",
-                    width: "4px",
-                    height: "4px",
-                    borderRadius: "50%",
-                    backgroundColor: "#ffd600",
-                    transition: "left 0.2s linear, top 0.2s linear",
-                  }}
-                />
-              )}
-              <span
-                style={{
-                  position: "absolute",
-                  bottom: "2px",
-                  left: "3px",
-                  fontSize: "7px",
-                  fontWeight: 900,
-                  color: "rgba(255,255,255,0.7)",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                RADAR
-              </span>
-            </div>
-          </div>
-
-          {/* Corner PIP 2: Live Player Cam Tracking */}
-          {(() => {
-            const allPlayers = [...homeLineup, ...awayLineup];
-            const activePlayer = allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6];
-            const teamColor = activePlayer.team === "home" ? score.homeMeta.color : score.awayMeta.color;
-            return (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "38px",
-                  right: "8px",
-                  width: "75px",
-                  height: "46px",
-                  backgroundColor: "rgba(15, 23, 42, 0.9)",
-                  borderRadius: "6px",
-                  border: `1px solid ${teamColor}`,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  padding: "4px",
-                  zIndex: 7,
-                }}
-                title={`Tracking ${activePlayer.name}`}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "8px", fontWeight: 900, color: teamColor }}>
-                    #{activePlayer.number}
-                  </span>
-                  <span style={{ fontSize: "7px", color: "#10b981", fontWeight: 800 }}>
-                    {activePlayer.speed_kmh ? `${activePlayer.speed_kmh.toFixed(1)}k` : "14k"}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    fontSize: "7px",
-                    fontWeight: 700,
-                    color: "#ffffff",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    marginTop: "1px",
-                  }}
-                >
-                  {activePlayer.name.split(" ").pop()}
-                </div>
-                <span style={{ fontSize: "6px", color: "var(--studio-subtext)", letterSpacing: "0.5px" }}>
-                  PLAYER CAM
-                </span>
-              </div>
-            );
-          })()}
-
           {/* Synchronized Broadcast TV Lower-Third Overlay */}
           <BroadcastOverlay
             isVisible={isOverlayVisible}
@@ -435,19 +304,20 @@ export const MediaTimelinePanel: React.FC = () => {
             borderTop: "1px solid var(--studio-panel-border)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <button
               onClick={() => handleSkip(-30)}
-              style={{ background: "none", border: "none", color: "var(--studio-subtext)", cursor: "pointer", padding: "2px" }}
-              title="Skip back 30s"
+              style={{ background: "none", border: "none", color: "var(--studio-subtext)", cursor: "pointer", padding: "4px" }}
+              title="Rewind 30 seconds"
+              aria-label="Rewind 30 seconds"
             >
-              <IonIcon icon={playSkipBackOutline} style={{ fontSize: "14px" }} />
+              <IonIcon icon={playSkipBackOutline} style={{ fontSize: "15px" }} />
             </button>
             <button
               onClick={handleTogglePlay}
               style={{
-                width: "26px",
-                height: "26px",
+                width: "28px",
+                height: "28px",
                 borderRadius: "50%",
                 background: "var(--ion-color-primary)",
                 border: "none",
@@ -456,41 +326,180 @@ export const MediaTimelinePanel: React.FC = () => {
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
+                transition: "transform 0.1s ease",
               }}
+              title={isPlaying ? "Pause playback" : "Start playback"}
+              aria-label={isPlaying ? "Pause playback" : "Start playback"}
             >
-              <IonIcon icon={isPlaying ? pauseOutline : playOutline} style={{ fontSize: "14px" }} />
+              <IonIcon icon={isPlaying ? pauseOutline : playOutline} style={{ fontSize: "15px" }} />
             </button>
             <button
               onClick={() => handleSkip(30)}
-              style={{ background: "none", border: "none", color: "var(--studio-subtext)", cursor: "pointer", padding: "2px" }}
-              title="Skip forward 30s"
+              style={{ background: "none", border: "none", color: "var(--studio-subtext)", cursor: "pointer", padding: "4px" }}
+              title="Fast forward 30 seconds"
+              aria-label="Fast forward 30 seconds"
             >
-              <IonIcon icon={playSkipForwardOutline} style={{ fontSize: "14px" }} />
+              <IonIcon icon={playSkipForwardOutline} style={{ fontSize: "15px" }} />
             </button>
-            <span style={{ fontSize: "11px", fontFamily: "monospace", color: "var(--ion-text-color)", fontWeight: 700 }}>
+            <span style={{ fontSize: "11px", fontFamily: "monospace", color: "var(--ion-text-color)", fontWeight: 700, marginLeft: "4px" }}>
               {formatClock(matchClock)}
             </span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--studio-subtext)" }}>
-            <IonIcon icon={repeatOutline} style={{ fontSize: "14px", cursor: "pointer" }} />
-            <IonIcon icon={scanOutline} style={{ fontSize: "14px", cursor: "pointer" }} />
-            <IonIcon icon={settingsOutline} style={{ fontSize: "14px", cursor: "pointer" }} />
-            <IonIcon icon={expandOutline} style={{ fontSize: "14px", cursor: "pointer" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--studio-subtext)" }}>
+            <button
+              onClick={() => setShowPipFeeds(!showPipFeeds)}
+              style={{
+                background: showPipFeeds ? "rgba(0, 229, 255, 0.15)" : "none",
+                border: showPipFeeds ? "1px solid rgba(0, 229, 255, 0.4)" : "1px solid transparent",
+                borderRadius: "4px",
+                color: showPipFeeds ? "#00e5ff" : "var(--studio-subtext)",
+                padding: "2px 6px",
+                fontSize: "10px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+              title="Toggle Tactical Radar & Player Tracking PIP Feeds"
+            >
+              <IonIcon icon={scanOutline} style={{ fontSize: "13px" }} />
+              <span>PIPs</span>
+            </button>
+            <button
+              onClick={() => setIsOverlayVisible(!isOverlayVisible)}
+              style={{ background: "none", border: "none", color: "var(--studio-subtext)", cursor: "pointer", padding: "4px" }}
+              title="Toggle Broadcast Lower-Third Overlay"
+            >
+              <IonIcon icon={tvOutline} style={{ fontSize: "14px" }} />
+            </button>
           </div>
         </div>
 
-        {/* Interactive Scrub Bar with Event Markers */}
+        {/* Docked PIP Feeds Strip (When Toggled) */}
+        {showPipFeeds && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "8px",
+              padding: "8px 12px",
+              backgroundColor: "#020617",
+              borderTop: "1px solid var(--studio-panel-border)",
+            }}
+          >
+            {/* Docked Feed 1: Mini Tactical Radar */}
+            <div
+              style={{
+                height: "64px",
+                backgroundColor: "rgba(5, 46, 22, 0.9)",
+                borderRadius: "6px",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              {homeLineup.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    position: "absolute",
+                    left: `${p.x}%`,
+                    top: `${p.y}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: "4px",
+                    height: "4px",
+                    borderRadius: "50%",
+                    backgroundColor: score.homeMeta.color,
+                  }}
+                />
+              ))}
+              {awayLineup.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    position: "absolute",
+                    left: `${p.x}%`,
+                    top: `${p.y}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: "4px",
+                    height: "4px",
+                    borderRadius: "50%",
+                    backgroundColor: score.awayMeta.color,
+                  }}
+                />
+              ))}
+              {currentFrame?.ball && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: `${(currentFrame.ball.x / 105.0) * 100}%`,
+                    top: `${(currentFrame.ball.y / 68.0) * 100}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: "5px",
+                    height: "5px",
+                    borderRadius: "50%",
+                    backgroundColor: "#ffd600",
+                  }}
+                />
+              )}
+              <span style={{ position: "absolute", bottom: "3px", left: "6px", fontSize: "9px", fontWeight: 800, color: "rgba(255,255,255,0.7)" }}>
+                RADAR (22 PL)
+              </span>
+            </div>
+
+            {/* Docked Feed 2: Player Tracking Cam */}
+            {(() => {
+              const allPlayers = [...homeLineup, ...awayLineup];
+              const activePlayer = allPlayers.find((p) => p.id === selectedPlayerId) || homeLineup[6];
+              const teamColor = activePlayer.team === "home" ? score.homeMeta.color : score.awayMeta.color;
+              return (
+                <div
+                  style={{
+                    height: "64px",
+                    backgroundColor: "rgba(15, 23, 42, 0.9)",
+                    borderRadius: "6px",
+                    border: `1px solid ${teamColor}`,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    padding: "6px 8px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "10px", fontWeight: 900, color: teamColor }}>
+                      #{activePlayer.number} {activePlayer.name.split(" ").pop()}
+                    </span>
+                    <span style={{ fontSize: "9px", color: "#10b981", fontWeight: 800 }}>
+                      {activePlayer.speed_kmh ? `${activePlayer.speed_kmh.toFixed(1)} km/h` : "14.2 km/h"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
+                    <span style={{ fontSize: "9px", color: "var(--studio-subtext)" }}>Pos: {activePlayer.pos}</span>
+                    <span style={{ fontSize: "9px", color: "#ffd600", fontWeight: 700 }}>★ {activePlayer.rating.toFixed(1)}</span>
+                  </div>
+                  <span style={{ fontSize: "8px", color: "var(--studio-subtext)", letterSpacing: "0.5px", marginTop: "2px" }}>
+                    PLAYER CAM
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Interactive Scrub Bar with Event Markers (Expanded height for comfortable hit target) */}
         <div
           ref={timelineTrackRef}
           onClick={handleTimelineScrub}
           style={{
-            height: "14px",
+            height: "22px",
             backgroundColor: "#020617",
             position: "relative",
             cursor: "pointer",
-            borderTop: "1px solid rgba(255,255,255,0.05)",
+            borderTop: "1px solid rgba(255,255,255,0.08)",
           }}
+          title="Click to scrub match timeline"
         >
           {/* Progress fill */}
           <div
@@ -595,8 +604,14 @@ export const MediaTimelinePanel: React.FC = () => {
           </button>
         </div>
 
-        {/* Toggle & Mode Selector Pills */}
-        <StudioChipScroller gap="6px" marginTopTrack={6}>
+        {/* Toggle & Mode Selector Pills - Trackless Edge-Fade Scroll */}
+        <StudioChipScroller
+          gap="6px"
+          paddingBottom="2px"
+          showTrack={false}
+          alwaysShowTrack={false}
+          enableEdgeFade={true}
+        >
           <button
             onClick={() => setIsOverlayVisible(!isOverlayVisible)}
             style={{
@@ -749,18 +764,13 @@ export const MediaTimelinePanel: React.FC = () => {
                   </div>
 
                   {/* Player & Event Info */}
-                  <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
+                  <div style={{ minWidth: 0, flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", gap: "2px" }}>
                     <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {evt.player}
                     </div>
-                    {evt.subOut && (
-                      <div style={{ fontSize: "10px", color: "var(--studio-subtext)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        Sub for: {evt.subOut}
-                      </div>
-                    )}
-                    {evt.detail && (
-                      <div style={{ fontSize: "10px", color: "var(--studio-subtext)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {evt.detail}
+                    {(evt.detail || evt.subOut) && (
+                      <div style={{ fontSize: "11px", color: "var(--studio-subtext)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {evt.subOut ? `Sub for ${evt.subOut}` : evt.detail}
                       </div>
                     )}
                   </div>
@@ -770,14 +780,15 @@ export const MediaTimelinePanel: React.FC = () => {
                 {evt.score && (
                   <span
                     style={{
-                      fontSize: "10px",
-                      fontWeight: 900,
+                      fontSize: "11px",
+                      fontWeight: 800,
                       color: "#ffffff",
-                      backgroundColor: "rgba(255, 255, 255, 0.1)",
-                      padding: "2px 6px",
-                      borderRadius: "4px",
+                      backgroundColor: "rgba(255, 255, 255, 0.12)",
+                      padding: "2px 8px",
+                      borderRadius: "6px",
                       flexShrink: 0,
                       marginLeft: "6px",
+                      fontFamily: "monospace",
                     }}
                   >
                     {evt.score}
