@@ -7,6 +7,7 @@ import {
   PersonaMode,
   SupportedLanguage,
   MatchScore,
+  GoalscorerItem,
   PlayerProfile,
   HeadToHeadStat,
   MatchEventItem,
@@ -40,6 +41,7 @@ export interface BaseMemoryState {
   selectedLanguage: SupportedLanguage;
   selectedPlayerId: string;
   activeScenario: string | null;
+  isJudgeTourOpen: boolean;
   serverStatus: ServerStatus;
 }
 
@@ -86,52 +88,152 @@ const initialHeadToHeadStats: HeadToHeadStat[] = [
   { label: "Yellow Cards", home: "1", away: "2", homePct: 33 },
 ];
 
-const initialTimelineEvents: MatchEventItem[] = [
-  { id: "e1", time: "90'+1", timeSec: 5460, type: "card", player: "E. Eze", playerId: "away_2", team: "away", detail: "Tactical breakdown" },
-  { id: "e2", time: "88'", timeSec: 5280, type: "sub", player: "A. Diallo", playerId: "away_7", team: "away", subOut: "N. Mazraoui" },
-  { id: "e3", time: "87'", timeSec: 5220, type: "goal", player: "K. De Bruyne", playerId: "home_7", team: "home", score: "2 - 3" },
-  { id: "e4", time: "84'", timeSec: 5040, type: "goal", player: "B. Saka", playerId: "away_8", team: "away", score: "2 - 2" },
-  { id: "e5", time: "81'", timeSec: 4860, type: "sub", player: "P. Dorgu", playerId: "away_5", team: "away", subOut: "B. Sesko" },
-  { id: "e6", time: "75'", timeSec: 4500, type: "sub", player: "J. Grealish", playerId: "home_11", team: "home", subOut: "P. Foden" },
-  { id: "e7", time: "69'", timeSec: 4140, type: "goal", player: "E. Haaland", playerId: "home_10", team: "home", score: "1 - 2" },
-  { id: "e8", time: "64'", timeSec: 3840, type: "card", player: "D. Rice", playerId: "away_7", team: "away", detail: "Yellow card" },
-  { id: "e9", time: "42'", timeSec: 2520, type: "goal", player: "E. Haaland", playerId: "home_10", team: "home", score: "1 - 0" },
-];
+export const normalizePlayerId = (id: string | undefined): string => {
+  if (!id) return "";
+  if (id.startsWith("h") && !id.startsWith("home_")) {
+    const num = id.slice(1);
+    if (!isNaN(Number(num))) return `home_${num}`;
+  }
+  if (id.startsWith("a") && !id.startsWith("away_")) {
+    const num = id.slice(1);
+    if (!isNaN(Number(num))) return `away_${num}`;
+  }
+  return id;
+};
 
-const initialShotMapEvents: ShotMapItem[] = [
-  { id: "s1", x: "48%", y: "25%", size: 18, isGoal: true, label: "Goal", playerId: "home_10", playerName: "E. Haaland", minute: "42'", xG: 0.74, xGOT: 0.81, foot: "Left", team: "home" },
-  { id: "s2", x: "42%", y: "45%", size: 14, isGoal: false, label: "Saved", playerId: "home_7", playerName: "K. De Bruyne", minute: "31'", xG: 0.28, xGOT: 0.35, foot: "Right", team: "home" },
-  { id: "s3", x: "58%", y: "35%", size: 10, isGoal: false, label: "Blocked", playerId: "home_9", playerName: "P. Foden", minute: "19'", xG: 0.15, xGOT: 0.0, foot: "Left", team: "home" },
-  { id: "s4", x: "32%", y: "55%", size: 8, isGoal: false, label: "Miss", playerId: "home_8", playerName: "B. Silva", minute: "14'", xG: 0.09, xGOT: 0.0, foot: "Left", team: "home" },
-  { id: "s5", x: "65%", y: "60%", size: 12, isGoal: false, label: "Saved", playerId: "home_6", playerName: "Rodri", minute: "8'", xG: 0.12, xGOT: 0.22, foot: "Right", team: "home" },
-  { id: "s6", x: "52%", y: "30%", size: 16, isGoal: true, label: "Goal", playerId: "away_8", playerName: "B. Saka", minute: "84'", xG: 0.58, xGOT: 0.72, foot: "Left", team: "away" },
-  { id: "s7", x: "40%", y: "42%", size: 12, isGoal: false, label: "Saved", playerId: "away_11", playerName: "K. Havertz", minute: "62'", xG: 0.32, xGOT: 0.41, foot: "Header", team: "away" },
-  { id: "s8", x: "60%", y: "52%", size: 10, isGoal: false, label: "Blocked", playerId: "away_10", playerName: "G. Martinelli", minute: "54'", xG: 0.18, xGOT: 0.0, foot: "Right", team: "away" },
-];
+export function extractGoalscorers(
+  events: any[],
+  shots: any[],
+  homeLineup: PlayerProfile[],
+  awayLineup: PlayerProfile[],
+  currentClockSec?: number
+): GoalscorerItem[] {
+  const goalscorers: GoalscorerItem[] = [];
+  const seen = new Set<string>();
 
-const initialTacticalInflections: TacticalInflectionItem[] = [
-  {
-    time: "42'",
-    timeSec: 2520,
-    title: "Low-Block Breakthrough",
-    detail: "Haaland finished from 11m following a 14-pass sequence. Shot xG: 0.74, Pass Difficulty Rating: 88%.",
-    impact: "Home Momentum +28%",
-  },
-  {
-    time: "69'",
-    timeSec: 4140,
-    title: "Flank Overload Adjustment",
-    detail: "Guardiola introduced Grealish to stretch Arsenal's 4-2-3-1, creating space for De Bruyne's curling strike.",
-    impact: "Control Index 74%",
-  },
-  {
-    time: "84'",
-    timeSec: 5040,
-    title: "Rapid Counter-Transition",
-    detail: "Saka broke City's rest-defense in 4 touches, punishing high line positioning with an equalizer.",
-    impact: "Game Rhythm Shift",
-  },
-];
+  // 1. Check goal shots from simulation
+  if (Array.isArray(shots)) {
+    for (const s of shots) {
+      if (s.outcome === "goal" || s.isGoal) {
+        const timeSec = typeof s.timestampMs === "number" ? Math.floor(s.timestampMs / 1000) : 0;
+        if (currentClockSec !== undefined && timeSec > currentClockSec) continue;
+        const minute = s.matchClock || (timeSec > 0 ? `${Math.floor(timeSec / 60)}'` : "1'");
+        const key = `${s.playerName || s.playerId}-${minute}-${s.team}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          goalscorers.push({
+            player: s.playerName || "Player",
+            minute,
+            team: s.team === "away" ? "away" : "home",
+          });
+        }
+      }
+    }
+  }
+
+  // 2. Check discrete match events
+  if (Array.isArray(events)) {
+    for (const ev of events) {
+      if (ev.type === "goal") {
+        const timeSec = typeof ev.timestampMs === "number" ? Math.floor(ev.timestampMs / 1000) : 0;
+        if (currentClockSec !== undefined && timeSec > currentClockSec) continue;
+
+        let playerName = "";
+        const actorId = ev.actorId ? normalizePlayerId(ev.actorId) : "";
+        const player = [...homeLineup, ...awayLineup].find(
+          (p) =>
+            p.id === actorId ||
+            p.id === ev.actorId ||
+            p.id.replace("home_", "h_") === ev.actorId ||
+            p.id.replace("away_", "a_") === ev.actorId
+        );
+        if (player) {
+          playerName = player.name;
+        } else if (ev.description) {
+          const match = ev.description.match(/GOAL!\s+([^(\s]+(?:\s+[^(\s]+)?)/i);
+          playerName = match ? match[1] : ev.description.split(" ")[1] || "Player";
+        } else {
+          playerName = "Player";
+        }
+
+        const minute = ev.matchClock || (timeSec > 0 ? `${Math.floor(timeSec / 60)}'` : "1'");
+        const team = ev.team === "away" ? "away" : "home";
+        const key = `${playerName}-${minute}-${team}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          goalscorers.push({
+            player: playerName,
+            minute,
+            team,
+          });
+        }
+      }
+    }
+  }
+
+  return goalscorers;
+}
+
+export function extractTacticalInflections(
+  events: any[],
+  currentClockSec?: number
+): TacticalInflectionItem[] {
+  const inflections: TacticalInflectionItem[] = [];
+  const seen = new Set<string>();
+
+  if (Array.isArray(events)) {
+    for (const ev of events) {
+      const evType = (ev.type || "").toLowerCase();
+      if (
+        evType === "inflection" ||
+        evType === "goal" ||
+        (evType === "card" && (ev.subAction?.includes("red") || ev.description?.toLowerCase().includes("red")))
+      ) {
+        const timeSec = typeof ev.timestampMs === "number" ? Math.floor(ev.timestampMs / 1000) : 0;
+        if (currentClockSec !== undefined && currentClockSec > 0 && timeSec > currentClockSec) continue;
+
+        let title = "Tactical Inflection";
+        let impact = "Tactical Shift";
+        if (evType === "goal") {
+          title = "Breakthrough Goal";
+          impact = `Score Impact (xG ${(ev.xG || 0.65).toFixed(2)})`;
+        } else if (evType === "card") {
+          title = "Disciplinary Crisis";
+          impact = "Numerical Asymmetry";
+        } else if (ev.description?.includes("Chaos") || ev.description?.includes("Compactness")) {
+          title = "Momentum Shift";
+          impact = "Chaos Index Spike";
+        } else if (ev.description?.includes("Control")) {
+          title = "Dominance Shift";
+          impact = "Territorial Pin";
+        }
+
+        const minute = ev.matchClock || (timeSec > 0 ? `${Math.floor(timeSec / 60)}'` : "1'");
+        const detail = ev.description || "Tactical inflection registered by Agent Swarm.";
+        const key = `${minute}-${title}-${detail.slice(0, 30)}`;
+
+        if (!seen.has(key)) {
+          seen.add(key);
+          inflections.push({
+            time: minute,
+            timeSec,
+            title,
+            detail,
+            impact,
+          });
+        }
+      }
+    }
+  }
+
+  return inflections.reverse();
+}
+
+const initialTimelineEvents: MatchEventItem[] = [];
+
+const initialShotMapEvents: ShotMapItem[] = [];
+
+const initialTacticalInflections: TacticalInflectionItem[] = [];
 
 const initialSwarmCommentary: SwarmCommentaryItem[] = [
   { time: "88'", timeSec: 5280, agent: "Tactical Agent", role: "Shape Analyst", text: "Arsenal shifted into a narrow 4-4-2 block to restrict central progression, forcing City wide." },
@@ -221,7 +323,7 @@ const initialState: BaseMemoryState = {
   score: {
     homeTeam: "MCI",
     awayTeam: "ARS",
-    homeScore: 1,
+    homeScore: 0,
     awayScore: 0,
     period: "1st Half",
     homeMeta: {
@@ -242,11 +344,7 @@ const initialState: BaseMemoryState = {
     time: "16:30",
     competition: "Premier League",
     venue: "Etihad Stadium",
-    goalscorers: [
-      { player: "E. Haaland", minute: "42'", team: "home" },
-      { player: "K. De Bruyne", minute: "68'", team: "home" },
-      { player: "B. Saka", minute: "51'", team: "away" },
-    ],
+    goalscorers: [],
   },
   homeLineup: initialHomeLineup,
   awayLineup: initialAwayLineup,
@@ -261,6 +359,7 @@ const initialState: BaseMemoryState = {
   selectedLanguage: "en",
   selectedPlayerId: "home_7",
   activeScenario: null,
+  isJudgeTourOpen: false,
   serverStatus: {
     isConnected: false,
     latencyMs: 0,
@@ -300,19 +399,6 @@ class BaseMemoryStore {
     if (!this.state.isPlaying || !rawFrame) {
       return;
     }
-
-    const normalizePlayerId = (id: string | undefined): string => {
-      if (!id) return "";
-      if (id.startsWith("h") && !id.startsWith("home_")) {
-        const num = id.slice(1);
-        if (!isNaN(Number(num))) return `home_${num}`;
-      }
-      if (id.startsWith("a") && !id.startsWith("away_")) {
-        const num = id.slice(1);
-        if (!isNaN(Number(num))) return `away_${num}`;
-      }
-      return id;
-    };
 
     // Normalize incoming players to PlayerKinematics
     const rawPlayers = (rawFrame as any).players || [];
@@ -451,37 +537,52 @@ class BaseMemoryStore {
       active_tactical_inflection: activeInflection,
     };
 
-    // Synchronize dynamic shots if provided by simulation
+    // Synchronize dynamic shots from simulation with true penalty box pitch projection
     let updatedShots = this.state.shotMapEvents;
-    if ((rawFrame as any).shots && Array.isArray((rawFrame as any).shots) && (rawFrame as any).shots.length > 0) {
-      updatedShots = (rawFrame as any).shots.map((s: any, idx: number) => ({
-        id: s.id || `s_${idx}`,
-        x: `${Math.round((s.x / 105.0) * 100)}%`,
-        y: `${Math.round((s.y / 68.0) * 100)}%`,
-        size: Math.round(10 + (s.xG || 0.3) * 12),
-        isGoal: s.outcome === "goal",
-        label: s.outcome === "goal" ? "Goal" : (s.outcome === "saved" ? "Saved" : "Miss"),
-        playerId: normalizePlayerId(s.playerId),
-        playerName: s.playerName,
-        minute: s.matchClock || `${Math.floor(s.timestampMs / 60000)}'`,
-        xG: s.xG,
-        xGOT: s.outcome === "goal" ? Math.min(0.99, s.xG + 0.15) : 0,
-        foot: "Right",
-        team: s.team,
-      }));
+    if (Array.isArray((rawFrame as any).shots)) {
+      updatedShots = (rawFrame as any).shots.map((s: any, idx: number) => {
+        const rawX = typeof s.x === "number" ? s.x : 0;
+        const rawY = typeof s.y === "number" ? s.y : 34.0;
+        const isHome = s.team !== "away";
+
+        // Accurate penalty box projection:
+        // Goal is at top (0%), penalty spot ~28%, 18-yard box ~50-65%
+        // Home attacks right goal (x=105, y=34), Away attacks left goal (x=0, y=34)
+        const distFromGoal = isHome ? Math.max(0, 105.0 - rawX) : Math.max(0, rawX);
+        const topPct = Math.max(8, Math.min(88, (distFromGoal / 32.0) * 60 + 8));
+        const leftPct = isHome
+          ? Math.max(10, Math.min(90, (rawY / 68.0) * 100))
+          : Math.max(10, Math.min(90, ((68.0 - rawY) / 68.0) * 100));
+
+        return {
+          id: s.id || `s_${idx}`,
+          x: `${Math.round(leftPct * 10) / 10}%`,
+          y: `${Math.round(topPct * 10) / 10}%`,
+          size: Math.round(10 + (s.xG || 0.25) * 14),
+          isGoal: s.outcome === "goal",
+          label: s.outcome === "goal" ? "Goal" : s.outcome === "saved" ? "Saved" : "Miss",
+          playerId: normalizePlayerId(s.playerId),
+          playerName: s.playerName || "Shooter",
+          minute: s.matchClock || `${Math.floor((s.timestampMs || 0) / 60000)}'`,
+          xG: typeof s.xG === "number" ? Math.round(s.xG * 100) / 100 : 0.25,
+          xGOT: s.outcome === "goal" ? Math.min(0.99, Math.round(((s.xG || 0.25) + 0.15) * 100) / 100) : 0,
+          foot: s.distanceToGoalM && s.distanceToGoalM < 10 ? "Header" : "Right",
+          team: s.team === "away" ? "away" : "home",
+        };
+      });
     }
 
-    // Synchronize dynamic events if provided by simulation
+    // Synchronize dynamic events from simulation
     let updatedEvents = this.state.timelineEvents;
-    if ((rawFrame as any).events && Array.isArray((rawFrame as any).events) && (rawFrame as any).events.length > 0) {
-      updatedEvents = (rawFrame as any).events.slice(-15).reverse().map((ev: any, idx: number) => ({
+    if (Array.isArray((rawFrame as any).events) && (rawFrame as any).events.length > 0) {
+      updatedEvents = (rawFrame as any).events.slice(-25).reverse().map((ev: any, idx: number) => ({
         id: ev.id || `ev_${idx}`,
-        time: ev.matchClock || `${Math.floor(ev.timestampMs / 60000)}'`,
+        time: ev.matchClock || `${Math.floor((ev.timestampMs || 0) / 60000)}'`,
         timeSec: Math.floor((ev.timestampMs || 0) / 1000),
-        type: ev.type === "goal" ? "goal" : (ev.type.includes("card") ? "card" : "sub"),
+        type: ev.type === "goal" ? "goal" : (typeof ev.type === "string" && ev.type.includes("card") ? "card" : "sub"),
         player: ev.description?.split(" ")[0] || "Player",
         playerId: normalizePlayerId(ev.actorId || "home_7"),
-        team: ev.team || "home",
+        team: ev.team === "away" ? "away" : "home",
         detail: ev.description,
         score: ev.score ? `${ev.score.home} - ${ev.score.away}` : undefined,
       }));
@@ -516,14 +617,44 @@ class BaseMemoryStore {
       };
     }
 
+    // Dynamically derive score and goalscorers from live frame events and shots
+    const dynamicGoalscorers = extractGoalscorers(
+      (rawFrame as any).events || [],
+      (rawFrame as any).shots || [],
+      updatedHome,
+      updatedAway,
+      effectiveClock
+    );
+
     const liveScore = (rawFrame as any).score;
-    const updatedScore = liveScore && typeof liveScore.home === "number" && typeof liveScore.away === "number"
-      ? {
-          ...this.state.score,
-          homeScore: liveScore.home,
-          awayScore: liveScore.away,
-        }
-      : this.state.score;
+    const computedHomeScore = liveScore && typeof liveScore.home === "number"
+      ? liveScore.home
+      : dynamicGoalscorers.filter(g => g.team === "home").length;
+    const computedAwayScore = liveScore && typeof liveScore.away === "number"
+      ? liveScore.away
+      : dynamicGoalscorers.filter(g => g.team === "away").length;
+
+    let period = "1st Half";
+    if (effectiveClock >= 5400) {
+      period = "Full Time";
+    } else if (effectiveClock >= 2700 && effectiveClock < 2760) {
+      period = "Halftime";
+    } else if (effectiveClock > 2700) {
+      period = "2nd Half";
+    }
+
+    const updatedScore: MatchScore = {
+      ...this.state.score,
+      homeScore: computedHomeScore,
+      awayScore: computedAwayScore,
+      period,
+      goalscorers: dynamicGoalscorers,
+    };
+
+    const dynamicInflections = extractTacticalInflections(
+      (rawFrame as any).events || [],
+      effectiveClock
+    );
 
     this.state = {
       ...this.state,
@@ -535,6 +666,7 @@ class BaseMemoryStore {
       headToHeadStats: updatedStats,
       shotMapEvents: updatedShots,
       timelineEvents: updatedEvents,
+      tacticalInflections: dynamicInflections.length > 0 ? dynamicInflections : this.state.tacticalInflections,
       blackboard: updatedBlackboard,
     };
     this.notify();
@@ -572,7 +704,7 @@ class BaseMemoryStore {
       inflectionTitle = "Low-Block Siege Injected";
       inflectionDetail = "Arsenal compressed to 18m block depth. City holding 82% pitch control.";
       inflectionImpact = "Home Control 82%";
-    } else if (scenarioId === "rapid_counter") {
+    } else if (scenarioId === "rapid_counter" || scenarioId === "counter_attack_transition" || scenarioId === "counter_attack_blitz") {
       blackboardUpdate = {
         control_index: 26,
         chaos_index: 74,
@@ -608,7 +740,7 @@ class BaseMemoryStore {
       inflectionTitle = "Red Card Crisis Injected";
       inflectionDetail = "Arsenal down to 10 men. Emergency 5-3-1 bunker engaged.";
       inflectionImpact = "Numerical Asymmetry -1";
-    } else if (scenarioId === "box_scramble") {
+    } else if (scenarioId === "box_scramble" || scenarioId === "final_minutes_desperation") {
       blackboardUpdate = {
         control_index: 15,
         chaos_index: 85,
@@ -650,9 +782,11 @@ class BaseMemoryStore {
       const scenarioMap: Record<string, string> = {
         low_block_siege: "low_block_siege",
         rapid_counter: "counter_attack_transition",
+        counter_attack_blitz: "counter_attack_transition",
         counter_attack_transition: "counter_attack_transition",
         red_card_crisis: "low_block_siege",
         box_scramble: "box_scramble",
+        final_minutes_desperation: "box_scramble",
         high_possession: "high_possession",
       };
       this.scenarioCommandHandler({
@@ -797,14 +931,63 @@ class BaseMemoryStore {
     this.notify();
   };
 
+  setJudgeTourOpen = (isOpen: boolean) => {
+    this.state = {
+      ...this.state,
+      isJudgeTourOpen: isOpen,
+    };
+    this.notify();
+  };
+
+  openJudgeTour = () => {
+    this.setJudgeTourOpen(true);
+  };
+
+  closeJudgeTour = () => {
+    this.setJudgeTourOpen(false);
+  };
+
   setMatchClock = (sec: number) => {
     const clamped = Math.min(5400, Math.max(0, sec));
     const rawClock = this.state.currentFrame?.match_clock_sec ?? 0;
     const newOffset = clamped - rawClock;
+
+    const rawEvents = (this.state.currentFrame as any)?.events || [];
+    const rawShots = (this.state.currentFrame as any)?.shots || [];
+    const filteredGoalscorers = extractGoalscorers(
+      rawEvents,
+      rawShots,
+      this.state.homeLineup,
+      this.state.awayLineup,
+      clamped
+    );
+
+    let period = "1st Half";
+    if (clamped >= 5400) {
+      period = "Full Time";
+    } else if (clamped >= 2700 && clamped < 2760) {
+      period = "Halftime";
+    } else if (clamped > 2700) {
+      period = "2nd Half";
+    }
+
+    const dynamicInflections = extractTacticalInflections(
+      rawEvents,
+      clamped
+    );
+
     this.state = {
       ...this.state,
       matchClock: clamped,
       clockOffset: newOffset,
+      tacticalInflections: dynamicInflections.length > 0 ? dynamicInflections : (clamped === 0 ? [] : this.state.tacticalInflections),
+      score: {
+        ...this.state.score,
+        homeScore: filteredGoalscorers.filter((g) => g.team === "home").length,
+        awayScore: filteredGoalscorers.filter((g) => g.team === "away").length,
+        period,
+        goalscorers: filteredGoalscorers,
+      },
     };
     this.notify();
   };

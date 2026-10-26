@@ -25,6 +25,9 @@ import TacticalPage from "./pages/TacticalPage";
 import PersonaPage from "./pages/PersonaPage";
 import StudioControlPage from "./pages/StudioControlPage";
 import { SidebarNav } from "./components/SidebarNav";
+import { TacticalCopilotDrawer } from "./components/TacticalCopilotDrawer";
+import { JudgeQuickTourModal } from "./components/JudgeQuickTourModal";
+import { useBaseMemory, baseMemory } from "./store/baseMemory";
 import { telemetryService } from "./services/telemetryService";
 
 /* Core CSS required for Ionic components to work properly */
@@ -58,11 +61,30 @@ const AppShell: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const isJudgeTourOpen = useBaseMemory((s) => s.isJudgeTourOpen);
 
   useEffect(() => {
     const path = location.pathname.replace("/", "");
     if (path) setActiveTab(path);
   }, [location.pathname]);
+
+  useEffect(() => {
+    // Keyboard shortcuts:
+    // Cmd+K / Ctrl+K: Tactical Copilot Drawer
+    // Cmd+J / Ctrl+J: Judge Quick Tour Modal
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCopilotOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        baseMemory.setJudgeTourOpen(!baseMemory.getState().isJudgeTourOpen);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     // Permanent Dark Mode initialization
@@ -82,7 +104,26 @@ const AppShell: React.FC = () => {
   return (
     <div style={{ display: "flex", width: "100%", height: "100%", minHeight: "100dvh", maxHeight: "100dvh", overflow: "hidden", position: "relative", backgroundColor: "#080d16" }}>
       {/* Desktop/Tablet Left Navigation Rail (Matching Reference Design) */}
-      <SidebarNav activeTab={activeTab} onSelectTab={handleSelectTab} />
+      <SidebarNav
+        activeTab={activeTab}
+        onSelectTab={handleSelectTab}
+        onOpenCopilot={() => setIsCopilotOpen(true)}
+        onOpenJudgeTour={() => baseMemory.openJudgeTour()}
+      />
+
+      {/* Slide-out Tactical Copilot Drawer */}
+      <TacticalCopilotDrawer
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+      />
+
+      {/* 🏆 Judge Quick Tour & Hero Tech Architecture Modal */}
+      <JudgeQuickTourModal
+        isOpen={isJudgeTourOpen}
+        onClose={() => baseMemory.closeJudgeTour()}
+        onNavigateTab={handleSelectTab}
+        onOpenCopilot={() => setIsCopilotOpen(true)}
+      />
 
       {/* Main Workspace Area */}
       <div style={{ flex: 1, minWidth: 0, height: "100%", overflow: "hidden", position: "relative" }}>

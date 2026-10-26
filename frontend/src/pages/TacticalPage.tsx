@@ -30,6 +30,7 @@ import {
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
 import { telemetryService } from "../services/telemetryService";
+import { JudgeQuickTourPill } from "../components/JudgeQuickTourPill";
 
 const TacticalPage: React.FC = () => {
   const [mobileTab, setMobileTab] = useState<"indices" | "intel" | "all">("indices");
@@ -71,6 +72,7 @@ const TacticalPage: React.FC = () => {
         <IonToolbar mode="ios">
           <IonTitle>Tactical Intelligence</IonTitle>
           <IonButtons slot="end">
+            <JudgeQuickTourPill compact={true} style={{ marginRight: "8px" }} />
             <IonBadge color={serverStatus.isConnected ? "success" : "warning"}>
               {serverStatus.isConnected ? "10Hz / 5Hz" : "Synthetic"}
             </IonBadge>

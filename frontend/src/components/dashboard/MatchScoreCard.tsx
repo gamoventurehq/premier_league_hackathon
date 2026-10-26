@@ -178,7 +178,7 @@ export const MatchScoreCard: React.FC = () => {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: homeGoals.length === 0 && awayGoals.length === 0 ? "1fr" : "1fr 1fr",
           gap: "8px",
           fontSize: "10px",
           color: "var(--studio-subtext)",
@@ -189,23 +189,31 @@ export const MatchScoreCard: React.FC = () => {
           overflow: "hidden",
         }}
       >
-        <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: "4px", minWidth: 0, overflow: "hidden" }}>
-          {homeGoals.map((g, idx) => (
-            <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", minWidth: 0, overflow: "hidden" }}>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.player} {g.minute}</span>
-              <IonIcon icon={footballOutline} style={{ fontSize: "11px", color: score.homeMeta.color, flexShrink: 0 }} />
+        {homeGoals.length === 0 && awayGoals.length === 0 ? (
+          <div style={{ textAlign: "center", fontStyle: "italic", opacity: 0.75, padding: "2px 0" }}>
+            No goals scored yet in this sequence
+          </div>
+        ) : (
+          <>
+            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: "4px", minWidth: 0, overflow: "hidden" }}>
+              {homeGoals.map((g, idx) => (
+                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", minWidth: 0, overflow: "hidden" }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.player} {g.minute}</span>
+                  <IonIcon icon={footballOutline} style={{ fontSize: "11px", color: score.homeMeta.color, flexShrink: 0 }} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: "4px", minWidth: 0, overflow: "hidden" }}>
-          {awayGoals.map((g, idx) => (
-            <div key={idx} style={{ display: "flex", alignItems: "center", gap: "4px", minWidth: 0, overflow: "hidden" }}>
-              <IonIcon icon={footballOutline} style={{ fontSize: "11px", color: score.awayMeta.color, flexShrink: 0 }} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.player} {g.minute}</span>
+            <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: "4px", minWidth: 0, overflow: "hidden" }}>
+              {awayGoals.map((g, idx) => (
+                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "4px", minWidth: 0, overflow: "hidden" }}>
+                  <IonIcon icon={footballOutline} style={{ fontSize: "11px", color: score.awayMeta.color, flexShrink: 0 }} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.player} {g.minute}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
 
       {/* Bottom Match Metadata */}

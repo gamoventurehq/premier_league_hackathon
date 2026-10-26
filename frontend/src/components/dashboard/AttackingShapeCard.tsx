@@ -1,36 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { IonIcon } from "@ionic/react";
 import { walkOutline } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 
-// Tactical Attacking Shape Base Anchors (Rest defense at base/bottom, forwards at arrow tip/top)
-const MAN_CITY_ATTACKING_BASE: Record<string, { x: number; y: number }> = {
-  home_10: { x: 50, y: 22 }, // E. Haaland (ST)
-  home_9: { x: 76, y: 28 },  // P. Foden (RW)
-  home_11: { x: 24, y: 28 }, // J. Grealish (LW)
-  home_7: { x: 36, y: 46 },  // K. De Bruyne (CM)
-  home_8: { x: 64, y: 46 },  // B. Silva (CM)
-  home_6: { x: 50, y: 62 },  // Rodri (DM)
-  home_5: { x: 22, y: 76 },  // J. Gvardiol (LB)
-  home_2: { x: 78, y: 76 },  // K. Walker (RB)
-  home_3: { x: 40, y: 86 },  // R. Dias (CB)
-  home_4: { x: 60, y: 86 },  // M. Akanji (CB)
-};
-
-const ARSENAL_ATTACKING_BASE: Record<string, { x: number; y: number }> = {
-  away_11: { x: 50, y: 22 }, // K. Havertz (ST)
-  away_8: { x: 76, y: 28 },  // B. Saka (RW)
-  away_10: { x: 24, y: 28 }, // G. Martinelli (LW)
-  away_9: { x: 50, y: 42 },  // M. Odegaard (AM)
-  away_7: { x: 36, y: 58 },  // D. Rice (DM)
-  away_6: { x: 64, y: 58 },  // T. Partey (DM)
-  away_5: { x: 22, y: 76 },  // J. Timber (LB)
-  away_2: { x: 78, y: 76 },  // B. White (RB)
-  away_4: { x: 40, y: 86 },  // Gabriel (CB)
-  away_3: { x: 60, y: 86 },  // W. Saliba (CB)
-};
-
 export const AttackingShapeCard: React.FC = () => {
+  const [selectedTeam, setSelectedTeam] = useState<"home" | "away">("home");
   const score = useBaseMemory((s) => s.score);
   const homeLineup = useBaseMemory((s) => s.homeLineup);
   const awayLineup = useBaseMemory((s) => s.awayLineup);
@@ -38,39 +12,96 @@ export const AttackingShapeCard: React.FC = () => {
   const currentFrame = useBaseMemory((s) => s.currentFrame);
   const controlIndex = useBaseMemory((s) => s.blackboard.control_index);
 
-  // Dynamically resolve active team attacking shape from Single Core Memory
-  const isAwaySelected = awayLineup.some((p) => p.id === selectedPlayerId);
+  // Automatically align selected team with core memory player selection
+  useEffect(() => {
+    const isAway = awayLineup.some((p) => p.id === selectedPlayerId);
+    setSelectedTeam(isAway ? "away" : "home");
+  }, [selectedPlayerId, awayLineup]);
+
+  const handleSelectTeam = (team: "home" | "away") => {
+    setSelectedTeam(team);
+    if (team === "away") {
+      baseMemory.setSelectedPlayer("away_8"); // Saka (Arsenal)
+    } else {
+      baseMemory.setSelectedPlayer("home_10"); // Haaland (Man City)
+    }
+  };
+
+  // Dynamically resolve active team attacking shape from selected team
+  const isAwaySelected = selectedTeam === "away";
   const activeLineup = isAwaySelected ? awayLineup : homeLineup;
   const activeMeta = isAwaySelected ? score.awayMeta : score.homeMeta;
-  const baseMap = isAwaySelected ? ARSENAL_ATTACKING_BASE : MAN_CITY_ATTACKING_BASE;
 
-  // Outfield players forming the attacking shape
+  // Outfield players forming the physical attacking shape
   const outfield = activeLineup.filter((p) => p.pos !== "GK");
 
-  // Dynamic collective momentum shift from live ball & rhythm
-  const ball = currentFrame?.ball;
-  const ballShiftX = ball ? (ball.y - 34.0) * 0.25 : 0;
-  const ballSurgeY = ball ? (ball.x - 52.5) * 0.12 : 0;
-
-  // Compute live dynamic coordinates for each player node
+  // Compute live dynamic coordinates directly from 10Hz/5Hz simulation telemetry
+  // Vertical orientation: Attacking goal at the TOP (0%), Rest defense at BOTTOM (100%)
   const liveNodes = outfield.map((player) => {
-    const base = baseMap[player.id] || { x: 50, y: 50 };
     const isSelected = selectedPlayerId === player.id;
+    const isHome = !isAwaySelected;
 
-    // Real-time micro-drift driven by 5Hz physics engine
-    const driftX = Math.sin(player.x * 0.5 + player.number) * 3.5 + ballShiftX;
-    const driftY = Math.cos(player.y * 0.4 + player.number) * 2.8 - ballSurgeY - (player.speed_kmh && player.speed_kmh > 14 ? 3.5 : 0);
+    // Direct physical pitch coordinate projection
+    // player.x is 0-100% along pitch length (105m); player.y is 0-100% along width (68m)
+    let screenX: number;
+    let screenY: number;
 
-    const x = Math.max(12, Math.min(88, base.x + driftX));
-    const y = Math.max(14, Math.min(88, base.y + driftY));
+    if (isHome) {
+      // Home team attacks towards x = 100% (right goal)
+      // Attackers near high x appear near TOP of visualizer
+      screenY = Math.max(12, Math.min(88, ((100 - player.x) / 100) * 74 + 13));
+      screenX = Math.max(12, Math.min(88, (player.y / 100) * 76 + 12));
+    } else {
+      // Away team attacks towards x = 0% (left goal)
+      // Attackers near low x appear near TOP of visualizer
+      screenY = Math.max(12, Math.min(88, (player.x / 100) * 74 + 13));
+      screenX = Math.max(12, Math.min(88, ((100 - player.y) / 100) * 76 + 12));
+    }
 
     return {
       player,
       isSelected,
-      x: Math.round(x * 10) / 10,
-      y: Math.round(y * 10) / 10,
+      x: Math.round(screenX * 10) / 10,
+      y: Math.round(screenY * 10) / 10,
     };
   });
+
+  // Calculate live dynamic ball position in attacking visualizer
+  let ballNode: { x: number; y: number } | null = null;
+  if (currentFrame?.ball) {
+    const isHome = !isAwaySelected;
+    const rawBx = currentFrame.ball.x; // 0 to 105m
+    const rawBy = currentFrame.ball.y; // 0 to 68m
+
+    const ballScreenY = isHome
+      ? Math.max(8, Math.min(92, ((105 - rawBx) / 105) * 74 + 13))
+      : Math.max(8, Math.min(92, (rawBx / 105) * 74 + 13));
+
+    const ballScreenX = isHome
+      ? Math.max(8, Math.min(92, (rawBy / 68) * 76 + 12))
+      : Math.max(8, Math.min(92, ((68 - rawBy) / 68) * 76 + 12));
+
+    ballNode = {
+      x: Math.round(ballScreenX * 10) / 10,
+      y: Math.round(ballScreenY * 10) / 10,
+    };
+  }
+
+  // Compute live structural triangulation vectors between proximate teammates
+  const connectingLines: { x1: number; y1: number; x2: number; y2: number }[] = [];
+  for (let i = 0; i < liveNodes.length; i++) {
+    for (let j = i + 1; j < liveNodes.length; j++) {
+      const p1 = liveNodes[i];
+      const p2 = liveNodes[j];
+      const dx = p1.x - p2.x;
+      const dy = p1.y - p2.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Connect proximate teammates within tactical support range
+      if (dist < 30 && dist > 4) {
+        connectingLines.push({ x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y });
+      }
+    }
+  }
 
   return (
     <div
@@ -88,21 +119,48 @@ export const AttackingShapeCard: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", minWidth: 0, flexWrap: "wrap", gap: "6px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
-          <IonIcon icon={walkOutline} style={{ color: "#10b981", fontSize: "16px", flexShrink: 0 }} />
-          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--ion-text-color)", whiteSpace: "nowrap" }}>
+      {/* Header with Dynamic Team Switcher */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <IonIcon icon={walkOutline} style={{ color: "#10b981", fontSize: "16px" }} />
+          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--ion-text-color)" }}>
             Attacking Shape
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, flexWrap: "wrap" }}>
-          <span style={{ fontSize: "10px", color: "var(--studio-subtext)", fontFamily: "monospace" }}>
-            LIVE 10Hz / 5Hz
-          </span>
-          <span style={{ fontSize: "11px", color: activeMeta.color, fontWeight: 700, whiteSpace: "nowrap" }}>
-            {activeMeta.name}
-          </span>
+
+        <div style={{ display: "flex", gap: "4px" }}>
+          <button
+            onClick={() => handleSelectTeam("home")}
+            style={{
+              padding: "3px 8px",
+              borderRadius: "6px",
+              border: selectedTeam === "home" ? `1px solid ${score.homeMeta.color}` : "1px solid rgba(255, 255, 255, 0.08)",
+              backgroundColor: selectedTeam === "home" ? "rgba(0, 229, 255, 0.2)" : "transparent",
+              color: selectedTeam === "home" ? score.homeMeta.color : "var(--studio-subtext)",
+              fontSize: "11px",
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            {score.homeMeta.shortCode}
+          </button>
+          <button
+            onClick={() => handleSelectTeam("away")}
+            style={{
+              padding: "3px 8px",
+              borderRadius: "6px",
+              border: selectedTeam === "away" ? `1px solid ${score.awayMeta.color}` : "1px solid rgba(255, 255, 255, 0.08)",
+              backgroundColor: selectedTeam === "away" ? "rgba(244, 63, 94, 0.2)" : "transparent",
+              color: selectedTeam === "away" ? score.awayMeta.color : "var(--studio-subtext)",
+              fontSize: "11px",
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            {score.awayMeta.shortCode}
+          </button>
         </div>
       </div>
 
@@ -150,7 +208,7 @@ export const AttackingShapeCard: React.FC = () => {
           }}
         />
 
-        {/* Dynamic Structural Connecting Vectors */}
+        {/* Dynamic Structural Connecting Vectors from Live Triangulation */}
         <svg
           style={{
             position: "absolute",
@@ -160,24 +218,42 @@ export const AttackingShapeCard: React.FC = () => {
             pointerEvents: "none",
           }}
         >
-          {liveNodes.slice(0, 4).map((node, i) => {
-            const next = liveNodes[(i + 1) % 4];
-            return (
-              <line
-                key={`line-${i}`}
-                x1={`${node.x}%`}
-                y1={`${node.y}%`}
-                x2={`${next.x}%`}
-                y2={`${next.y}%`}
-                stroke="rgba(255, 255, 255, 0.15)"
-                strokeDasharray="3 3"
-                strokeWidth="1"
-              />
-            );
-          })}
+          {connectingLines.map((line, i) => (
+            <line
+              key={`conn-${i}`}
+              x1={`${line.x1}%`}
+              y1={`${line.y1}%`}
+              x2={`${line.x2}%`}
+              y2={`${line.y2}%`}
+              stroke="rgba(255, 255, 255, 0.22)"
+              strokeDasharray="3 3"
+              strokeWidth="1.2"
+            />
+          ))}
         </svg>
 
-        {/* Live Outfield Player Nodes (Smooth 5Hz Continuous Motion) */}
+        {/* Live Match Ball Node */}
+        {ballNode && (
+          <div
+            style={{
+              position: "absolute",
+              left: `${ballNode.x}%`,
+              top: `${ballNode.y}%`,
+              transform: "translate(-50%, -50%)",
+              width: "10px",
+              height: "10px",
+              borderRadius: "50%",
+              backgroundColor: "#ffffff",
+              boxShadow: "0 0 10px #ffffff, 0 0 4px #00e5ff",
+              zIndex: 8,
+              pointerEvents: "none",
+              transition: "left 0.15s linear, top 0.15s linear",
+            }}
+            title="Live Match Ball"
+          />
+        )}
+
+        {/* Live Outfield Player Nodes (Streamed 10Hz/5Hz Continuous Tracking) */}
         {liveNodes.map(({ player, isSelected, x, y }) => (
           <div
             key={player.id}
@@ -199,13 +275,13 @@ export const AttackingShapeCard: React.FC = () => {
               fontWeight: 900,
               color: isSelected ? "#080d16" : "#ffffff",
               boxShadow: isSelected
-                ? `0 0 10px ${activeMeta.color}`
+                ? `0 0 12px ${activeMeta.color}`
                 : player.is_ball_carrier
-                ? "0 0 10px #ffd600"
+                ? "0 0 12px #ffd600, 0 0 4px #ffffff"
                 : "0 2px 4px rgba(0,0,0,0.4)",
               cursor: "pointer",
               transition: "left 0.25s linear, top 0.25s linear, box-shadow 0.2s ease",
-              zIndex: isSelected ? 5 : 2,
+              zIndex: isSelected ? 6 : player.is_ball_carrier ? 5 : 2,
             }}
             title={`${player.name} (#${player.number})`}
           >
@@ -216,3 +292,5 @@ export const AttackingShapeCard: React.FC = () => {
     </div>
   );
 };
+
+export default AttackingShapeCard;

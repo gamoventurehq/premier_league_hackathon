@@ -37,6 +37,7 @@ import {
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
 import { PitchRadarCanvas, CameraAngle } from "../components/PitchRadarCanvas";
 import { StudioChipScroller } from "../components/StudioChipScroller";
+import { JudgeQuickTourPill } from "../components/JudgeQuickTourPill";
 
 const LivePitchPage: React.FC = () => {
   const [cameraAngle, setCameraAngle] = useState<CameraAngle>("overhead");
@@ -137,6 +138,7 @@ const LivePitchPage: React.FC = () => {
         <IonToolbar mode="ios">
           <IonTitle>Live Pitch Radar</IonTitle>
           <IonButtons slot="end">
+            <JudgeQuickTourPill compact={true} style={{ marginRight: "8px" }} />
             <IonBadge color={serverStatus.isConnected ? "success" : "warning"}>
               {serverStatus.isConnected ? "10Hz / 5Hz" : "Synthetic"}
             </IonBadge>

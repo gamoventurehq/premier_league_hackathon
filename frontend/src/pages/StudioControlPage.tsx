@@ -13,6 +13,7 @@ import {
   IonBadge,
   IonIcon,
   IonButton,
+  IonButtons,
   IonProgressBar,
 } from "@ionic/react";
 import {
@@ -31,6 +32,7 @@ import {
   speedometerOutline,
 } from "ionicons/icons";
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
+import { JudgeQuickTourPill } from "../components/JudgeQuickTourPill";
 
 const scenarioDefinitions = [
   {
@@ -113,6 +115,9 @@ const StudioControlPage: React.FC = () => {
       <IonHeader mode="ios">
         <IonToolbar mode="ios">
           <IonTitle>Gamoventure Studio Diagnostics</IonTitle>
+          <IonButtons slot="end">
+            <JudgeQuickTourPill compact={true} style={{ marginRight: "8px" }} />
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 

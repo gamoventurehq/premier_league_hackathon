@@ -33,10 +33,9 @@ export const ShootMapCard: React.FC = () => {
   };
 
   const filteredShots = shotMapEvents.filter((s) => s.team === team);
-  const activeShot: ShotMapItem =
+  const activeShot: ShotMapItem | undefined =
     filteredShots.find((s) => s.id === selectedShotId) ||
-    filteredShots[0] ||
-    shotMapEvents[0];
+    filteredShots[0];
 
   const handleShotClick = (shot: ShotMapItem) => {
     setSelectedShotId(shot.id);
@@ -146,39 +145,62 @@ export const ShootMapCard: React.FC = () => {
         />
 
         {/* Dynamic Shot Locations from Single Core Memory */}
-        {filteredShots.map((shot) => {
-          const isSelected = activeShot.id === shot.id;
-          return (
-            <div
-              key={shot.id}
-              onClick={() => handleShotClick(shot)}
-              style={{
-                position: "absolute",
-                left: shot.x,
-                top: shot.y,
-                transform: "translate(-50%, -50%)",
-                width: `${shot.size}px`,
-                height: `${shot.size}px`,
-                borderRadius: "50%",
-                backgroundColor: shot.isGoal ? "#ffd600" : "rgba(255, 255, 255, 0.4)",
-                border: isSelected
-                  ? "2.5px solid #00e5ff"
-                  : shot.isGoal
-                  ? "2px solid #ffffff"
-                  : "1px solid rgba(255, 255, 255, 0.6)",
-                boxShadow: shot.isGoal
-                  ? "0 0 10px #ffd600"
-                  : isSelected
-                  ? "0 0 8px #00e5ff"
-                  : "none",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-                zIndex: isSelected ? 5 : 2,
-              }}
-              title={`${shot.playerName} (${shot.minute}) - ${shot.label}`}
-            />
-          );
-        })}
+        {filteredShots.length === 0 ? (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "rgba(255, 255, 255, 0.7)",
+              fontSize: "11px",
+              fontStyle: "italic",
+              gap: "4px",
+              pointerEvents: "none",
+              padding: "0 16px",
+              textAlign: "center",
+            }}
+          >
+            <span>No shots recorded yet for {team === "home" ? score.homeMeta.name : score.awayMeta.name}</span>
+            <span style={{ fontSize: "9.5px", opacity: 0.75 }}>Live attempts will plot dynamically from match events</span>
+          </div>
+        ) : (
+          filteredShots.map((shot) => {
+            const isSelected = activeShot?.id === shot.id;
+            return (
+              <div
+                key={shot.id}
+                onClick={() => handleShotClick(shot)}
+                style={{
+                  position: "absolute",
+                  left: shot.x,
+                  top: shot.y,
+                  transform: "translate(-50%, -50%)",
+                  width: `${shot.size}px`,
+                  height: `${shot.size}px`,
+                  borderRadius: "50%",
+                  backgroundColor: shot.isGoal ? "#ffd600" : "rgba(255, 255, 255, 0.4)",
+                  border: isSelected
+                    ? "2.5px solid #00e5ff"
+                    : shot.isGoal
+                    ? "2px solid #ffffff"
+                    : "1px solid rgba(255, 255, 255, 0.6)",
+                  boxShadow: shot.isGoal
+                    ? "0 0 10px #ffd600"
+                    : isSelected
+                    ? "0 0 8px #00e5ff"
+                    : "none",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  zIndex: isSelected ? 5 : 2,
+                }}
+                title={`${shot.playerName} (${shot.minute}) - ${shot.label}`}
+              />
+            );
+          })
+        )}
 
         {/* Dynamic Selected Shot Detail Tooltip Card */}
         {activeShot && (

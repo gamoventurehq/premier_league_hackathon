@@ -17,6 +17,7 @@ import {
   IonProgressBar,
   IonIcon,
   IonButton,
+  IonButtons,
 } from "@ionic/react";
 import {
   analyticsOutline,
@@ -39,6 +40,7 @@ import {
 import { useBaseMemory, baseMemory } from "../store/baseMemory";
 import { PersonaMode, SupportedLanguage, PlayerProfile } from "../types/telemetry";
 import { StudioChipScroller } from "../components/StudioChipScroller";
+import { JudgeQuickTourPill } from "../components/JudgeQuickTourPill";
 
 const personaTitles: Record<PersonaMode, string> = {
   analyst: "Analyst Experience",
@@ -163,6 +165,9 @@ const PersonaPage: React.FC = () => {
       <IonHeader mode="ios">
         <IonToolbar mode="ios">
           <IonTitle>Persona Experience</IonTitle>
+          <IonButtons slot="end">
+            <JudgeQuickTourPill compact={true} style={{ marginRight: "8px" }} />
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 

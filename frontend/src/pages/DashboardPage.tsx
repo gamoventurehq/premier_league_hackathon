@@ -26,6 +26,7 @@ import { ShootMapCard } from "../components/dashboard/ShootMapCard";
 import { AttackingShapeCard } from "../components/dashboard/AttackingShapeCard";
 import { useBaseMemory } from "../store/baseMemory";
 import { StudioRecapModal } from "../components/broadcast/StudioRecapModal";
+import { JudgeQuickTourPill } from "../components/JudgeQuickTourPill";
 
 export const DashboardPage: React.FC = () => {
   const serverStatus = useBaseMemory((s) => s.serverStatus);
@@ -55,6 +56,7 @@ export const DashboardPage: React.FC = () => {
             <span style={{ fontSize: "14px", fontWeight: 800, color: "#f8fafc" }}>PL Studio</span>
           </div>
           <IonButtons slot="end">
+            <JudgeQuickTourPill compact={true} style={{ marginRight: "6px" }} />
             <IonButton
               fill="clear"
               size="small"
@@ -111,8 +113,10 @@ export const DashboardPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Right Controls: Teleprompter & Server Live Badge */}
+          {/* Right Controls: Judge Tour, Teleprompter & Server Live Badge */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <JudgeQuickTourPill />
+
             <button
               onClick={() => setIsRecapModalOpen(true)}
               style={{

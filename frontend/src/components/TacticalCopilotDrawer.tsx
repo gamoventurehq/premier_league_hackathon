@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { IonIcon, IonSpinner } from "@ionic/react";
 import {
   closeOutline,
@@ -152,25 +152,48 @@ export const TacticalCopilotDrawer: React.FC<{ isOpen: boolean; onClose: () => v
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: "min(400px, 100vw)",
-        backgroundColor: "#0f172a",
-        borderLeft: "1px solid #1e293b",
-        zIndex: 10000,
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: "-8px 0 24px rgba(0, 0, 0, 0.6)",
-      }}
-    >
-      {/* Header */}
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.45)",
+          backdropFilter: "blur(2px)",
+          zIndex: 9999,
+        }}
+      />
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "min(400px, 100vw)",
+          backgroundColor: "#0f172a",
+          borderLeft: "1px solid #1e293b",
+          zIndex: 10000,
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "-8px 0 24px rgba(0, 0, 0, 0.6)",
+        }}
+      >
+        {/* Header */}
       <div
         style={{
           padding: "16px",
@@ -367,5 +390,6 @@ export const TacticalCopilotDrawer: React.FC<{ isOpen: boolean; onClose: () => v
         </button>
       </div>
     </div>
+    </>
   );
 };

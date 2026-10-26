@@ -8,16 +8,21 @@ import {
   settingsOutline,
   personCircleOutline,
   shieldOutline,
+  sparklesOutline,
 } from "ionicons/icons";
 
 interface SidebarNavProps {
   activeTab: string;
   onSelectTab: (tab: string) => void;
+  onOpenCopilot?: () => void;
+  onOpenJudgeTour?: () => void;
 }
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({
   activeTab,
   onSelectTab,
+  onOpenCopilot,
+  onOpenJudgeTour,
 }) => {
   return (
     <aside
@@ -141,6 +146,49 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           >
             <IonIcon icon={settingsOutline} style={{ fontSize: "20px", display: "block" }} />
           </button>
+
+          {onOpenCopilot && (
+            <button
+              onClick={onOpenCopilot}
+              title="Tactical Copilot (Azure MCP) [Cmd+K]"
+              style={{
+                background: "rgba(0, 229, 255, 0.12)",
+                border: "1px solid rgba(0, 229, 255, 0.3)",
+                borderRadius: "10px",
+                padding: "10px",
+                cursor: "pointer",
+                color: "#00e5ff",
+                boxShadow: "0 0 10px rgba(0, 229, 255, 0.2)",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <IonIcon icon={sparklesOutline} style={{ fontSize: "20px", display: "block" }} />
+            </button>
+          )}
+
+          {onOpenJudgeTour && (
+            <button
+              onClick={onOpenJudgeTour}
+              title="🏆 Judge Quick Tour • Hero Tech Stack [Cmd+J]"
+              style={{
+                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.3) 100%)",
+                border: "1px solid rgba(245, 158, 11, 0.65)",
+                borderRadius: "10px",
+                padding: "8px",
+                cursor: "pointer",
+                color: "#fbbf24",
+                boxShadow: "0 0 14px rgba(245, 158, 11, 0.35)",
+                transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "16px",
+                lineHeight: 1,
+              }}
+            >
+              <span role="img" aria-label="Judge Quick Tour">🏆</span>
+            </button>
+          )}
         </nav>
       </div>
 

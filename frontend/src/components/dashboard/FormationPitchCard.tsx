@@ -9,8 +9,24 @@ import {
 import { useBaseMemory, baseMemory } from "../../store/baseMemory";
 import { telemetryService } from "../../services/telemetryService";
 
+function getPositionCategory(pos: string): "Forwards" | "Midfielders" | "Defenders" | "Goalkeeper" {
+  const p = (pos || "").toUpperCase();
+  if (p === "GK") return "Goalkeeper";
+  if (p.includes("B") || p === "DF") return "Defenders";
+  if (p.includes("M") || p === "DM" || p === "MF") return "Midfielders";
+  return "Forwards";
+}
+
+const positionCategories = [
+  { key: "Forwards" as const, label: "Forwards", accentColor: "#f43f5e" },
+  { key: "Midfielders" as const, label: "Midfielders", accentColor: "#00e5ff" },
+  { key: "Defenders" as const, label: "Defenders", accentColor: "#10b981" },
+  { key: "Goalkeeper" as const, label: "Goalkeeper", accentColor: "#f59e0b" },
+];
+
 export const FormationPitchCard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("LINEUP");
+  const [playerTeamFilter, setPlayerTeamFilter] = useState<"all" | "home" | "away">("all");
   const tabScrollRef = useRef<HTMLDivElement>(null);
 
   const scrollTabs = (direction: "left" | "right") => {
@@ -36,6 +52,9 @@ export const FormationPitchCard: React.FC = () => {
   const tacticalInflections = useBaseMemory((s) => s.tacticalInflections);
   const swarmCommentary = useBaseMemory((s) => s.swarmCommentary);
   const narrativeHeadline = useBaseMemory((s) => s.blackboard.narrative_headline);
+  const narrativeExplanation = useBaseMemory((s) => s.blackboard.narrative_explanation);
+  const selectedPersona = useBaseMemory((s) => s.selectedPersona);
+  const personaOverview = useBaseMemory((s) => s.blackboard.persona_overviews?.[s.selectedPersona]);
 
   const getShortName = (fullName: string) => {
     const parts = fullName.trim().split(" ");
@@ -63,7 +82,7 @@ export const FormationPitchCard: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      {/* Sticky Tab Switcher Bar with Scroll Option (952x608 & Responsive) */}
+      {/* Sticky Centered Tab Switcher Bar */}
       <div
         style={{
           position: "sticky",
@@ -72,37 +91,13 @@ export const FormationPitchCard: React.FC = () => {
           backgroundColor: "var(--studio-panel-bg)",
           display: "flex",
           alignItems: "center",
-          gap: "4px",
+          justifyContent: "center",
           width: "100%",
           paddingBottom: "8px",
           borderBottom: "1px solid var(--studio-panel-border)",
           boxSizing: "border-box",
         }}
       >
-        <button
-          type="button"
-          onClick={() => scrollTabs("left")}
-          aria-label="Scroll tabs left"
-          title="Scroll tabs left"
-          style={{
-            background: "rgba(255, 255, 255, 0.05)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-            borderRadius: "6px",
-            color: "var(--studio-subtext)",
-            width: "22px",
-            height: "26px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            flexShrink: 0,
-            padding: 0,
-            transition: "all 0.15s ease",
-          }}
-        >
-          <IonIcon icon={chevronBackOutline} style={{ fontSize: "14px" }} />
-        </button>
-
         <div
           ref={tabScrollRef}
           className="studio-chip-scroll"
@@ -114,63 +109,46 @@ export const FormationPitchCard: React.FC = () => {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "6px",
+            justifyContent: "center",
+            gap: "8px",
             overflowX: "auto",
             scrollBehavior: "smooth",
             WebkitOverflowScrolling: "touch",
-            flex: 1,
-            minWidth: 0,
             padding: "2px 0",
+            maxWidth: "100%",
           }}
         >
-          {["SUMMARY", "STATISTICS", "LINEUP", "PLAYERS", "COMMENTS"].map((tab) => (
+          {[
+            { id: "SUMMARY", label: "summary" },
+            { id: "STATISTICS", label: "statistics" },
+            { id: "LINEUP", label: "lineups" },
+            { id: "PLAYERS", label: "players" },
+            { id: "COMMENTS", label: "comments" },
+          ].map((tab) => (
             <button
-              key={tab}
-              onClick={(e) => handleTabClick(tab, e)}
+              key={tab.id}
+              onClick={(e) => handleTabClick(tab.id, e)}
               style={{
-                padding: "5px 11px",
+                padding: "6px 14px",
                 borderRadius: "8px",
-                border: activeTab === tab ? "1px solid rgba(16, 185, 129, 0.6)" : "1px solid rgba(255, 255, 255, 0.05)",
-                backgroundColor: activeTab === tab ? "rgba(16, 185, 129, 0.22)" : "rgba(255, 255, 255, 0.03)",
-                color: activeTab === tab ? "#34d399" : "var(--studio-subtext)",
-                boxShadow: activeTab === tab ? "0 0 10px rgba(16, 185, 129, 0.35)" : "none",
-                fontWeight: activeTab === tab ? 800 : 600,
+                border: activeTab === tab.id ? "1px solid rgba(16, 185, 129, 0.6)" : "1px solid rgba(255, 255, 255, 0.06)",
+                backgroundColor: activeTab === tab.id ? "rgba(16, 185, 129, 0.22)" : "rgba(255, 255, 255, 0.03)",
+                color: activeTab === tab.id ? "#34d399" : "var(--studio-subtext)",
+                boxShadow: activeTab === tab.id ? "0 0 10px rgba(16, 185, 129, 0.35)" : "none",
+                fontWeight: activeTab === tab.id ? 800 : 600,
                 fontSize: "11px",
-                letterSpacing: "0.5px",
+                letterSpacing: "0.4px",
+                textTransform: "capitalize",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
                 cursor: "pointer",
                 transition: "all 0.2s ease",
               }}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
-
-        <button
-          type="button"
-          onClick={() => scrollTabs("right")}
-          aria-label="Scroll tabs right"
-          title="Scroll tabs right"
-          style={{
-            background: "rgba(255, 255, 255, 0.05)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-            borderRadius: "6px",
-            color: "var(--studio-subtext)",
-            width: "22px",
-            height: "26px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            flexShrink: 0,
-            padding: 0,
-            transition: "all 0.15s ease",
-          }}
-        >
-          <IonIcon icon={chevronForwardOutline} style={{ fontSize: "14px" }} />
-        </button>
       </div>
 
       {/* Tab 1: Tactical Lineup & Pitch */}
@@ -541,29 +519,6 @@ export const FormationPitchCard: React.FC = () => {
             padding: "8px 4px",
           }}
         >
-          {/* AI Narrative Badge */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 14px",
-              borderRadius: "10px",
-              background: "linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(0, 229, 255, 0.1))",
-              border: "1px solid rgba(124, 58, 237, 0.3)",
-            }}
-          >
-            <IonIcon icon={flashOutline} style={{ color: "#00e5ff", fontSize: "18px" }} />
-            <div>
-              <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--ion-text-color)" }}>
-                Tactical Inflection Engine • Live Narrative
-              </div>
-              <div style={{ fontSize: "10px", color: "var(--studio-subtext)" }}>
-                Synthesized across Telemetry, Tactical, and Narrative Agent Swarm
-              </div>
-            </div>
-          </div>
-
           {/* Match Story Card */}
           <div
             style={{
@@ -579,7 +534,9 @@ export const FormationPitchCard: React.FC = () => {
             <span style={{ fontWeight: 800, color: "#10b981", display: "block", marginBottom: "4px" }}>
               {narrativeHeadline}
             </span>
-            {score.homeMeta.name} sustained dominant Pitch Control by pinning {score.awayMeta.name}'s defensive line with structured position play, while {score.awayMeta.name} sought rapid transition corridors via counter-attacking opportunities.
+            {narrativeExplanation || personaOverview || (
+              `${score.homeMeta.name} sustained dominant Pitch Control with structured position play, while ${score.awayMeta.name} sought rapid transition corridors.`
+            )}
           </div>
 
           {/* Tactical Inflection Points List */}
@@ -587,49 +544,65 @@ export const FormationPitchCard: React.FC = () => {
             Tactical Inflection Points
           </span>
 
-          {tacticalInflections.map((inflection) => {
-            const isNear = inflection.timeSec !== undefined && Math.abs(matchClock - inflection.timeSec) < 45;
-            return (
-              <div
-                key={inflection.time + inflection.title}
-                onClick={() => {
-                  if (inflection.timeSec !== undefined) {
-                    baseMemory.setMatchClock(inflection.timeSec);
-                    telemetryService.sendCommand({ command: "seek", time: inflection.timeSec });
-                  }
-                }}
-                style={{
-                  backgroundColor: isNear ? "rgba(124, 58, 237, 0.18)" : "var(--studio-inner-bg)",
-                  borderRadius: "10px",
-                  padding: "10px 12px",
-                  border: isNear ? "1.5px solid #7c3aed" : "1px solid var(--studio-panel-border)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-                title={`Click to seek match clock to ${inflection.time}`}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 900, color: "#7c3aed", fontFamily: "monospace" }}>
-                      {inflection.time}
-                    </span>
-                    <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
-                      {inflection.title}
+          {tacticalInflections.length === 0 ? (
+            <div
+              style={{
+                backgroundColor: "var(--studio-inner-bg)",
+                borderRadius: "10px",
+                padding: "16px",
+                border: "1px dashed var(--studio-panel-border)",
+                fontSize: "12px",
+                color: "var(--studio-subtext)",
+                textAlign: "center",
+              }}
+            >
+              No major tactical inflections recorded yet in this sequence.
+            </div>
+          ) : (
+            tacticalInflections.map((inflection) => {
+              const isNear = inflection.timeSec !== undefined && Math.abs(matchClock - inflection.timeSec) < 45;
+              return (
+                <div
+                  key={inflection.time + inflection.title}
+                  onClick={() => {
+                    if (inflection.timeSec !== undefined) {
+                      baseMemory.setMatchClock(inflection.timeSec);
+                      telemetryService.sendCommand({ command: "seek", time: inflection.timeSec });
+                    }
+                  }}
+                  style={{
+                    backgroundColor: isNear ? "rgba(124, 58, 237, 0.18)" : "var(--studio-inner-bg)",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    border: isNear ? "1.5px solid #7c3aed" : "1px solid var(--studio-panel-border)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  title={`Click to seek match clock to ${inflection.time}`}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 900, color: "#7c3aed", fontFamily: "monospace" }}>
+                        {inflection.time}
+                      </span>
+                      <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
+                        {inflection.title}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "9px", fontWeight: 800, color: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.15)", padding: "2px 6px", borderRadius: "4px" }}>
+                      {inflection.impact}
                     </span>
                   </div>
-                  <span style={{ fontSize: "9px", fontWeight: 800, color: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.15)", padding: "2px 6px", borderRadius: "4px" }}>
-                    {inflection.impact}
-                  </span>
+                  <p style={{ margin: 0, fontSize: "11px", color: "var(--studio-subtext)", lineHeight: "1.4" }}>
+                    {inflection.detail}
+                  </p>
                 </div>
-                <p style={{ margin: 0, fontSize: "11px", color: "var(--studio-subtext)", lineHeight: "1.4" }}>
-                  {inflection.detail}
-                </p>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       )}
 
@@ -646,59 +619,242 @@ export const FormationPitchCard: React.FC = () => {
             padding: "8px 4px",
           }}
         >
-          <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--studio-subtext)", textTransform: "uppercase" }}>
-            Click Player to Spotlight in Right Column
-          </div>
-
-          {[...homeLineup, ...awayLineup].map((p) => {
-            const isSelected = selectedPlayerId === p.id;
-            const teamColor = p.team === "home" ? score.homeMeta.color : score.awayMeta.color;
-            const teamCode = p.team === "home" ? score.homeMeta.shortCode : score.awayMeta.shortCode;
-            return (
-              <div
-                key={p.id}
-                onClick={() => baseMemory.setSelectedPlayer(p.id)}
+          {/* Team Switcher Toolbar */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              backgroundColor: "var(--studio-inner-bg)",
+              padding: "4px",
+              borderRadius: "10px",
+              border: "1px solid var(--studio-panel-border)",
+            }}
+          >
+            <div style={{ display: "flex", gap: "4px", width: "100%" }}>
+              <button
+                onClick={() => setPlayerTeamFilter("all")}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "8px 12px",
-                  backgroundColor: isSelected ? "rgba(124, 58, 237, 0.2)" : "var(--studio-inner-bg)",
-                  borderRadius: "8px",
-                  border: isSelected ? "1.5px solid #7c3aed" : "1px solid var(--studio-panel-border)",
+                  flex: 1,
+                  padding: "6px 8px",
+                  borderRadius: "7px",
+                  border: playerTeamFilter === "all" ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid transparent",
+                  backgroundColor: playerTeamFilter === "all" ? "rgba(255, 255, 255, 0.08)" : "transparent",
+                  color: playerTeamFilter === "all" ? "#ffffff" : "var(--studio-subtext)",
+                  fontSize: "11px",
+                  fontWeight: 700,
                   cursor: "pointer",
                   transition: "all 0.15s ease",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "10px", fontWeight: 900, color: teamColor, minWidth: "28px" }}>
-                    {teamCode}
-                  </span>
-                  <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--studio-subtext)", minWidth: "18px" }}>
-                    #{p.number}
-                  </span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ion-text-color)" }}>
-                    {p.name}
-                  </span>
-                  <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "4px", backgroundColor: "rgba(255,255,255,0.08)", color: "var(--studio-subtext)" }}>
-                    {p.pos}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    backgroundColor: p.rating >= 8.0 ? "#10b981" : p.rating >= 7.3 ? "#3b82f6" : "#f59e0b",
-                    color: "#ffffff",
-                    fontSize: "11px",
-                    fontWeight: 900,
-                    padding: "2px 7px",
-                    borderRadius: "4px",
-                  }}
-                >
-                  {p.rating.toFixed(1)}
-                </div>
-              </div>
+                All (22)
+              </button>
+              <button
+                onClick={() => setPlayerTeamFilter("home")}
+                style={{
+                  flex: 1,
+                  padding: "6px 8px",
+                  borderRadius: "7px",
+                  border: playerTeamFilter === "home" ? `1px solid ${score.homeMeta.color}` : "1px solid transparent",
+                  backgroundColor: playerTeamFilter === "home" ? "rgba(0, 229, 255, 0.15)" : "transparent",
+                  color: playerTeamFilter === "home" ? score.homeMeta.color : "var(--studio-subtext)",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {score.homeMeta.shortCode} (11)
+              </button>
+              <button
+                onClick={() => setPlayerTeamFilter("away")}
+                style={{
+                  flex: 1,
+                  padding: "6px 8px",
+                  borderRadius: "7px",
+                  border: playerTeamFilter === "away" ? `1px solid ${score.awayMeta.color}` : "1px solid transparent",
+                  backgroundColor: playerTeamFilter === "away" ? "rgba(244, 63, 94, 0.15)" : "transparent",
+                  color: playerTeamFilter === "away" ? score.awayMeta.color : "var(--studio-subtext)",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {score.awayMeta.shortCode} (11)
+              </button>
+            </div>
+          </div>
+
+          {/* Grouped by Position Lines */}
+          {(() => {
+            const displayedPlayers = (
+              playerTeamFilter === "home"
+                ? homeLineup
+                : playerTeamFilter === "away"
+                ? awayLineup
+                : [...homeLineup, ...awayLineup]
             );
-          })}
+
+            return positionCategories.map((cat) => {
+              const playersInCat = displayedPlayers.filter((p) => getPositionCategory(p.pos) === cat.key);
+              if (playersInCat.length === 0) return null;
+
+              const avgRating = (
+                playersInCat.reduce((acc, p) => acc + p.rating, 0) / playersInCat.length
+              ).toFixed(1);
+
+              return (
+                <div key={cat.key} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {/* Position Group Header */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      backgroundColor: "rgba(255, 255, 255, 0.02)",
+                      borderLeft: `3px solid ${cat.accentColor}`,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--ion-text-color)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        {cat.label}
+                      </span>
+                      <span style={{ fontSize: "9px", padding: "1px 6px", borderRadius: "10px", backgroundColor: "rgba(255, 255, 255, 0.06)", color: "var(--studio-subtext)", fontWeight: 700 }}>
+                        {playersInCat.length}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "10px", color: "var(--studio-subtext)", fontWeight: 600 }}>
+                      Avg Rating <strong style={{ color: "var(--ion-text-color)" }}>{avgRating}</strong>
+                    </span>
+                  </div>
+
+                  {/* Players List in this Group */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                    {playersInCat.map((p) => {
+                      const isSelected = selectedPlayerId === p.id;
+                      const isHome = p.team === "home";
+                      const teamColor = isHome ? score.homeMeta.color : score.awayMeta.color;
+                      const teamCode = isHome ? score.homeMeta.shortCode : score.awayMeta.shortCode;
+                      const activeAura = isHome ? "rgba(0, 229, 255, 0.15)" : "rgba(244, 63, 94, 0.15)";
+
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => baseMemory.setSelectedPlayer(p.id)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 12px",
+                            backgroundColor: isSelected ? activeAura : "var(--studio-inner-bg)",
+                            borderRadius: "10px",
+                            border: isSelected ? `1.5px solid ${teamColor}` : "1px solid var(--studio-panel-border)",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                            {/* Shirt Number Badge */}
+                            <div
+                              style={{
+                                width: "24px",
+                                height: "24px",
+                                borderRadius: "6px",
+                                backgroundColor: isSelected ? teamColor : "rgba(255, 255, 255, 0.06)",
+                                color: isSelected ? (isHome ? "#080d16" : "#ffffff") : teamColor,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "10px",
+                                fontWeight: 900,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {p.number}
+                            </div>
+
+                            {/* Player Identity */}
+                            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span
+                                  style={{
+                                    fontSize: "12px",
+                                    fontWeight: 700,
+                                    color: isSelected ? "#ffffff" : "var(--ion-text-color)",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {p.name}
+                                </span>
+                                {p.is_ball_carrier && (
+                                  <span
+                                    style={{
+                                      fontSize: "8px",
+                                      fontWeight: 900,
+                                      backgroundColor: "rgba(255, 214, 0, 0.18)",
+                                      color: "#ffd600",
+                                      padding: "1px 5px",
+                                      borderRadius: "4px",
+                                      border: "1px solid rgba(255, 214, 0, 0.3)",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    BALL
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "1px" }}>
+                                <span style={{ fontSize: "9px", fontWeight: 800, color: teamColor }}>
+                                  {teamCode}
+                                </span>
+                                <span style={{ fontSize: "9px", color: "var(--studio-subtext)" }}>•</span>
+                                <span style={{ fontSize: "9px", color: "var(--studio-subtext)", fontWeight: 700 }}>
+                                  {p.pos}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Metrics & Rating */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                            {p.speed_kmh !== undefined && p.speed_kmh > 1.0 && (
+                              <span style={{ fontSize: "9px", color: "var(--studio-subtext)", fontFamily: "monospace" }}>
+                                {p.speed_kmh.toFixed(1)} km/h
+                              </span>
+                            )}
+                            <div
+                              style={{
+                                backgroundColor:
+                                  p.rating >= 8.0
+                                    ? "#10b981"
+                                    : p.rating >= 7.3
+                                    ? "#0ea5e9"
+                                    : "#f59e0b",
+                                color: "#ffffff",
+                                fontSize: "11px",
+                                fontWeight: 900,
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                minWidth: "28px",
+                                textAlign: "center",
+                              }}
+                            >
+                              {p.rating.toFixed(1)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            });
+          })()}
         </div>
       )}
 

@@ -446,8 +446,14 @@ class BroadcastNarrativeAgent:
         if draft is None:
             if status is not AgentStatus.FALLBACK:
                 status = AgentStatus.COMPLETE
-            draft = self.generator.build(context, variant=self._variant % 2)
-            self._variant += 1
+            # Select variant based on match progression (5-minute tactical blocks) and inflection presence,
+            # ensuring headline remains stable throughout each phase instead of flickering every tick.
+            match_mins = int(frame.matchSeconds // 60)
+            quarter = match_mins // 5
+            templates_len = max(1, len(HEADLINE_TEMPLATES.get(frame.scenario.value, {}).get("en", [1])))
+            inflection_flag = 1 if bool(view.read(K_INFLECTION_CANDIDATES) if view else False) else 0
+            variant = (quarter + inflection_flag) % templates_len
+            draft = self.generator.build(context, variant=variant)
 
         view.write(K_NARRATIVE_ARC, NARRATIVE_ARCS.get(frame.scenario.value, frame.scenario.value))
         view.write(
