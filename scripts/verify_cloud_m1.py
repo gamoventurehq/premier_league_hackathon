@@ -28,27 +28,32 @@ BACKEND_BASE = "https://plstudio-backend.bluebeach-f4935620.eastus2.azurecontain
 FRONTEND_BASE = "https://plstudio-frontend.bluebeach-f4935620.eastus2.azurecontainerapps.io"
 
 
-def http_get(url: str, timeout: float = 15.0) -> tuple[int, dict[str, str], str, float]:
-    """Perform HTTP GET and return (status_code, headers_dict, body_text, latency_ms)."""
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "PLStudio-M1-Auditor/1.0", "Accept": "*/*"}
-    )
-    t0 = time.perf_counter()
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+def http_get(url: str, timeout: float = 25.0, retries: int = 3) -> tuple[int, dict[str, str], str, float]:
+    """Perform HTTP GET with retries and return (status_code, headers_dict, body_text, latency_ms)."""
+    for attempt in range(retries):
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "PLStudio-M1-Auditor/1.0", "Accept": "*/*"}
+        )
+        t0 = time.perf_counter()
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                latency_ms = (time.perf_counter() - t0) * 1000.0
+                body = resp.read().decode("utf-8", errors="replace")
+                headers = {k.lower(): v for k, v in resp.headers.items()}
+                return resp.status, headers, body, latency_ms
+        except urllib.error.HTTPError as e:
             latency_ms = (time.perf_counter() - t0) * 1000.0
-            body = resp.read().decode("utf-8", errors="replace")
-            headers = {k.lower(): v for k, v in resp.headers.items()}
-            return resp.status, headers, body, latency_ms
-    except urllib.error.HTTPError as e:
-        latency_ms = (time.perf_counter() - t0) * 1000.0
-        body = e.read().decode("utf-8", errors="replace")
-        headers = {k.lower(): v for k, v in e.headers.items()}
-        return e.code, headers, body, latency_ms
-    except Exception as e:
-        latency_ms = (time.perf_counter() - t0) * 1000.0
-        raise RuntimeError(f"Network error accessing {url}: {e}") from e
+            body = e.read().decode("utf-8", errors="replace")
+            headers = {k.lower(): v for k, v in e.headers.items()}
+            return e.code, headers, body, latency_ms
+        except Exception as e:
+            if attempt < retries - 1:
+                time.sleep(1.0)
+                continue
+            latency_ms = (time.perf_counter() - t0) * 1000.0
+            raise RuntimeError(f"Network error accessing {url}: {e}") from e
+    raise RuntimeError(f"Exhausted retries accessing {url}")
 
 
 def run_audit() -> dict[str, Any]:
