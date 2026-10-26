@@ -390,3 +390,7 @@ Run the existing automated test suites against the cloud deployment, check the f
 ### Test Integrity
 - [ ] Automated integration test scripts pass cleanly with 0 unhandled exceptions.
 - [ ] A final Markdown audit report is written summarizing test results, latencies, and verification artifacts.
+
+## 2026-10-25T21:26:22Z
+
+Revision 2 of plstudio-backend has already been deployed with AZURE_MCP_SERVER_URL configured, successfully enabling all 4 Azure capabilities on GET /health (foundry: true, eventHubs: true, cosmos: true, mcp: true). Proceed with establishing SCOPE.md, GATE_STATUS.md, and executing Milestones R1–R5 to complete the audit.
