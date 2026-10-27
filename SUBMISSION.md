@@ -4,6 +4,9 @@
 > **Submission Portal**: [aka.ms/insidethegame](https://aka.ms/insidethegame)  
 > **Host / Partners**: Microsoft Corporation & The Football Association Premier League  
 > **Team Name**: **Gamoventure**  
+> **Team Members**:  
+> • **Gaurav Abhiman Mahajan** (`gamoventure@gmail.com`)  
+> • **Urvashi Mallah** (`mallahurvashi09@gmail.com`)  
 > **Project Name**: **Premier League Studio: Synthetic Match Insights Engine**  
 > **Target Category Bids**: **Grand Prize (1st Place)** • **Best Use of Microsoft Foundry** • **Best Multi-Agent System**
 
@@ -112,3 +115,12 @@ cd frontend && npm run typecheck
 - [x] **Demo Video**: 106.91s duration (strictly under the 120s limit) showing live functioning software.
 - [x] **Working Project Access**: Self-contained reproduction via Docker Compose and live API endpoints.
 - [x] **Language**: All interfaces, code, documentation, and video narration in English (with verified multilingual localization in ES, FR, JA, AR).
+
+---
+
+### 7. Official Team Roster & Author Credentials
+
+| Member Name | Email Address | Role & Focus |
+| :--- | :--- | :--- |
+| **Gaurav Abhiman Mahajan** | `gamoventure@gmail.com` | Team Lead • AI Architecture, Multi-Agent Orchestration & Azure Cloud Engineering |
+| **Urvashi Mallah** | `mallahurvashi09@gmail.com` | Frontend Engineering, Broadcast UI & UX Design Systems |

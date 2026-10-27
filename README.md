@@ -398,6 +398,9 @@ premier_league_hackathon/
 ## 👥 Team & Submission Information
 
 - **Team Name**: **Gamoventure**
+- **Team Members**:
+  - **Gaurav Abhiman Mahajan** (`gamoventure@gmail.com`) — AI Architecture & Full-Stack Cloud Engineering
+  - **Urvashi Mallah** (`mallahurvashi09@gmail.com`) — Frontend Engineering & UX Design Systems
 - **Contest**: **Microsoft Premier League Hackathon: Inside the Game**
 - **Target Category Prizes**: **Grand Prize (1st Place)** • **Best Use of Microsoft Foundry** • **Best Multi-Agent System**
 - **License**: MIT License — open-source for evaluation.
