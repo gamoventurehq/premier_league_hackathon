@@ -16,12 +16,19 @@
 [![Ionic React](https://img.shields.io/badge/Frontend-Ionic_React_Cupertino-3880FF?logo=ionic&logoColor=white)](https://ionicframework.com/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_5Hz_Stream-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Synthetic Data](https://img.shields.io/badge/Data-100%25_Synthetic_Physics-success)](#-synthetic-data-mandate)
-[![Test Suite](https://img.shields.io/badge/Tests-4--Tier_E2E_Verified-brightgreen)](#-verification-testing--inspection-guide)
+[![Live App](https://img.shields.io/badge/Live_App-Azure_Container_Apps-0078D4?logo=microsoftazure&logoColor=white)](https://plstudio-frontend.bluebeach-f4935620.eastus2.azurecontainerapps.io)
 [![Video Duration](https://img.shields.io/badge/Demo_Video-106.9s_%28%3C120s_Limit%29-red)](#-official-demo-video-under-2-minutes)
 
-[🎬 Watch Demo Video](#-official-demo-video-under-2-minutes) • [🚀 Quick Start](#-quick-start--local-reproduction) • [☁️ Azure Hero Tech](#-microsoft-hero-technologies--azure-cloud-architecture) • [🧠 5-Stage Pipeline](#-5-stage-match-insights-pipeline) • [🏆 Judging Rubric](#-hackathon-judging-rubric-alignment-matrix)
+[🌐 Live Web App](https://plstudio-frontend.bluebeach-f4935620.eastus2.azurecontainerapps.io) • [🎬 Watch Demo Video](#-official-demo-video-under-2-minutes) • [🚀 Quick Start](#-quick-start--local-reproduction) • [☁️ Azure Hero Tech](#-microsoft-hero-technologies--azure-cloud-architecture) • [🧠 5-Stage Pipeline](#-5-stage-match-insights-pipeline) • [🏆 Judging Rubric](#-hackathon-judging-rubric-alignment-matrix)
 
 </div>
+
+---
+
+> ### 🌐 Live Production Application for Judges
+> **Direct Live Web App URL**: [https://plstudio-frontend.bluebeach-f4935620.eastus2.azurecontainerapps.io](https://plstudio-frontend.bluebeach-f4935620.eastus2.azurecontainerapps.io)  
+> **Live Backend Health**: [https://plstudio-backend.bluebeach-f4935620.eastus2.azurecontainerapps.io/health](https://plstudio-backend.bluebeach-f4935620.eastus2.azurecontainerapps.io/health)  
+> *Deployed natively on Microsoft Azure Container Apps with zero login walls or restrictions. Fully accessible free of charge throughout the entire judging period.*
 
 ---
 

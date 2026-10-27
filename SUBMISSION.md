@@ -72,6 +72,12 @@ The frontend is implemented in Ionic React with strict native iOS Cupertino styl
 
 The test build is fully accessible without paywalls, login restrictions, or third-party dependencies:
 
+#### Live Cloud Deployment (No Setup Required):
+- **Live Broadcast Studio Web App**: [https://plstudio-frontend.bluebeach-f4935620.eastus2.azurecontainerapps.io](https://plstudio-frontend.bluebeach-f4935620.eastus2.azurecontainerapps.io)
+- **Live Backend Health & Swagger**: [https://plstudio-backend.bluebeach-f4935620.eastus2.azurecontainerapps.io/docs](https://plstudio-backend.bluebeach-f4935620.eastus2.azurecontainerapps.io/docs)
+- **Live Health Endpoint**: [https://plstudio-backend.bluebeach-f4935620.eastus2.azurecontainerapps.io/health](https://plstudio-backend.bluebeach-f4935620.eastus2.azurecontainerapps.io/health)
+*(Runs 24/7 on Microsoft Azure Container Apps throughout the entire judging window)*
+
 #### 1-Command Docker Launch:
 ```bash
 git clone https://github.com/gamoventurehq/premier_league_hackathon.git
