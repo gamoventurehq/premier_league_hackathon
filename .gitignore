@@ -41,3 +41,9 @@ venv/
 
 # Agent metadata
 .agents/
+.impeccable/
+
+# Intermediate media generation captures & builds
+media_gen/raw_captures*/
+media_gen/video*/
+media_gen/*.mp4
